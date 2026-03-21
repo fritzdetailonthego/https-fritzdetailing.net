@@ -1,97 +1,74 @@
-// Attempts to fetch Instagram posts for the gallery slideshow
-// Falls back to gallery.json manual images if Instagram blocks the request
-
-const INSTAGRAM_USER = 'fritzdetailonthego';
-const CACHE_DURATION = 3600000; // 1 hour cache
-
-let cachedData = null;
-let cacheTime = 0;
+// Fetches Instagram post images via oEmbed / media redirect
+// Admin pastes Instagram post URLs, this returns the image URLs
 
 module.exports = async (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Cache-Control', 'public, max-age=300'); // browser caches 5 min
-
-  // Return cache if fresh
-  if (cachedData && (Date.now() - cacheTime) < CACHE_DURATION) {
-    return res.json(cachedData);
+  if (req.method === 'OPTIONS') {
+    res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+    return res.status(200).end();
   }
 
-  try {
-    // Method 1: Try Instagram's public page and extract from HTML
-    const response = await fetch(`https://www.instagram.com/${INSTAGRAM_USER}/`, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
-        'Accept-Language': 'en-US,en;q=0.5',
-        'Sec-Fetch-Dest': 'document',
-        'Sec-Fetch-Mode': 'navigate',
-      }
-    });
+  // GET: return cached/stored images from gallery.json post URLs
+  // POST: resolve a single Instagram URL to an image
 
-    if (!response.ok) throw new Error('Instagram returned ' + response.status);
+  if (req.method === 'GET') {
+    try {
+      const fs = require('fs');
+      const path = require('path');
+      const galleryPath = path.join(__dirname, '..', 'public', 'gallery.json');
+      const gallery = JSON.parse(fs.readFileSync(galleryPath, 'utf8'));
 
-    const html = await response.text();
-
-    // Try to extract image URLs from meta tags and embedded JSON
-    const images = [];
-
-    // Extract og:image (profile/post images in meta tags)
-    const ogMatches = html.matchAll(/property="og:image"\s+content="([^"]+)"/g);
-    for (const match of ogMatches) {
-      if (match[1] && !match[1].includes('profile_pic')) {
-        images.push({ url: match[1], caption: '', source: 'instagram' });
-      }
-    }
-
-    // Try to find image URLs in the page's JSON data
-    // Instagram embeds post data in script tags
-    const scriptMatches = html.matchAll(/"display_url"\s*:\s*"([^"]+)"/g);
-    for (const match of scriptMatches) {
-      const url = match[1].replace(/\\u0026/g, '&').replace(/\\/g, '');
-      if (url.startsWith('http')) {
-        images.push({ url, caption: '', source: 'instagram' });
-      }
-    }
-
-    // Also try thumbnail URLs
-    const thumbMatches = html.matchAll(/"thumbnail_src"\s*:\s*"([^"]+)"/g);
-    for (const match of thumbMatches) {
-      const url = match[1].replace(/\\u0026/g, '&').replace(/\\/g, '');
-      if (url.startsWith('http') && !images.find(i => i.url === url)) {
-        images.push({ url, caption: '', source: 'instagram' });
-      }
-    }
-
-    if (images.length > 0) {
-      // Dedupe and limit to 12
-      const unique = [];
-      const seen = new Set();
-      for (const img of images) {
-        const key = img.url.split('?')[0]; // ignore query params for dedup
-        if (!seen.has(key)) {
-          seen.add(key);
-          unique.push(img);
+      const images = [];
+      for (const item of (gallery.images || [])) {
+        if (item.url) {
+          // If it's already a direct image URL, use it
+          if (item.url.match(/\.(jpg|jpeg|png|webp|gif)/i) || item.url.includes('ibb.co') || item.url.includes('imgur')) {
+            images.push(item);
+          }
+          // If it's an Instagram post URL, try to get the media
+          else if (item.url.includes('instagram.com/p/') || item.url.includes('instagram.com/reel/')) {
+            try {
+              const mediaUrl = item.url.replace(/\/$/, '') + '/media/?size=l';
+              const mediaRes = await fetch(mediaUrl, { redirect: 'follow' });
+              if (mediaRes.ok && mediaRes.url) {
+                images.push({ ...item, url: mediaRes.url });
+              }
+            } catch(e) {
+              // Skip this image if fetch fails
+            }
+          } else {
+            images.push(item);
+          }
         }
-        if (unique.length >= 12) break;
       }
 
-      const result = { images: unique, source: 'instagram', instagram: INSTAGRAM_USER };
-      cachedData = result;
-      cacheTime = Date.now();
-      return res.json(result);
+      res.json({ images, source: 'gallery', instagram: gallery.instagram || 'fritzdetailonthego' });
+    } catch(e) {
+      res.json({ images: [], source: 'empty', instagram: 'fritzdetailonthego' });
     }
-
-    throw new Error('No images found in Instagram response');
-
-  } catch (error) {
-    console.log('Instagram fetch failed:', error.message, '— falling back to gallery.json');
-
-    // Fallback: return empty so frontend uses gallery.json
-    res.json({
-      images: [],
-      source: 'fallback',
-      instagram: INSTAGRAM_USER,
-      message: 'Instagram feed unavailable — using manual gallery'
-    });
+    return;
   }
+
+  // POST: resolve a single Instagram URL to check if it works
+  if (req.method === 'POST') {
+    const { url } = req.body;
+    if (!url) return res.status(400).json({ error: 'No URL provided' });
+
+    try {
+      if (url.includes('instagram.com/p/') || url.includes('instagram.com/reel/')) {
+        const mediaUrl = url.replace(/\/$/, '') + '/media/?size=l';
+        const mediaRes = await fetch(mediaUrl, { redirect: 'follow' });
+        if (mediaRes.ok) {
+          return res.json({ success: true, imageUrl: mediaRes.url, original: url });
+        }
+      }
+      // Not an Instagram URL or fetch failed — treat as direct image
+      return res.json({ success: true, imageUrl: url, original: url });
+    } catch(e) {
+      return res.status(400).json({ error: 'Could not resolve URL: ' + e.message });
+    }
+  }
+
+  res.status(405).json({ error: 'Method not allowed' });
 };

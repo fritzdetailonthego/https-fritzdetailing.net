@@ -1171,18 +1171,18 @@ async function loadGallery() {
 
   let images = [];
 
-  // Step 1: Try pulling from Instagram via our API
+  // Fetch images from API (resolves Instagram post URLs to actual images)
   try {
-    const igRes = await fetch('/api/instagram-feed');
-    if (igRes.ok) {
-      const igData = await igRes.json();
-      if (igData.images && igData.images.length > 0) {
-        images = igData.images;
+    const res = await fetch('/api/instagram-feed');
+    if (res.ok) {
+      const data = await res.json();
+      if (data.images && data.images.length > 0) {
+        images = data.images;
       }
     }
   } catch(e) {}
 
-  // Step 2: If no Instagram images, try manual gallery.json
+  // Fallback: try gallery.json directly
   if (images.length === 0) {
     try {
       const res = await fetch('/gallery.json?t=' + Date.now());
