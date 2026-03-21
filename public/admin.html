@@ -108,7 +108,12 @@ body{font-family:'Open Sans',sans-serif;background:var(--black);color:var(--whit
   <!-- GALLERY MANAGER -->
   <div style="margin-top:48px;padding-top:32px;border-top:1px solid var(--border)">
     <div class="section-label">Gallery / Slideshow</div>
-    <p style="color:var(--gray);font-size:14px;margin-bottom:20px">Paste <strong style="color:var(--purple-light)">Instagram post URLs</strong> to show them in the slideshow. Go to any post on Instagram, copy the link (e.g. <code style="color:var(--gray-light);background:var(--dark);padding:2px 6px;border-radius:4px;font-size:12px">instagram.com/p/ABC123/</code>), and paste it below. Direct image URLs also work.</p>
+    <p style="color:var(--gray);font-size:14px;margin-bottom:12px">Add photos to the slideshow on the main site. <strong style="color:var(--purple-light)">3 easy steps:</strong></p>
+    <ol style="color:var(--gray);font-size:14px;margin-bottom:20px;padding-left:20px;line-height:2">
+      <li>Go to <a href="https://imgbb.com" target="_blank" style="color:var(--purple-light)">imgbb.com</a> (free, no signup)</li>
+      <li>Upload Fritz's before/after photos</li>
+      <li>Copy the <strong style="color:var(--gray-light)">Direct link</strong> and paste it below</li>
+    </ol>
 
     <div id="gallery-editor"></div>
 
@@ -366,7 +371,7 @@ function renderGalleryEditor() {
         ${img.url ? `<img src="${img.url}" style="width:100%;height:100%;object-fit:cover" onerror="this.style.display='none'">` : '<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:var(--gray);font-size:11px">No img</div>'}
       </div>
       <div style="flex:1;display:flex;flex-direction:column;gap:6px">
-        <input class="input" placeholder="Instagram post URL (e.g. instagram.com/p/ABC123/) or direct image link" value="${img.url || ''}" onchange="galleryData.images[${i}].url=this.value;renderGalleryEditor()" style="font-size:13px;padding:8px 10px">
+        <input class="input" placeholder="Paste image URL from imgbb.com (e.g. https://i.ibb.co/abc/photo.jpg)" value="${img.url || ''}" onchange="galleryData.images[${i}].url=this.value;renderGalleryEditor()" style="font-size:13px;padding:8px 10px">
         <input class="input" placeholder="Caption (optional)" value="${img.caption || ''}" onchange="galleryData.images[${i}].caption=this.value" style="font-size:13px;padding:8px 10px">
       </div>
       <button onclick="galleryData.images.splice(${i},1);renderGalleryEditor()" class="del-btn" style="font-size:20px" title="Remove">×</button>
