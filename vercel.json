@@ -1,12 +1,9 @@
 {
   "version": 2,
-  "builds": [
-    { "src": "public/**", "use": "@vercel/static" },
-    { "src": "api/**/*.js", "use": "@vercel/node" }
-  ],
-  "routes": [
-    { "src": "/api/(.*)", "dest": "/api/$1" },
-    { "src": "/(.*)", "dest": "/public/$1" }
+  "rewrites": [
+    { "source": "/api/create-payment-intent", "destination": "/api/create-payment-intent" },
+    { "source": "/api/create-crypto-invoice", "destination": "/api/create-crypto-invoice" },
+    { "source": "/api/save-pricing", "destination": "/api/save-pricing" }
   ],
   "headers": [
     {
