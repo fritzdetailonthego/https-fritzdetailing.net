@@ -29,10 +29,15 @@ module.exports = async (req, res) => {
           // If it's an Instagram post URL, try to get the media
           else if (item.url.includes('instagram.com/p/') || item.url.includes('instagram.com/reel/')) {
             try {
-              const mediaUrl = item.url.replace(/\/$/, '') + '/media/?size=l';
+              // Strip query params and trailing slash, then add /media/?size=l
+              const cleanUrl = item.url.split('?')[0].replace(/\/$/, '');
+              const mediaUrl = cleanUrl + '/media/?size=l';
               const mediaRes = await fetch(mediaUrl, { redirect: 'follow' });
               if (mediaRes.ok && mediaRes.url) {
                 images.push({ ...item, url: mediaRes.url });
+              } else {
+                // If media redirect fails, skip
+                images.push({ ...item, url: '' });
               }
             } catch(e) {
               // Skip this image if fetch fails
@@ -57,7 +62,8 @@ module.exports = async (req, res) => {
 
     try {
       if (url.includes('instagram.com/p/') || url.includes('instagram.com/reel/')) {
-        const mediaUrl = url.replace(/\/$/, '') + '/media/?size=l';
+        const cleanUrl = url.split('?')[0].replace(/\/$/, '');
+        const mediaUrl = cleanUrl + '/media/?size=l';
         const mediaRes = await fetch(mediaUrl, { redirect: 'follow' });
         if (mediaRes.ok) {
           return res.json({ success: true, imageUrl: mediaRes.url, original: url });
