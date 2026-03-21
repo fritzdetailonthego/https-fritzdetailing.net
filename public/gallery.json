@@ -1,4 +1,10 @@
 {
-  "images": [],
+  "images": [
+    {
+      "url": "https://www.instagram.com/p/DVPsyyDkeor/?igsh=c2doMG5ldTdmeHpx",
+      "caption": "smth smth test",
+      "type": "detail"
+    }
+  ],
   "instagram": "fritzdetailonthego"
 }
