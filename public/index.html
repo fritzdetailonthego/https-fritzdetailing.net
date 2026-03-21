@@ -850,9 +850,24 @@ async function handlePayment() {
       btnText.style.display = 'inline';
       spinner.style.display = 'none';
     } else if (paymentIntent.status === 'succeeded') {
-      // Success!
+      // Success — log the sale
       document.getElementById('stripe-form').style.display = 'none';
       document.getElementById('pay-success').style.display = 'block';
+      // Fire and forget sale logging
+      fetch(BACKEND_URL + '/log-sale', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sale: {
+            customer: name,
+            service: serviceText,
+            amount: amount,
+            paymentMethod: 'card',
+            source: 'stripe',
+            stripePaymentId: paymentIntent.id
+          }
+        })
+      }).catch(() => {});
     }
   } catch (err) {
     errEl.textContent = err.message || 'Payment failed. Please try again or contact Fritz at (276) 247-0921.';

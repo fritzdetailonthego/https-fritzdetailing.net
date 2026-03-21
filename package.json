@@ -6,6 +6,7 @@
     "start": "node api/create-payment-intent.js"
   },
   "dependencies": {
-    "stripe": "^17.0.0"
+    "stripe": "^17.0.0",
+    "@vercel/blob": "^0.27.0"
   }
 }

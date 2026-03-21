@@ -124,6 +124,78 @@ body{font-family:'Open Sans',sans-serif;background:var(--black);color:var(--whit
     </div>
     <div id="gallery-status" class="status-bar" style="margin-top:12px"></div>
   </div>
+
+  <!-- SALES DASHBOARD -->
+  <div style="margin-top:48px;padding-top:32px;border-top:1px solid var(--border)">
+    <div class="section-label">Sales & Commission Tracker</div>
+    <p style="color:var(--gray);font-size:14px;margin-bottom:20px">All sales are stored permanently in cloud storage — they survive every code update and deploy. Export to XLSX anytime.</p>
+
+    <!-- SUMMARY CARDS -->
+    <div id="sales-summary" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:24px">
+      <div style="background:var(--dark);border:1px solid var(--border);border-radius:10px;padding:16px;text-align:center">
+        <div style="font-size:13px;color:var(--gray);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Total Sales</div>
+        <div id="stat-count" style="font-family:'Rajdhani',sans-serif;font-size:32px;font-weight:700;color:var(--purple-light)">—</div>
+      </div>
+      <div style="background:var(--dark);border:1px solid var(--border);border-radius:10px;padding:16px;text-align:center">
+        <div style="font-size:13px;color:var(--gray);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Total Revenue</div>
+        <div id="stat-revenue" style="font-family:'Rajdhani',sans-serif;font-size:32px;font-weight:700;color:var(--white)">—</div>
+      </div>
+      <div style="background:var(--dark);border:1px solid rgba(29,158,117,0.3);border-radius:10px;padding:16px;text-align:center">
+        <div style="font-size:13px;color:#1D9E75;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Your Commission</div>
+        <div id="stat-commission" style="font-family:'Rajdhani',sans-serif;font-size:32px;font-weight:700;color:#1D9E75">—</div>
+      </div>
+      <div style="background:var(--dark);border:1px solid var(--border);border-radius:10px;padding:16px;text-align:center">
+        <div style="font-size:13px;color:var(--gray);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Rate</div>
+        <div id="stat-rate" style="font-family:'Rajdhani',sans-serif;font-size:32px;font-weight:700;color:var(--purple-light)">—</div>
+      </div>
+    </div>
+
+    <!-- TOOLBAR -->
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px">
+      <button class="btn btn-green" onclick="exportXLSX()">Export XLSX</button>
+      <button class="btn btn-outline" onclick="loadSales()">Refresh</button>
+      <button class="btn btn-primary" onclick="document.getElementById('manual-sale-form').style.display=document.getElementById('manual-sale-form').style.display==='none'?'block':'none'">+ Log Manual Sale</button>
+    </div>
+
+    <!-- MANUAL SALE FORM -->
+    <div id="manual-sale-form" style="display:none;background:var(--dark);border:1px solid var(--border);border-radius:10px;padding:20px;margin-bottom:20px">
+      <div style="font-family:'Rajdhani',sans-serif;font-size:14px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--purple-light);margin-bottom:12px">Log Cash / Crypto / Other Sale</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <input class="input" id="ms-customer" placeholder="Customer name">
+        <input class="input" id="ms-service" placeholder="Service performed">
+        <input class="input" id="ms-amount" type="number" min="1" placeholder="Amount ($)">
+        <select class="input" id="ms-method">
+          <option value="cash">Cash</option>
+          <option value="cashapp">Cash App</option>
+          <option value="crypto">Crypto (XMR/BTC)</option>
+          <option value="card">Card (manual)</option>
+          <option value="other">Other</option>
+        </select>
+        <input class="input" id="ms-vehicle" placeholder="Vehicle (optional)" style="grid-column:1/-1">
+        <input class="input" id="ms-notes" placeholder="Notes (optional)" style="grid-column:1/-1">
+      </div>
+      <button class="btn btn-green" onclick="logManualSale()" style="margin-top:12px;width:100%;justify-content:center">Log Sale</button>
+    </div>
+
+    <!-- SALES TABLE -->
+    <div style="overflow-x:auto">
+      <table id="sales-table" style="width:100%;border-collapse:collapse;font-size:13px">
+        <thead>
+          <tr style="background:rgba(123,47,190,0.08)">
+            <th style="padding:10px 12px;text-align:left;font-family:'Rajdhani',sans-serif;font-size:12px;text-transform:uppercase;letter-spacing:1px;color:var(--gray);font-weight:600;border-bottom:1px solid var(--border)">Date</th>
+            <th style="padding:10px 12px;text-align:left;font-family:'Rajdhani',sans-serif;font-size:12px;text-transform:uppercase;letter-spacing:1px;color:var(--gray);font-weight:600;border-bottom:1px solid var(--border)">Customer</th>
+            <th style="padding:10px 12px;text-align:left;font-family:'Rajdhani',sans-serif;font-size:12px;text-transform:uppercase;letter-spacing:1px;color:var(--gray);font-weight:600;border-bottom:1px solid var(--border)">Service</th>
+            <th style="padding:10px 12px;text-align:right;font-family:'Rajdhani',sans-serif;font-size:12px;text-transform:uppercase;letter-spacing:1px;color:var(--gray);font-weight:600;border-bottom:1px solid var(--border)">Amount</th>
+            <th style="padding:10px 12px;text-align:right;font-family:'Rajdhani',sans-serif;font-size:12px;text-transform:uppercase;letter-spacing:1px;color:#1D9E75;font-weight:600;border-bottom:1px solid var(--border)">Commission</th>
+            <th style="padding:10px 12px;text-align:center;font-family:'Rajdhani',sans-serif;font-size:12px;text-transform:uppercase;letter-spacing:1px;color:var(--gray);font-weight:600;border-bottom:1px solid var(--border)">Method</th>
+          </tr>
+        </thead>
+        <tbody id="sales-tbody">
+          <tr><td colspan="6" style="padding:24px;text-align:center;color:var(--gray)">Loading sales...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
 </div>
 
 </div>
@@ -422,8 +494,148 @@ async function saveGallery() {
 const origDoLogin = doLogin;
 doLogin = async function() {
   await origDoLogin();
-  if (pricingData) loadGallery();
+  if (pricingData) {
+    loadGallery();
+    loadSales();
+  }
 };
+
+// ===== SALES DASHBOARD =====
+let salesData = [];
+
+async function loadSales() {
+  try {
+    const res = await fetch('/api/get-sales', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: adminPassword })
+    });
+    if (!res.ok) { const e = await res.json(); throw new Error(e.error); }
+    const data = await res.json();
+    salesData = data.sales || [];
+
+    // Update summary
+    document.getElementById('stat-count').textContent = data.summary.totalSales;
+    document.getElementById('stat-revenue').textContent = '$' + data.summary.totalRevenue.toLocaleString();
+    document.getElementById('stat-commission').textContent = '$' + data.summary.totalCommission.toLocaleString();
+    document.getElementById('stat-rate').textContent = Math.round(data.summary.commissionRate * 100) + '%';
+
+    // Render table
+    const tbody = document.getElementById('sales-tbody');
+    if (salesData.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="6" style="padding:24px;text-align:center;color:var(--gray)">No sales recorded yet. Sales auto-log from card payments, or use "Log Manual Sale" for cash/crypto.</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = salesData.map(s => {
+      const date = new Date(s.timestamp).toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' });
+      const methodColors = { card:'#7B2FBE', cash:'#1D9E75', cashapp:'#00D632', crypto:'#FF6600', manual:'var(--gray)' };
+      const color = methodColors[s.paymentMethod] || 'var(--gray)';
+      return `<tr style="border-bottom:1px solid rgba(255,255,255,0.03)">
+        <td style="padding:10px 12px;color:var(--gray-light)">${date}</td>
+        <td style="padding:10px 12px;color:var(--white);font-weight:500">${s.customer}</td>
+        <td style="padding:10px 12px;color:var(--gray-light)">${s.service}</td>
+        <td style="padding:10px 12px;text-align:right;font-family:'Rajdhani',sans-serif;font-weight:700;font-size:15px">$${s.amount.toLocaleString()}</td>
+        <td style="padding:10px 12px;text-align:right;font-family:'Rajdhani',sans-serif;font-weight:700;font-size:15px;color:#1D9E75">$${s.commission.toLocaleString()}</td>
+        <td style="padding:10px 12px;text-align:center"><span style="background:${color};color:#fff;padding:3px 10px;border-radius:20px;font-size:11px;font-family:'Rajdhani',sans-serif;font-weight:600;text-transform:uppercase;letter-spacing:0.5px">${s.paymentMethod}</span></td>
+      </tr>`;
+    }).join('');
+
+  } catch(e) {
+    document.getElementById('sales-tbody').innerHTML = '<tr><td colspan="6" style="padding:24px;text-align:center;color:var(--red)">' + (e.message || 'Failed to load sales. Make sure BLOB_READ_WRITE_TOKEN is set in Vercel env vars.') + '</td></tr>';
+  }
+}
+
+async function logManualSale() {
+  const customer = document.getElementById('ms-customer').value.trim();
+  const service = document.getElementById('ms-service').value.trim();
+  const amount = parseFloat(document.getElementById('ms-amount').value);
+  const method = document.getElementById('ms-method').value;
+  const vehicle = document.getElementById('ms-vehicle').value.trim();
+  const notes = document.getElementById('ms-notes').value.trim();
+
+  if (!customer || !amount) { showToast('Enter customer name and amount'); return; }
+
+  try {
+    const res = await fetch('/api/log-sale', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        password: adminPassword,
+        sale: { customer, service, amount, paymentMethod: method, vehicle, notes, source: 'manual' }
+      })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error);
+    showToast('Sale logged: $' + amount);
+    // Clear form
+    document.getElementById('ms-customer').value = '';
+    document.getElementById('ms-service').value = '';
+    document.getElementById('ms-amount').value = '';
+    document.getElementById('ms-vehicle').value = '';
+    document.getElementById('ms-notes').value = '';
+    document.getElementById('manual-sale-form').style.display = 'none';
+    loadSales();
+  } catch(e) {
+    showToast(e.message || 'Failed to log sale');
+  }
+}
+
+function exportXLSX() {
+  if (salesData.length === 0) { showToast('No sales to export'); return; }
+
+  // Load SheetJS from CDN if not loaded
+  if (!window.XLSX) {
+    const s = document.createElement('script');
+    s.src = 'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js';
+    s.onload = () => buildAndDownloadXLSX();
+    document.head.appendChild(s);
+  } else {
+    buildAndDownloadXLSX();
+  }
+}
+
+function buildAndDownloadXLSX() {
+  const rows = salesData.map(s => ({
+    'Date': new Date(s.timestamp).toLocaleDateString('en-US'),
+    'Time': new Date(s.timestamp).toLocaleTimeString('en-US'),
+    'Sale ID': s.id,
+    'Customer': s.customer,
+    'Service': s.service,
+    'Vehicle': s.vehicle || '',
+    'Amount ($)': s.amount,
+    'Commission ($)': s.commission,
+    'Commission Rate': s.commissionRate,
+    'Payment Method': s.paymentMethod,
+    'Source': s.source,
+    'Stripe ID': s.stripePaymentId || '',
+    'Notes': s.notes || '',
+    'Status': s.status
+  }));
+
+  // Add summary row
+  const totalRev = salesData.reduce((s, r) => s + r.amount, 0);
+  const totalComm = salesData.reduce((s, r) => s + r.commission, 0);
+  rows.push({});
+  rows.push({
+    'Date': 'TOTALS',
+    'Customer': salesData.length + ' sales',
+    'Amount ($)': Math.round(totalRev * 100) / 100,
+    'Commission ($)': Math.round(totalComm * 100) / 100,
+  });
+
+  const ws = XLSX.utils.json_to_sheet(rows);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Sales');
+
+  // Auto-size columns
+  const colWidths = Object.keys(rows[0] || {}).map(k => ({ wch: Math.max(k.length, 12) }));
+  ws['!cols'] = colWidths;
+
+  const filename = 'fritz-sales-' + new Date().toISOString().split('T')[0] + '.xlsx';
+  XLSX.writeFile(wb, filename);
+  showToast('Exported ' + salesData.length + ' sales to ' + filename);
+}
 </script>
 </body>
 </html>
