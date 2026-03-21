@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fritz's Detail — Admin Panel</title>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Rajdhani:wght@400;500;600;700&family=Open+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--purple:#7B2FBE;--purple-light:#9B4FDE;--black:#0A0A0A;--dark:#121212;--dark-card:#1A1A1A;--white:#FFF;--gray:#999;--gray-light:#CCC;--border:rgba(123,47,190,0.25);--green:#1D9E75;--red:#E24B4A}
+body{font-family:'Open Sans',sans-serif;background:var(--black);color:var(--white);min-height:100vh}
+.header{background:rgba(10,10,10,0.95);border-bottom:1px solid var(--border);padding:16px 24px;display:flex;align-items:center;justify-content:space-between}
+.header a{color:var(--purple-light);text-decoration:none;font-family:'Rajdhani',sans-serif;font-weight:600;font-size:14px;text-transform:uppercase;letter-spacing:1px}
+.header h1{font-family:'Oswald',sans-serif;font-size:18px;font-weight:600;letter-spacing:1px;text-transform:uppercase}
+.header h1 span{color:var(--purple-light)}
+.container{max-width:1000px;margin:0 auto;padding:32px 24px}
+
+/* LOGIN */
+#login-screen{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;text-align:center}
+#login-screen h2{font-family:'Oswald',sans-serif;font-size:32px;text-transform:uppercase;margin-bottom:8px}
+#login-screen p{color:var(--gray);margin-bottom:24px}
+.login-box{background:var(--dark-card);border:1px solid var(--border);border-radius:12px;padding:32px;width:100%;max-width:360px}
+.input{width:100%;padding:12px 14px;background:var(--dark);border:1px solid var(--border);border-radius:8px;color:#fff;font-size:15px;font-family:'Open Sans',sans-serif;outline:none;transition:border .2s}
+.input:focus{border-color:var(--purple)}
+.btn{font-family:'Rajdhani',sans-serif;font-weight:700;font-size:15px;letter-spacing:1.5px;text-transform:uppercase;padding:12px 24px;border-radius:8px;border:none;cursor:pointer;display:inline-flex;align-items:center;gap:8px;transition:all .2s}
+.btn-primary{background:var(--purple);color:#fff}
+.btn-primary:hover{background:var(--purple-light)}
+.btn-outline{background:transparent;color:var(--white);border:2px solid var(--border)}
+.btn-outline:hover{border-color:var(--purple)}
+.btn-green{background:var(--green);color:#fff}
+.btn-green:hover{background:#25b888}
+.btn-red{background:var(--red);color:#fff}
+.btn-red:hover{background:#f06060}
+
+/* ADMIN */
+#admin-screen{display:none}
+.section-label{font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:2px;color:var(--purple-light);margin-bottom:12px}
+.toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:24px}
+.status-bar{padding:10px 16px;border-radius:8px;font-size:14px;margin-bottom:24px;display:none}
+.status-bar.success{display:block;background:rgba(29,158,117,0.15);border:1px solid rgba(29,158,117,0.3);color:var(--green)}
+.status-bar.error{display:block;background:rgba(226,75,74,0.15);border:1px solid rgba(226,75,74,0.3);color:var(--red)}
+
+/* PRICING TABLE */
+.tier-section{margin-bottom:32px}
+.tier-header{font-family:'Oswald',sans-serif;font-size:22px;text-transform:uppercase;margin-bottom:4px;font-weight:600}
+.tier-sub{font-size:13px;color:var(--gray);margin-bottom:16px}
+.price-table{width:100%;border-collapse:collapse;margin-bottom:8px}
+.price-table th{font-family:'Rajdhani',sans-serif;font-size:12px;text-transform:uppercase;letter-spacing:1.5px;color:var(--gray);font-weight:600;padding:8px 12px;text-align:left;border-bottom:1px solid var(--border);background:rgba(123,47,190,0.05)}
+.price-table th:nth-child(2){text-align:right;width:120px}
+.price-table th:nth-child(3){width:50px}
+.price-table td{padding:6px 12px;border-bottom:1px solid rgba(255,255,255,0.03)}
+.price-table td:nth-child(2){text-align:right}
+.price-table .cat-header{background:rgba(123,47,190,0.08);font-family:'Rajdhani',sans-serif;font-weight:700;font-size:13px;text-transform:uppercase;letter-spacing:1px;color:var(--purple-light);padding:10px 12px}
+.price-input{width:90px;padding:6px 8px;background:var(--dark);border:1px solid var(--border);border-radius:6px;color:#fff;font-size:14px;font-weight:600;text-align:right;font-family:'Rajdhani',sans-serif;outline:none}
+.price-input:focus{border-color:var(--purple)}
+.name-input{width:100%;padding:6px 8px;background:transparent;border:1px solid transparent;border-radius:6px;color:var(--gray-light);font-size:14px;font-family:'Open Sans',sans-serif;outline:none}
+.name-input:focus{border-color:var(--border);background:var(--dark)}
+.del-btn{background:none;border:none;color:var(--red);cursor:pointer;font-size:16px;opacity:0.4;transition:opacity .2s;padding:4px 8px}
+.del-btn:hover{opacity:1}
+.add-row-btn{font-size:13px;color:var(--purple-light);background:none;border:1px dashed var(--border);border-radius:6px;padding:6px 16px;cursor:pointer;font-family:'Rajdhani',sans-serif;font-weight:600;text-transform:uppercase;letter-spacing:1px;transition:all .2s;margin-top:4px}
+.add-row-btn:hover{border-color:var(--purple);background:rgba(123,47,190,0.1)}
+
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(100px);background:var(--green);color:#fff;padding:14px 28px;border-radius:10px;font-family:'Rajdhani',sans-serif;font-weight:600;font-size:15px;letter-spacing:1px;z-index:999;transition:transform .3s;pointer-events:none}
+.toast.show{transform:translateX(-50%) translateY(0)}
+
+@media(max-width:600px){.toolbar{flex-direction:column}.toolbar .btn{width:100%;justify-content:center}}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <a href="index.html">&larr; Back to Site</a>
+  <h1>Admin <span>Panel</span></h1>
+  <span></span>
+</div>
+
+<div class="container">
+
+<!-- LOGIN -->
+<div id="login-screen">
+  <h2>Admin Access</h2>
+  <p>Enter your admin password to manage pricing.</p>
+  <div class="login-box">
+    <input type="password" class="input" id="pw-input" placeholder="Password" style="margin-bottom:12px" onkeydown="if(event.key==='Enter')doLogin()">
+    <div id="login-error" style="color:var(--red);font-size:13px;min-height:20px;margin-bottom:12px"></div>
+    <button class="btn btn-primary" style="width:100%;justify-content:center" onclick="doLogin()">Unlock</button>
+  </div>
+</div>
+
+<!-- ADMIN PANEL -->
+<div id="admin-screen">
+  <div class="section-label">Manage Pricing</div>
+  <p style="color:var(--gray);font-size:14px;margin-bottom:20px">Edit prices below. Changes update the entire website — pricing tables, payment forms, and invoices. Hit Save when done.</p>
+
+  <div class="toolbar">
+    <button class="btn btn-green" onclick="savePricing()">Save & Deploy</button>
+    <button class="btn btn-outline" onclick="downloadCSV()">Download CSV</button>
+    <label class="btn btn-outline" style="cursor:pointer">
+      Upload CSV
+      <input type="file" accept=".csv" onchange="uploadCSV(event)" style="display:none">
+    </label>
+    <button class="btn btn-outline" onclick="resetPricing()">Reset to Saved</button>
+  </div>
+
+  <div id="status-bar" class="status-bar"></div>
+  <div id="pricing-editor"></div>
+</div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+let pricingData = null;
+let adminPassword = '';
+
+async function doLogin() {
+  const pw = document.getElementById('pw-input').value;
+  if (!pw) { document.getElementById('login-error').textContent = 'Enter a password'; return; }
+  adminPassword = pw;
+
+  // Try loading pricing to verify connection works
+  try {
+    const res = await fetch('/pricing.json?t=' + Date.now());
+    if (!res.ok) throw new Error('Failed to load pricing');
+    pricingData = await res.json();
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('admin-screen').style.display = 'block';
+    renderEditor();
+  } catch(e) {
+    document.getElementById('login-error').textContent = 'Could not load pricing data.';
+  }
+}
+
+function renderEditor() {
+  const container = document.getElementById('pricing-editor');
+  let html = '';
+
+  for (const [tierKey, tier] of Object.entries(pricingData)) {
+    html += `<div class="tier-section" data-tier="${tierKey}">`;
+    html += `<div class="tier-header">${tier.label}</div>`;
+    html += `<div class="tier-sub">Edit service names and prices. Add or remove services as needed.</div>`;
+    html += `<table class="price-table">`;
+    html += `<thead><tr><th>Service</th><th>Price</th><th></th></tr></thead><tbody>`;
+
+    for (const [section, items] of Object.entries({exterior: tier.exterior, interior: tier.interior, packages: tier.packages})) {
+      const sectionLabel = section.charAt(0).toUpperCase() + section.slice(1);
+      html += `<tr><td class="cat-header" colspan="3">${sectionLabel}</td></tr>`;
+      for (const [name, price] of Object.entries(items)) {
+        html += `<tr data-tier="${tierKey}" data-section="${section}">
+          <td><input class="name-input" value="${name}" data-orig="${name}" onchange="updateName(this,'${tierKey}','${section}')"></td>
+          <td><span style="color:var(--gray);margin-right:2px">$</span><input class="price-input" type="number" min="0" value="${price}" onchange="updatePrice(this,'${tierKey}','${section}','${name}')"></td>
+          <td><button class="del-btn" onclick="deleteService(this,'${tierKey}','${section}','${name}')" title="Remove">×</button></td>
+        </tr>`;
+      }
+      html += `<tr><td colspan="3"><button class="add-row-btn" onclick="addService('${tierKey}','${section}')">+ Add ${sectionLabel} Service</button></td></tr>`;
+    }
+
+    html += `</tbody></table></div>`;
+  }
+
+  container.innerHTML = html;
+}
+
+function updatePrice(input, tier, section, name) {
+  const val = parseInt(input.value) || 0;
+  if (pricingData[tier] && pricingData[tier][section]) {
+    // Find the actual key (might have been renamed)
+    const origName = input.closest('tr').querySelector('.name-input').value;
+    // Delete old key if name changed
+    if (name !== origName && pricingData[tier][section][name] !== undefined) {
+      delete pricingData[tier][section][name];
+    }
+    pricingData[tier][section][origName] = val;
+  }
+}
+
+function updateName(input, tier, section) {
+  const oldName = input.dataset.orig;
+  const newName = input.value.trim();
+  if (!newName || oldName === newName) return;
+  const price = pricingData[tier][section][oldName];
+  delete pricingData[tier][section][oldName];
+  pricingData[tier][section][newName] = price;
+  input.dataset.orig = newName;
+  // Update the price input's onchange reference
+  const priceInput = input.closest('tr').querySelector('.price-input');
+  priceInput.setAttribute('onchange', `updatePrice(this,'${tier}','${section}','${newName}')`);
+  const delBtn = input.closest('tr').querySelector('.del-btn');
+  delBtn.setAttribute('onclick', `deleteService(this,'${tier}','${section}','${newName}')`);
+}
+
+function deleteService(btn, tier, section, name) {
+  if (!confirm(`Remove "${name}" from ${pricingData[tier].label} ${section}?`)) return;
+  delete pricingData[tier][section][name];
+  btn.closest('tr').remove();
+  showToast('Service removed — save to apply');
+}
+
+function addService(tier, section) {
+  const name = prompt('Service name:');
+  if (!name) return;
+  const price = parseInt(prompt('Price ($):'));
+  if (isNaN(price)) return;
+  pricingData[tier][section][name] = price;
+  renderEditor();
+  showToast('Service added — save to apply');
+}
+
+async function savePricing() {
+  const statusBar = document.getElementById('status-bar');
+  statusBar.className = 'status-bar';
+  statusBar.style.display = 'block';
+  statusBar.textContent = 'Saving...';
+  statusBar.style.background = 'rgba(123,47,190,0.15)';
+  statusBar.style.borderColor = 'rgba(123,47,190,0.3)';
+  statusBar.style.color = 'var(--purple-light)';
+
+  try {
+    const res = await fetch('/api/save-pricing', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: adminPassword, pricing: pricingData })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error);
+    statusBar.className = 'status-bar success';
+    statusBar.textContent = data.message || 'Saved! Site will redeploy in ~30 seconds.';
+    showToast('Pricing saved!');
+  } catch(e) {
+    statusBar.className = 'status-bar error';
+    statusBar.textContent = e.message || 'Save failed';
+  }
+}
+
+function downloadCSV() {
+  let csv = 'Vehicle Type,Category,Service,Price\n';
+  for (const [tierKey, tier] of Object.entries(pricingData)) {
+    for (const [section, items] of Object.entries({exterior: tier.exterior, interior: tier.interior, packages: tier.packages})) {
+      for (const [name, price] of Object.entries(items)) {
+        csv += `"${tier.label}","${section}","${name}",${price}\n`;
+      }
+    }
+  }
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'fritz-pricing.csv';
+  a.click();
+  showToast('CSV downloaded');
+}
+
+function uploadCSV(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const lines = e.target.result.split('\n').filter(l => l.trim());
+      if (lines.length < 2) throw new Error('Empty CSV');
+
+      // Reset pricing
+      const newPricing = JSON.parse(JSON.stringify(pricingData));
+      for (const tier of Object.values(newPricing)) {
+        tier.exterior = {};
+        tier.interior = {};
+        tier.packages = {};
+      }
+
+      // Map labels to keys
+      const labelMap = {};
+      for (const [key, tier] of Object.entries(pricingData)) {
+        labelMap[tier.label.toLowerCase()] = key;
+      }
+
+      for (let i = 1; i < lines.length; i++) {
+        const cols = lines[i].match(/("([^"]*)"|[^,]+)/g);
+        if (!cols || cols.length < 4) continue;
+        const vehicleLabel = cols[0].replace(/"/g, '').trim().toLowerCase();
+        const section = cols[1].replace(/"/g, '').trim().toLowerCase();
+        const service = cols[2].replace(/"/g, '').trim();
+        const price = parseInt(cols[3].replace(/"/g, '').trim());
+
+        const tierKey = labelMap[vehicleLabel];
+        if (tierKey && newPricing[tierKey][section] !== undefined && service && !isNaN(price)) {
+          newPricing[tierKey][section][service] = price;
+        }
+      }
+
+      pricingData = newPricing;
+      renderEditor();
+      showToast('CSV imported — review and save');
+    } catch(err) {
+      alert('CSV import error: ' + err.message);
+    }
+  };
+  reader.readAsText(file);
+  event.target.value = '';
+}
+
+async function resetPricing() {
+  if (!confirm('Reset all changes to last saved version?')) return;
+  const res = await fetch('/pricing.json?t=' + Date.now());
+  pricingData = await res.json();
+  renderEditor();
+  showToast('Reset to saved pricing');
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+</script>
+</body>
+</html>

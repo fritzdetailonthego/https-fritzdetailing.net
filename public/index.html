@@ -1,0 +1,1154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Fritz's Detail on the Go — Professional mobile car detailing in Southwest Virginia. Premium washes, paint correction, ceramic coating & more. We come to you!">
+<meta name="keywords" content="mobile detailing, car detailing, Southwest Virginia, SWVA, ceramic coating, paint correction, Fritz detailing">
+<meta property="og:title" content="Fritz's Detail on the Go | Mobile Detailing SWVA">
+<meta property="og:description" content="Professional mobile detailing brought to your door in Southwest Virginia. Premium washes, ceramic coating, paint correction & more.">
+<meta property="og:url" content="https://fritzdetailing.net">
+<meta property="og:type" content="website">
+<link rel="canonical" href="https://fritzdetailing.net">
+<title>Fritz's Detail on the Go | Mobile Detailing Southwest Virginia | fritzdetailing.net</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Rajdhani:wght@400;500;600;700&family=Open+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+--purple:#7B2FBE;
+--purple-light:#9B4FDE;
+--purple-dark:#5A1F8E;
+--purple-glow:rgba(123,47,190,0.3);
+--black:#0A0A0A;
+--dark:#121212;
+--dark-card:#1A1A1A;
+--dark-card-hover:#222;
+--white:#FFFFFF;
+--gray:#999;
+--gray-light:#CCC;
+--border:rgba(123,47,190,0.25);
+}
+html{scroll-behavior:smooth}
+body{font-family:'Open Sans',sans-serif;background:var(--black);color:var(--white);overflow-x:hidden;line-height:1.6}
+
+/* HEADER */
+.header{position:fixed;top:0;left:0;right:0;z-index:100;padding:12px 24px;background:rgba(10,10,10,0.92);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;transition:all .3s}
+.header-logo{display:flex;align-items:center;gap:10px}
+.header-logo img{height:48px;width:auto}
+.header-brand{font-family:'Oswald',sans-serif;font-size:18px;font-weight:600;letter-spacing:1px;text-transform:uppercase}
+.header-brand span{color:var(--purple-light)}
+nav{display:flex;gap:24px;align-items:center}
+nav a{color:var(--gray-light);text-decoration:none;font-family:'Rajdhani',sans-serif;font-size:15px;font-weight:600;text-transform:uppercase;letter-spacing:1.5px;transition:color .2s}
+nav a:hover{color:var(--purple-light)}
+.nav-cta{background:var(--purple);color:#fff!important;padding:8px 20px;border-radius:6px;transition:background .2s,transform .1s}
+.nav-cta:hover{background:var(--purple-light);transform:translateY(-1px)}
+.hamburger{display:none;flex-direction:column;gap:5px;cursor:pointer;padding:4px}
+.hamburger span{width:24px;height:2px;background:var(--white);transition:all .3s}
+
+/* HERO */
+.hero{min-height:100vh;display:flex;align-items:center;justify-content:center;text-align:center;padding:120px 24px 80px;position:relative;overflow:hidden}
+.hero::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 50% 30%,rgba(123,47,190,0.15) 0%,transparent 60%)}
+.hero-content{max-width:800px;position:relative;z-index:2}
+.hero-logo{width:320px;max-width:90vw;margin:0 auto 32px;filter:drop-shadow(0 0 40px rgba(123,47,190,0.3))}
+.hero-tagline{font-family:'Rajdhani',sans-serif;font-size:clamp(18px,4vw,26px);color:var(--gray-light);letter-spacing:3px;text-transform:uppercase;margin-bottom:16px;font-weight:500}
+.hero h1{font-family:'Oswald',sans-serif;font-size:clamp(36px,7vw,64px);font-weight:700;line-height:1.1;margin-bottom:24px;text-transform:uppercase}
+.hero h1 span{color:var(--purple-light);display:block}
+.hero-sub{font-size:18px;color:var(--gray);max-width:560px;margin:0 auto 40px}
+.hero-btns{display:flex;gap:16px;justify-content:center;flex-wrap:wrap}
+.btn{font-family:'Rajdhani',sans-serif;font-weight:700;font-size:16px;letter-spacing:2px;text-transform:uppercase;padding:14px 36px;border-radius:6px;border:none;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:8px;transition:all .25s}
+.btn-primary{background:var(--purple);color:#fff}
+.btn-primary:hover{background:var(--purple-light);transform:translateY(-2px);box-shadow:0 8px 30px var(--purple-glow)}
+.btn-outline{background:transparent;color:var(--white);border:2px solid var(--purple)}
+.btn-outline:hover{background:var(--purple);color:#fff}
+
+/* SECTIONS */
+.section{padding:80px 24px}
+.section-title{font-family:'Oswald',sans-serif;font-size:clamp(28px,5vw,42px);text-transform:uppercase;text-align:center;margin-bottom:12px;font-weight:700}
+.section-title span{color:var(--purple-light)}
+.section-sub{text-align:center;color:var(--gray);font-size:16px;max-width:600px;margin:0 auto 48px}
+.container{max-width:1100px;margin:0 auto}
+
+/* SERVICES */
+.services-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:24px}
+.service-card{background:var(--dark-card);border:1px solid var(--border);border-radius:12px;padding:32px 24px;text-align:center;transition:all .3s}
+.service-card:hover{border-color:var(--purple);transform:translateY(-4px);background:var(--dark-card-hover)}
+.service-icon{width:56px;height:56px;margin:0 auto 16px;background:rgba(123,47,190,0.15);border-radius:50%;display:flex;align-items:center;justify-content:center}
+.service-icon svg{width:28px;height:28px;stroke:var(--purple-light);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.service-card h3{font-family:'Oswald',sans-serif;font-size:20px;text-transform:uppercase;margin-bottom:8px;font-weight:600}
+.service-card p{font-size:14px;color:var(--gray);line-height:1.5}
+
+/* PRICING */
+.pricing-section{background:var(--dark)}
+.vehicle-tabs{display:flex;justify-content:center;gap:8px;margin-bottom:40px;flex-wrap:wrap}
+.tab{font-family:'Rajdhani',sans-serif;font-weight:700;font-size:15px;letter-spacing:1.5px;text-transform:uppercase;padding:10px 28px;border:2px solid var(--border);border-radius:8px;background:transparent;color:var(--gray);cursor:pointer;transition:all .25s}
+.tab.active,.tab:hover{border-color:var(--purple);color:var(--white);background:rgba(123,47,190,0.15)}
+.tab.active{background:var(--purple);color:#fff}
+
+.pricing-container{display:none}
+.pricing-container.active{display:block}
+
+.pricing-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:24px}
+.pricing-col{background:var(--dark-card);border:1px solid var(--border);border-radius:12px;overflow:hidden}
+.pricing-col-header{background:rgba(123,47,190,0.1);padding:20px 24px;border-bottom:1px solid var(--border);text-align:center}
+.pricing-col-header h3{font-family:'Oswald',sans-serif;font-size:22px;text-transform:uppercase;letter-spacing:2px;font-weight:600}
+.pricing-row{display:flex;justify-content:space-between;align-items:center;padding:14px 24px;border-bottom:1px solid rgba(255,255,255,0.05)}
+.pricing-row:last-child{border-bottom:none}
+.pricing-row .name{font-size:15px;color:var(--gray-light)}
+.pricing-row .price{font-family:'Rajdhani',sans-serif;font-size:20px;font-weight:700;color:var(--purple-light)}
+
+.packages-section{margin-top:40px}
+.package-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:24px}
+.package-card{background:var(--dark-card);border:1px solid var(--border);border-radius:12px;padding:32px 24px;text-align:center;position:relative;overflow:hidden;transition:all .3s}
+.package-card:hover{border-color:var(--purple);transform:translateY(-4px)}
+.package-card.featured{border-color:var(--purple)}
+.package-card.featured::before{content:'MOST POPULAR';position:absolute;top:16px;right:-32px;background:var(--purple);color:#fff;font-family:'Rajdhani',sans-serif;font-size:11px;font-weight:700;letter-spacing:1.5px;padding:4px 40px;transform:rotate(45deg)}
+.package-name{font-family:'Oswald',sans-serif;font-size:24px;text-transform:uppercase;margin-bottom:8px;font-weight:600}
+.package-price{font-family:'Rajdhani',sans-serif;font-size:48px;font-weight:700;color:var(--purple-light);margin-bottom:16px}
+.package-price sup{font-size:22px;top:-14px;position:relative}
+.package-desc{font-size:14px;color:var(--gray);margin-bottom:20px}
+
+/* PAYMENT */
+.payment-section{text-align:center}
+.payment-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:20px;max-width:800px;margin:0 auto}
+.payment-card{background:var(--dark-card);border:1px solid var(--border);border-radius:12px;padding:24px 20px;text-align:center;text-decoration:none;color:var(--white);transition:all .3s;display:flex;flex-direction:column;align-items:center;gap:12px}
+.payment-card:hover{border-color:var(--purple);transform:translateY(-3px);background:var(--dark-card-hover)}
+.payment-icon{width:48px;height:48px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:700}
+.payment-card h3{font-family:'Rajdhani',sans-serif;font-size:18px;font-weight:700;text-transform:uppercase;letter-spacing:1px}
+.payment-card p{font-size:13px;color:var(--gray)}
+.pay-cashapp .payment-icon{background:#00D632;color:#fff}
+.pay-card .payment-icon{background:linear-gradient(135deg,#434343,#1a1a2e);color:var(--purple-light);border:1px solid var(--purple)}
+.pay-crypto .payment-icon{background:#FF6600;color:#fff}
+
+/* AREA */
+.area-section{background:var(--dark);text-align:center}
+.area-badge{display:inline-block;background:rgba(123,47,190,0.15);border:1px solid var(--border);border-radius:40px;padding:12px 32px;font-family:'Rajdhani',sans-serif;font-size:18px;font-weight:600;letter-spacing:1px;text-transform:uppercase;margin-bottom:16px}
+.area-badge svg{display:inline;vertical-align:middle;margin-right:8px}
+
+/* CTA */
+.cta-section{text-align:center;padding:80px 24px;position:relative}
+.cta-section::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at center,rgba(123,47,190,0.12) 0%,transparent 70%)}
+.cta-content{position:relative;z-index:2}
+.cta-content h2{font-family:'Oswald',sans-serif;font-size:clamp(28px,5vw,48px);text-transform:uppercase;margin-bottom:16px;font-weight:700}
+.cta-content h2 span{color:var(--purple-light)}
+
+/* FOOTER */
+.footer{background:var(--dark);padding:40px 24px;text-align:center;border-top:1px solid var(--border)}
+.footer-links{display:flex;justify-content:center;gap:24px;margin-bottom:16px;flex-wrap:wrap}
+.footer-links a{color:var(--gray);text-decoration:none;font-size:14px;transition:color .2s}
+.footer-links a:hover{color:var(--purple-light)}
+.footer p{color:var(--gray);font-size:13px}
+
+/* MOBILE */
+@media(max-width:768px){
+  nav{display:none;position:absolute;top:100%;left:0;right:0;background:rgba(10,10,10,0.98);flex-direction:column;padding:24px;gap:16px;border-bottom:1px solid var(--border)}
+  nav.open{display:flex}
+  .hamburger{display:flex}
+  .hero-logo{width:240px}
+  .pricing-grid{grid-template-columns:1fr}
+  .payment-grid{grid-template-columns:1fr 1fr}
+}
+@media(max-width:480px){
+  .payment-grid{grid-template-columns:1fr}
+  .hero-btns{flex-direction:column;align-items:center}
+}
+
+/* ANIMATIONS */
+@keyframes fadeUp{from{opacity:0;transform:translateY(30px)}to{opacity:1;transform:translateY(0)}}
+.fade-up{opacity:0;animation:fadeUp .6s ease forwards}
+.fade-up.d1{animation-delay:.1s}
+.fade-up.d2{animation-delay:.2s}
+.fade-up.d3{animation-delay:.3s}
+.fade-up.d4{animation-delay:.4s}
+
+/* SCROLLBAR */
+::-webkit-scrollbar{width:8px}
+::-webkit-scrollbar-track{background:var(--dark)}
+::-webkit-scrollbar-thumb{background:var(--purple-dark);border-radius:4px}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header class="header" id="header">
+  <div class="header-logo">
+    <div class="header-brand">Fritz's <span>Detail</span></div>
+  </div>
+  <div class="hamburger" onclick="document.querySelector('nav').classList.toggle('open')">
+    <span></span><span></span><span></span>
+  </div>
+  <nav>
+    <a href="#services">Services</a>
+    <a href="#pricing">Pricing</a>
+    <a href="about.html">About</a>
+    <a href="#payment">Pay</a>
+    <a href="invoice.html">Invoice</a>
+    <a href="#contact" class="nav-cta">Book Now</a>
+  </nav>
+</header>
+
+<!-- HERO -->
+<section class="hero" id="home">
+  <div class="hero-content">
+    <div class="hero-tagline fade-up">Southwest Virginia's Premier Mobile Detailing</div>
+    <h1 class="fade-up d1">We Come To You<span>& Make It Shine</span></h1>
+    <p class="hero-sub fade-up d2">From premium hand washes with top-tier products to full ceramic coating — Fritz's Detail on the Go brings showroom-quality results right to your driveway.</p>
+    <div class="hero-btns fade-up d3">
+      <a href="#pricing" class="btn btn-primary">View Pricing</a>
+      <a href="#payment" class="btn btn-outline">Book & Pay</a>
+    </div>
+  </div>
+</section>
+
+<!-- SERVICES -->
+<section class="section" id="services">
+  <div class="container">
+    <h2 class="section-title">What We <span>Offer</span></h2>
+    <p class="section-sub">Professional mobile detailing services brought directly to you in the SWVA area. We use only the highest quality products for exceptional results.</p>
+    <div class="services-grid">
+      <div class="service-card">
+        <div class="service-icon">
+          <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+        </div>
+        <h3>Premium Wash</h3>
+        <p>Thorough hand wash using pH-balanced soaps and microfiber mitts for a scratch-free, deep clean finish.</p>
+      </div>
+      <div class="service-card">
+        <div class="service-icon">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+        </div>
+        <h3>Paint Correction</h3>
+        <p>Multi-stage polishing to remove swirl marks, scratches, and oxidation — restoring your paint's true depth and clarity.</p>
+      </div>
+      <div class="service-card">
+        <div class="service-icon">
+          <svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        </div>
+        <h3>Ceramic Coating</h3>
+        <p>Long-lasting ceramic glass protection that shields your paint from UV, contaminants, and makes cleaning effortless.</p>
+      </div>
+      <div class="service-card">
+        <div class="service-icon">
+          <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+        </div>
+        <h3>Interior Detail</h3>
+        <p>Deep interior cleaning, leather conditioning, carpet shampooing, and dashboard restoration for a fresh, like-new cabin.</p>
+      </div>
+      <div class="service-card">
+        <div class="service-icon">
+          <svg viewBox="0 0 24 24"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+        </div>
+        <h3>Headlight Restoration</h3>
+        <p>Restore cloudy, yellowed headlights to crystal clarity for improved visibility and a refreshed appearance.</p>
+      </div>
+      <div class="service-card">
+        <div class="service-icon">
+          <svg viewBox="0 0 24 24"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>
+        </div>
+        <h3>Decontamination</h3>
+        <p>Iron removal, clay bar treatment, and fallout decontamination to prep your paint for protection or correction.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PRICING -->
+<section class="section pricing-section" id="pricing">
+  <div class="container">
+    <h2 class="section-title">Our <span>Pricing</span></h2>
+    <p class="section-sub">Select your vehicle type below for accurate pricing. Larger vehicles require more time and product — prices reflect that.</p>
+
+    <div class="vehicle-tabs">
+      <button class="tab active" onclick="showPricing('sedan')">Sedan / Coupe / Hatchback</button>
+      <button class="tab" onclick="showPricing('suv')">SUV / Minivan / Van</button>
+      <button class="tab" onclick="showPricing('truck')">Trucks</button>
+    </div>
+
+    <!-- SEDAN -->
+    <div class="pricing-container active" id="pricing-sedan">
+      <div class="pricing-grid">
+        <div class="pricing-col">
+          <div class="pricing-col-header"><h3>Exterior</h3></div>
+          <div class="pricing-row"><span class="name">Premium Wash</span><span class="price">$90</span></div>
+          <div class="pricing-row"><span class="name">Decontamination</span><span class="price">$50</span></div>
+          <div class="pricing-row"><span class="name">Paint Correction</span><span class="price">$150</span></div>
+          <div class="pricing-row"><span class="name">Wax</span><span class="price">$125</span></div>
+          <div class="pricing-row"><span class="name">Trim Restoration</span><span class="price">$40</span></div>
+          <div class="pricing-row"><span class="name">Tire Shine</span><span class="price">$25</span></div>
+          <div class="pricing-row"><span class="name">Headlight Restoration</span><span class="price">$50</span></div>
+          <div class="pricing-row"><span class="name">Ceramic Glass Protection</span><span class="price">$25</span></div>
+          <div class="pricing-row"><span class="name">Engine Bay Clean</span><span class="price">$75</span></div>
+          <div class="pricing-row"><span class="name">Ceramic Coat</span><span class="price">$1,000</span></div>
+        </div>
+        <div class="pricing-col">
+          <div class="pricing-col-header"><h3>Interior</h3></div>
+          <div class="pricing-row"><span class="name">Interior Clean</span><span class="price">$100</span></div>
+          <div class="pricing-row"><span class="name">Carpet Shampoo</span><span class="price">$40</span></div>
+          <div class="pricing-row"><span class="name">Steam Clean</span><span class="price">$40</span></div>
+        </div>
+      </div>
+      <div class="packages-section">
+        <h3 style="font-family:'Oswald',sans-serif;font-size:26px;text-align:center;text-transform:uppercase;margin-bottom:24px;font-weight:600">Packages</h3>
+        <div class="package-cards">
+          <div class="package-card">
+            <div class="package-name">Maintenance</div>
+            <div class="package-price"><sup>$</sup>150</div>
+            <div class="package-desc">Keep your ride looking fresh with a regular maintenance detail.</div>
+            <a href="#payment" class="btn btn-primary" style="width:100%;justify-content:center">Book Now</a>
+          </div>
+          <div class="package-card featured">
+            <div class="package-name">The Shiny Package</div>
+            <div class="package-price"><sup>$</sup>275</div>
+            <div class="package-desc">Our most popular full-service package for a complete transformation.</div>
+            <a href="#payment" class="btn btn-primary" style="width:100%;justify-content:center">Book Now</a>
+          </div>
+          <div class="package-card">
+            <div class="package-name">Wash, Clay, Seal</div>
+            <div class="package-price"><sup>$</sup>140</div>
+            <div class="package-desc">Deep wash with clay bar decontamination and sealant protection.</div>
+            <a href="#payment" class="btn btn-primary" style="width:100%;justify-content:center">Book Now</a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SUV -->
+    <div class="pricing-container" id="pricing-suv">
+      <div class="pricing-grid">
+        <div class="pricing-col">
+          <div class="pricing-col-header"><h3>Exterior</h3></div>
+          <div class="pricing-row"><span class="name">Premium Wash</span><span class="price">$125</span></div>
+          <div class="pricing-row"><span class="name">Decontamination</span><span class="price">$75</span></div>
+          <div class="pricing-row"><span class="name">Paint Correction</span><span class="price">$175</span></div>
+          <div class="pricing-row"><span class="name">Wax</span><span class="price">$150</span></div>
+          <div class="pricing-row"><span class="name">Trim Restoration</span><span class="price">$40</span></div>
+          <div class="pricing-row"><span class="name">Tire Shine</span><span class="price">$25</span></div>
+          <div class="pricing-row"><span class="name">Headlight Restoration</span><span class="price">$50</span></div>
+          <div class="pricing-row"><span class="name">Ceramic Glass Protection</span><span class="price">$25</span></div>
+          <div class="pricing-row"><span class="name">Engine Bay Clean</span><span class="price">$75</span></div>
+          <div class="pricing-row"><span class="name">Ceramic Coat</span><span class="price">$1,500</span></div>
+        </div>
+        <div class="pricing-col">
+          <div class="pricing-col-header"><h3>Interior</h3></div>
+          <div class="pricing-row"><span class="name">Interior Clean</span><span class="price">$125</span></div>
+          <div class="pricing-row"><span class="name">Carpet Shampoo</span><span class="price">$60</span></div>
+          <div class="pricing-row"><span class="name">Steam Clean</span><span class="price">$50</span></div>
+        </div>
+      </div>
+      <div class="packages-section">
+        <h3 style="font-family:'Oswald',sans-serif;font-size:26px;text-align:center;text-transform:uppercase;margin-bottom:24px;font-weight:600">Packages</h3>
+        <div class="package-cards">
+          <div class="package-card">
+            <div class="package-name">Maintenance</div>
+            <div class="package-price"><sup>$</sup>200</div>
+            <div class="package-desc">Keep your ride looking fresh with a regular maintenance detail.</div>
+            <a href="#payment" class="btn btn-primary" style="width:100%;justify-content:center">Book Now</a>
+          </div>
+          <div class="package-card featured">
+            <div class="package-name">The Shiny Package</div>
+            <div class="package-price"><sup>$</sup>350</div>
+            <div class="package-desc">Our most popular full-service package for a complete transformation.</div>
+            <a href="#payment" class="btn btn-primary" style="width:100%;justify-content:center">Book Now</a>
+          </div>
+          <div class="package-card">
+            <div class="package-name">Wash, Clay, Seal</div>
+            <div class="package-price"><sup>$</sup>200</div>
+            <div class="package-desc">Deep wash with clay bar decontamination and sealant protection.</div>
+            <a href="#payment" class="btn btn-primary" style="width:100%;justify-content:center">Book Now</a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TRUCKS -->
+    <div class="pricing-container" id="pricing-truck">
+      <div class="pricing-grid">
+        <div class="pricing-col">
+          <div class="pricing-col-header"><h3>Exterior</h3></div>
+          <div class="pricing-row"><span class="name">Premium Wash</span><span class="price">$125</span></div>
+          <div class="pricing-row"><span class="name">Decontamination</span><span class="price">$75</span></div>
+          <div class="pricing-row"><span class="name">Paint Correction</span><span class="price">$175</span></div>
+          <div class="pricing-row"><span class="name">Wax</span><span class="price">$150</span></div>
+          <div class="pricing-row"><span class="name">Trim Restoration</span><span class="price">$40</span></div>
+          <div class="pricing-row"><span class="name">Tire Shine</span><span class="price">$25</span></div>
+          <div class="pricing-row"><span class="name">Headlight Restoration</span><span class="price">$50</span></div>
+          <div class="pricing-row"><span class="name">Ceramic Glass Protection</span><span class="price">$25</span></div>
+          <div class="pricing-row"><span class="name">Engine Bay Clean</span><span class="price">$75</span></div>
+          <div class="pricing-row"><span class="name">Ceramic Coat</span><span class="price">$1,250</span></div>
+        </div>
+        <div class="pricing-col">
+          <div class="pricing-col-header"><h3>Interior</h3></div>
+          <div class="pricing-row"><span class="name">Interior Clean</span><span class="price">$100</span></div>
+          <div class="pricing-row"><span class="name">Carpet Shampoo</span><span class="price">$40</span></div>
+          <div class="pricing-row"><span class="name">Steam Clean</span><span class="price">$40</span></div>
+        </div>
+      </div>
+      <div class="packages-section">
+        <h3 style="font-family:'Oswald',sans-serif;font-size:26px;text-align:center;text-transform:uppercase;margin-bottom:24px;font-weight:600">Packages</h3>
+        <div class="package-cards">
+          <div class="package-card">
+            <div class="package-name">Maintenance</div>
+            <div class="package-price"><sup>$</sup>180</div>
+            <div class="package-desc">Keep your ride looking fresh with a regular maintenance detail.</div>
+            <a href="#payment" class="btn btn-primary" style="width:100%;justify-content:center">Book Now</a>
+          </div>
+          <div class="package-card featured">
+            <div class="package-name">The Shiny Package</div>
+            <div class="package-price"><sup>$</sup>325</div>
+            <div class="package-desc">Our most popular full-service package for a complete transformation.</div>
+            <a href="#payment" class="btn btn-primary" style="width:100%;justify-content:center">Book Now</a>
+          </div>
+          <div class="package-card">
+            <div class="package-name">Wash, Clay, Seal</div>
+            <div class="package-price"><sup>$</sup>200</div>
+            <div class="package-desc">Deep wash with clay bar decontamination and sealant protection.</div>
+            <a href="#payment" class="btn btn-primary" style="width:100%;justify-content:center">Book Now</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- SERVICE AREA -->
+<section class="section area-section">
+  <div class="container">
+    <div class="area-badge">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--purple-light)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+      Southwest Virginia
+    </div>
+    <h2 class="section-title">Mobile Detailing <span>That Comes To You</span></h2>
+    <p class="section-sub">No need to drop your car off anywhere. We bring all professional-grade equipment and premium products directly to your home, office, or wherever your vehicle is parked in the SWVA area.</p>
+  </div>
+</section>
+
+<!-- PAYMENT -->
+<section class="section payment-section" id="payment">
+  <div class="container">
+    <h2 class="section-title">Book & <span>Pay</span></h2>
+    <p class="section-sub">Choose your preferred payment method below. Reach out to schedule your appointment, then pay securely with any option.</p>
+    <div class="payment-grid">
+      <a href="https://cash.app/$zackfritz08" target="_blank" rel="noopener" class="payment-card pay-cashapp">
+        <div class="payment-icon">$</div>
+        <h3>Cash App</h3>
+        <p>$zackfritz08</p>
+      </a>
+      <div class="payment-card pay-card" id="card-pay-btn" style="cursor:pointer" onclick="document.getElementById('card-modal').style.display='flex'">
+        <div class="payment-icon">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+        </div>
+        <h3>Credit / Debit</h3>
+        <p>Visa, Mastercard, Amex</p>
+      </div>
+      <div class="payment-card pay-crypto" style="cursor:pointer" onclick="document.getElementById('crypto-modal').style.display='flex'">
+        <div class="payment-icon">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+        </div>
+        <h3>Crypto</h3>
+        <p>Bitcoin & Monero</p>
+      </div>
+      <div class="payment-card" style="cursor:pointer;border-color:rgba(29,158,117,0.4)" onclick="document.getElementById('invoice-modal').style.display='flex'">
+        <div class="payment-icon" style="background:rgba(29,158,117,0.15);color:#1D9E75;font-size:20px;font-weight:700">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#1D9E75" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+        </div>
+        <h3>Cash Invoice</h3>
+        <p>Generate & print receipt</p>
+      </div>
+    </div>
+    <p style="margin-top:24px;color:var(--gray);font-size:14px">Cash is also accepted at time of service.</p>
+  </div>
+</section>
+
+<!-- CARD MODAL (Stripe) -->
+<div id="card-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:200;align-items:center;justify-content:center;padding:24px;overflow-y:auto" onclick="if(event.target===this)this.style.display='none'">
+  <div style="background:var(--dark-card);border:1px solid var(--border);border-radius:16px;padding:36px 28px;max-width:440px;width:100%;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px">
+      <h3 style="font-family:'Oswald',sans-serif;font-size:22px;text-transform:uppercase">Pay With Card</h3>
+      <button onclick="document.getElementById('card-modal').style.display='none'" style="background:none;border:none;color:var(--gray);font-size:24px;cursor:pointer;line-height:1">&times;</button>
+    </div>
+
+    <div id="stripe-form">
+      <label style="display:block;font-size:13px;color:var(--gray);margin-bottom:6px;text-transform:uppercase;letter-spacing:1px;font-family:'Rajdhani',sans-serif;font-weight:600">Your Name</label>
+      <input type="text" id="card-name" placeholder="Full name" style="width:100%;padding:12px 14px;background:var(--dark);border:1px solid var(--border);border-radius:8px;color:#fff;font-size:15px;margin-bottom:16px;outline:none;font-family:'Open Sans',sans-serif" onfocus="this.style.borderColor='var(--purple)'" onblur="this.style.borderColor='var(--border)'">
+
+      <label style="display:block;font-size:13px;color:var(--gray);margin-bottom:6px;text-transform:uppercase;letter-spacing:1px;font-family:'Rajdhani',sans-serif;font-weight:600">Email</label>
+      <input type="email" id="card-email" placeholder="your@email.com" style="width:100%;padding:12px 14px;background:var(--dark);border:1px solid var(--border);border-radius:8px;color:#fff;font-size:15px;margin-bottom:16px;outline:none;font-family:'Open Sans',sans-serif" onfocus="this.style.borderColor='var(--purple)'" onblur="this.style.borderColor='var(--border)'">
+
+      <label style="display:block;font-size:13px;color:var(--gray);margin-bottom:6px;text-transform:uppercase;letter-spacing:1px;font-family:'Rajdhani',sans-serif;font-weight:600">Service</label>
+      <select id="card-service" onchange="updateAmount()" style="width:100%;padding:12px 14px;background:var(--dark);border:1px solid var(--border);border-radius:8px;color:#fff;font-size:15px;margin-bottom:16px;outline:none;font-family:'Open Sans',sans-serif;cursor:pointer;-webkit-appearance:none;appearance:none">
+        <option value="">Select a service...</option>
+        <optgroup label="Sedan / Coupe / Hatchback — Exterior">
+          <option value="90">Premium Wash — $90</option>
+          <option value="50">Decontamination — $50</option>
+          <option value="150">Paint Correction — $150</option>
+          <option value="125">Wax — $125</option>
+          <option value="40">Trim Restoration — $40</option>
+          <option value="25">Tire Shine — $25</option>
+          <option value="50">Headlight Restoration — $50</option>
+          <option value="25">Ceramic Glass Protection — $25</option>
+          <option value="75">Engine Bay Clean — $75</option>
+          <option value="1000">Ceramic Coat — $1,000</option>
+        </optgroup>
+        <optgroup label="Sedan / Coupe / Hatchback — Interior">
+          <option value="100">Interior Clean — $100</option>
+          <option value="40">Carpet Shampoo — $40</option>
+          <option value="40">Steam Clean — $40</option>
+        </optgroup>
+        <optgroup label="Sedan / Coupe / Hatchback — Packages">
+          <option value="150">Maintenance Package — $150</option>
+          <option value="275">The Shiny Package — $275</option>
+          <option value="140">Wash, Clay, Seal — $140</option>
+        </optgroup>
+        <optgroup label="SUV / Minivan / Van — Exterior">
+          <option value="125">Premium Wash — $125</option>
+          <option value="75">Decontamination — $75</option>
+          <option value="175">Paint Correction — $175</option>
+          <option value="150">Wax — $150</option>
+          <option value="40">Trim Restoration — $40</option>
+          <option value="25">Tire Shine — $25</option>
+          <option value="50">Headlight Restoration — $50</option>
+          <option value="25">Ceramic Glass Protection — $25</option>
+          <option value="75">Engine Bay Clean — $75</option>
+          <option value="1500">Ceramic Coat — $1,500</option>
+        </optgroup>
+        <optgroup label="SUV / Minivan / Van — Interior">
+          <option value="125">Interior Clean — $125</option>
+          <option value="60">Carpet Shampoo — $60</option>
+          <option value="50">Steam Clean — $50</option>
+        </optgroup>
+        <optgroup label="SUV / Minivan / Van — Packages">
+          <option value="200">Maintenance Package — $200</option>
+          <option value="350">The Shiny Package — $350</option>
+          <option value="200">Wash, Clay, Seal — $200</option>
+        </optgroup>
+        <optgroup label="Trucks — Exterior">
+          <option value="125">Premium Wash — $125</option>
+          <option value="75">Decontamination — $75</option>
+          <option value="175">Paint Correction — $175</option>
+          <option value="150">Wax — $150</option>
+          <option value="40">Trim Restoration — $40</option>
+          <option value="25">Tire Shine — $25</option>
+          <option value="50">Headlight Restoration — $50</option>
+          <option value="25">Ceramic Glass Protection — $25</option>
+          <option value="75">Engine Bay Clean — $75</option>
+          <option value="1250">Ceramic Coat — $1,250</option>
+        </optgroup>
+        <optgroup label="Trucks — Interior">
+          <option value="100">Interior Clean — $100</option>
+          <option value="40">Carpet Shampoo — $40</option>
+          <option value="40">Steam Clean — $40</option>
+        </optgroup>
+        <optgroup label="Trucks — Packages">
+          <option value="180">Maintenance Package — $180</option>
+          <option value="325">The Shiny Package — $325</option>
+          <option value="200">Wash, Clay, Seal — $200</option>
+        </optgroup>
+      </select>
+
+      <label style="display:block;font-size:13px;color:var(--gray);margin-bottom:6px;text-transform:uppercase;letter-spacing:1px;font-family:'Rajdhani',sans-serif;font-weight:600">Amount (USD)</label>
+      <div style="position:relative;margin-bottom:16px">
+        <span style="position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--purple-light);font-size:18px;font-weight:700;font-family:'Rajdhani',sans-serif">$</span>
+        <input type="number" id="card-amount" min="1" step="1" placeholder="Select a service" readonly style="width:100%;padding:12px 14px 12px 30px;background:var(--dark);border:1px solid var(--border);border-radius:8px;color:#fff;font-size:18px;font-weight:700;outline:none;font-family:'Rajdhani',sans-serif;cursor:not-allowed;opacity:0.8">>
+      </div>
+
+      <label style="display:block;font-size:13px;color:var(--gray);margin-bottom:6px;text-transform:uppercase;letter-spacing:1px;font-family:'Rajdhani',sans-serif;font-weight:600">Card Details</label>
+      <div id="card-element" style="padding:14px;background:var(--dark);border:1px solid var(--border);border-radius:8px;margin-bottom:8px"></div>
+      <div id="card-errors" style="color:#E24B4A;font-size:13px;min-height:20px;margin-bottom:16px"></div>
+
+      <button id="pay-btn" onclick="handlePayment()" class="btn btn-primary" style="width:100%;justify-content:center;font-size:18px;padding:16px;position:relative">
+        <span id="pay-btn-text">Pay Now</span>
+        <div id="pay-spinner" style="display:none;width:20px;height:20px;border:2px solid rgba(255,255,255,0.3);border-top-color:#fff;border-radius:50%;animation:spin .6s linear infinite"></div>
+      </button>
+      <style>@keyframes spin{to{transform:rotate(360deg)}}</style>
+
+      <div id="pay-success" style="display:none;text-align:center;padding:24px 0">
+        <div style="width:64px;height:64px;border-radius:50%;background:rgba(29,158,117,0.15);margin:0 auto 16px;display:flex;align-items:center;justify-content:center">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#1D9E75" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+        </div>
+        <h3 style="font-family:'Oswald',sans-serif;font-size:22px;text-transform:uppercase;margin-bottom:8px;color:#1D9E75">Payment Successful!</h3>
+        <p style="color:var(--gray);font-size:14px">Thank you! Fritz will reach out to confirm your appointment.</p>
+      </div>
+    </div>
+
+    <p style="text-align:center;color:var(--gray);font-size:12px;margin-top:16px">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle;margin-right:4px"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+      Secured by Stripe. Your card info never touches our server.
+    </p>
+  </div>
+</div>
+
+
+<!-- CRYPTO MODAL (NOWPayments) -->
+<div id="crypto-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:200;align-items:center;justify-content:center;padding:24px;overflow-y:auto" onclick="if(event.target===this)this.style.display='none'">
+  <div style="background:var(--dark-card);border:1px solid var(--border);border-radius:16px;padding:36px 28px;max-width:440px;width:100%;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px">
+      <h3 style="font-family:'Oswald',sans-serif;font-size:22px;text-transform:uppercase">Pay With Crypto</h3>
+      <button onclick="document.getElementById('crypto-modal').style.display='none'" style="background:none;border:none;color:var(--gray);font-size:24px;cursor:pointer;line-height:1">&times;</button>
+    </div>
+
+    <div id="crypto-form">
+      <label style="display:block;font-size:13px;color:var(--gray);margin-bottom:6px;text-transform:uppercase;letter-spacing:1px;font-family:'Rajdhani',sans-serif;font-weight:600">Currency</label>
+      <div style="display:flex;gap:8px;margin-bottom:16px">
+        <button onclick="selectCrypto('btc')" id="btn-btc" class="btn btn-outline" style="flex:1;justify-content:center;padding:12px;font-size:14px;border-color:var(--purple)" >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:6px"><circle cx="12" cy="12" r="10"/><path d="M9 8h4a2 2 0 0 1 0 4H9V8z"/><path d="M9 12h5a2 2 0 0 1 0 4H9v-4z"/><path d="M10 6v2M14 6v2M10 16v2M14 16v2"/></svg>
+          Bitcoin
+        </button>
+        <button onclick="selectCrypto('xmr')" id="btn-xmr" class="btn btn-outline" style="flex:1;justify-content:center;padding:12px;font-size:14px">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:6px"><circle cx="12" cy="12" r="10"/><path d="M8 16V8l4 4 4-4v8"/></svg>
+          Monero
+        </button>
+      </div>
+
+      <label style="display:block;font-size:13px;color:var(--gray);margin-bottom:6px;text-transform:uppercase;letter-spacing:1px;font-family:'Rajdhani',sans-serif;font-weight:600">Service</label>
+      <select id="crypto-service" onchange="cryptoUpdateAmount()" style="width:100%;padding:12px 14px;background:var(--dark);border:1px solid var(--border);border-radius:8px;color:#fff;font-size:15px;margin-bottom:16px;outline:none;font-family:'Open Sans',sans-serif;-webkit-appearance:none;appearance:none">
+        <option value="">Select a service...</option>
+        <optgroup label="Sedan / Coupe / Hatchback">
+          <option value="90">Premium Wash — $90</option>
+          <option value="275">The Shiny Package — $275</option>
+          <option value="1000">Ceramic Coat — $1,000</option>
+        </optgroup>
+        <optgroup label="SUV / Minivan / Van">
+          <option value="125">Premium Wash — $125</option>
+          <option value="350">The Shiny Package — $350</option>
+          <option value="1500">Ceramic Coat — $1,500</option>
+        </optgroup>
+        <optgroup label="Trucks">
+          <option value="125">Premium Wash — $125</option>
+          <option value="325">The Shiny Package — $325</option>
+          <option value="1250">Ceramic Coat — $1,250</option>
+        </optgroup>
+      </select>
+
+      <label style="display:block;font-size:13px;color:var(--gray);margin-bottom:6px;text-transform:uppercase;letter-spacing:1px;font-family:'Rajdhani',sans-serif;font-weight:600">Amount (USD)</label>
+      <div style="position:relative;margin-bottom:20px">
+        <span style="position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--purple-light);font-size:18px;font-weight:700;font-family:'Rajdhani',sans-serif">$</span>
+        <input type="number" id="crypto-amount" min="1" step="1" placeholder="Select a service" readonly style="width:100%;padding:12px 14px 12px 30px;background:var(--dark);border:1px solid var(--border);border-radius:8px;color:#fff;font-size:18px;font-weight:700;outline:none;font-family:'Rajdhani',sans-serif;cursor:not-allowed;opacity:0.8">
+      </div>
+
+      <button id="crypto-pay-btn" onclick="handleCryptoPayment()" class="btn btn-primary" style="width:100%;justify-content:center;font-size:18px;padding:16px;position:relative">
+        <span id="crypto-btn-text">Pay with Bitcoin</span>
+        <div id="crypto-spinner" style="display:none;width:20px;height:20px;border:2px solid rgba(255,255,255,0.3);border-top-color:#fff;border-radius:50%;animation:spin .6s linear infinite"></div>
+      </button>
+
+      <div id="crypto-error" style="color:#E24B4A;font-size:13px;min-height:20px;margin-top:8px;text-align:center"></div>
+    </div>
+
+    <p style="text-align:center;color:var(--gray);font-size:12px;margin-top:16px">
+      Powered by NOWPayments. You'll be redirected to complete payment.
+    </p>
+  </div>
+</div>
+
+<!-- CASH INVOICE MODAL -->
+<div id="invoice-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:200;align-items:center;justify-content:center;padding:24px;overflow-y:auto" onclick="if(event.target===this)this.style.display='none'">
+  <div style="background:var(--dark-card);border:1px solid var(--border);border-radius:16px;padding:36px 28px;max-width:520px;width:100%;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px">
+      <h3 style="font-family:'Oswald',sans-serif;font-size:22px;text-transform:uppercase">Cash Invoice</h3>
+      <button onclick="document.getElementById('invoice-modal').style.display='none'" style="background:none;border:none;color:var(--gray);font-size:24px;cursor:pointer;line-height:1">&times;</button>
+    </div>
+
+    <div id="invoice-builder">
+      <label style="display:block;font-size:13px;color:var(--gray);margin-bottom:6px;text-transform:uppercase;letter-spacing:1px;font-family:'Rajdhani',sans-serif;font-weight:600">Customer Name</label>
+      <input type="text" id="inv-name" placeholder="Customer name" style="width:100%;padding:12px 14px;background:var(--dark);border:1px solid var(--border);border-radius:8px;color:#fff;font-size:15px;margin-bottom:16px;outline:none;font-family:'Open Sans',sans-serif" onfocus="this.style.borderColor='var(--purple)'" onblur="this.style.borderColor='var(--border)'">
+
+      <label style="display:block;font-size:13px;color:var(--gray);margin-bottom:6px;text-transform:uppercase;letter-spacing:1px;font-family:'Rajdhani',sans-serif;font-weight:600">Vehicle Type</label>
+      <select id="inv-vehicle" onchange="invUpdateServices()" style="width:100%;padding:12px 14px;background:var(--dark);border:1px solid var(--border);border-radius:8px;color:#fff;font-size:15px;margin-bottom:16px;outline:none;font-family:'Open Sans',sans-serif;-webkit-appearance:none;appearance:none">
+        <option value="sedan">Sedan / Coupe / Hatchback</option>
+        <option value="suv">SUV / Minivan / Van</option>
+        <option value="truck">Trucks</option>
+      </select>
+
+      <label style="display:block;font-size:13px;color:var(--gray);margin-bottom:6px;text-transform:uppercase;letter-spacing:1px;font-family:'Rajdhani',sans-serif;font-weight:600">Services (select all that apply)</label>
+      <div id="inv-services" style="background:var(--dark);border:1px solid var(--border);border-radius:8px;padding:8px 12px;margin-bottom:16px;max-height:220px;overflow-y:auto"></div>
+
+      <label style="display:block;font-size:13px;color:var(--gray);margin-bottom:6px;text-transform:uppercase;letter-spacing:1px;font-family:'Rajdhani',sans-serif;font-weight:600">Notes (optional)</label>
+      <textarea id="inv-notes" placeholder="Additional notes..." rows="2" style="width:100%;padding:12px 14px;background:var(--dark);border:1px solid var(--border);border-radius:8px;color:#fff;font-size:15px;margin-bottom:16px;outline:none;font-family:'Open Sans',sans-serif;resize:vertical"></textarea>
+
+      <div style="background:var(--dark);border:1px solid var(--border);border-radius:8px;padding:14px 16px;margin-bottom:20px;display:flex;justify-content:space-between;align-items:center">
+        <span style="font-family:'Rajdhani',sans-serif;font-size:16px;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:var(--gray-light)">Total</span>
+        <span id="inv-total" style="font-family:'Rajdhani',sans-serif;font-size:28px;font-weight:700;color:var(--purple-light)">$0</span>
+      </div>
+
+      <button onclick="generateInvoice()" class="btn btn-primary" style="width:100%;justify-content:center;font-size:18px;padding:16px;background:#1D9E75">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:8px"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+        Generate & Print Invoice
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- PRINTABLE INVOICE (hidden, used for printing) -->
+<div id="invoice-print" style="display:none"></div>
+
+<!-- INSTAGRAM -->
+<section class="section" style="background:var(--dark);text-align:center">
+  <div class="container">
+    <h2 class="section-title">See The <span>Results</span></h2>
+    <p class="section-sub">Before & after shots from real jobs — follow along on Instagram.</p>
+    <a href="https://instagram.com/fritzdetailonthego" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:10px;background:linear-gradient(135deg,#833ab4,#fd1d1d,#fcb045);padding:14px 32px;border-radius:8px;color:#fff;text-decoration:none;font-family:'Rajdhani',sans-serif;font-weight:700;font-size:16px;text-transform:uppercase;letter-spacing:1.5px;transition:transform .2s,box-shadow .2s">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg>
+      @fritzdetailonthego
+    </a>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="cta-section" id="contact">
+  <div class="cta-content">
+    <h2>Ready For That <span>Showroom Shine?</span></h2>
+    <p style="color:var(--gray);font-size:18px;margin-bottom:32px;max-width:500px;margin-left:auto;margin-right:auto">Get in touch to schedule your mobile detail. We'll come to you anywhere in Southwest Virginia.</p>
+    <div style="display:flex;gap:16px;justify-content:center;flex-wrap:wrap">
+      <a href="sms:+12762470921?body=Hi%20Fritz!%20I'd%20like%20to%20book%20a%20detail." class="btn btn-primary">Text to Book</a>
+      <a href="tel:+12762470921" class="btn btn-outline">Call Now</a>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer class="footer">
+  <div class="footer-links">
+    <a href="#home">Home</a>
+    <a href="#services">Services</a>
+    <a href="#pricing">Pricing</a>
+    <a href="about.html">About</a>
+    <a href="#payment">Pay</a>
+    <a href="invoice.html">Invoice</a>
+    <a href="#contact">Contact</a>
+  </div>
+  <p>&copy; 2026 Fritz's Detail on the Go. All rights reserved. | <a href="https://fritzdetailing.net" style="color:var(--purple-light);text-decoration:none">fritzdetailing.net</a> | Southwest Virginia Mobile Detailing</p>
+</footer>
+
+<script src="https://js.stripe.com/v3/"></script>
+<script>
+// ===== PRICING TABS =====
+function showPricing(type){
+  document.querySelectorAll('.pricing-container').forEach(c=>c.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('pricing-'+type).classList.add('active');
+  event.target.classList.add('active');
+}
+
+// ===== HEADER SCROLL =====
+let lastScroll=0;
+window.addEventListener('scroll',()=>{
+  const header=document.getElementById('header');
+  const scroll=window.pageYOffset;
+  if(scroll>80){header.style.padding='8px 24px'}else{header.style.padding='12px 24px'}
+  lastScroll=scroll;
+});
+
+// ===== FADE ANIMATIONS =====
+const observer=new IntersectionObserver((entries)=>{
+  entries.forEach(e=>{if(e.isIntersecting){e.target.style.opacity='1';e.target.style.transform='translateY(0)'}});
+},{threshold:0.1});
+document.querySelectorAll('.service-card,.pricing-col,.package-card,.payment-card').forEach(el=>{
+  el.style.opacity='0';el.style.transform='translateY(20px)';el.style.transition='opacity .5s ease, transform .5s ease';
+  observer.observe(el);
+});
+
+// ===== STRIPE PAYMENT =====
+const STRIPE_PK = 'pk_live_51TCOBz1xKrhk2iIWpqK6J28lU8BxVrlEpC0mIbR4ZkLA3kaJDGcJHdH5UY1Aeqrnk8K5XtSVTtZZAaKPjp2Gxq6700yZHMpxcl';
+// Stripe LIVE key
+const BACKEND_URL = '/api'; // Same domain — Vercel serverless function
+
+const stripe = Stripe(STRIPE_PK);
+const elements = stripe.elements({
+  appearance: {
+    theme: 'night',
+    variables: {
+      colorPrimary: '#7B2FBE',
+      colorBackground: '#121212',
+      colorText: '#FFFFFF',
+      colorDanger: '#E24B4A',
+      fontFamily: 'Open Sans, sans-serif',
+      borderRadius: '8px',
+    }
+  }
+});
+const cardElement = elements.create('card', {
+  style: {
+    base: {
+      fontSize: '16px',
+      color: '#fff',
+      '::placeholder': { color: '#999' },
+    },
+    invalid: { color: '#E24B4A' }
+  }
+});
+cardElement.mount('#card-element');
+
+cardElement.on('change', function(event) {
+  const errEl = document.getElementById('card-errors');
+  errEl.textContent = event.error ? event.error.message : '';
+});
+
+function updateAmount() {
+  const sel = document.getElementById('card-service');
+  const amtInput = document.getElementById('card-amount');
+  if (sel.value) {
+    amtInput.value = sel.value;
+  } else {
+    amtInput.value = '';
+  }
+}
+
+async function handlePayment() {
+  const name = document.getElementById('card-name').value.trim();
+  const email = document.getElementById('card-email').value.trim();
+  const amount = parseInt(document.getElementById('card-amount').value);
+  const service = document.getElementById('card-service');
+  const serviceText = service.options[service.selectedIndex]?.text || 'Detailing Service';
+  const errEl = document.getElementById('card-errors');
+
+  if (!name) { errEl.textContent = 'Please enter your name.'; return; }
+  if (!email) { errEl.textContent = 'Please enter your email.'; return; }
+  if (!amount || amount < 1) { errEl.textContent = 'Please select a service or enter an amount.'; return; }
+
+  const btn = document.getElementById('pay-btn');
+  const btnText = document.getElementById('pay-btn-text');
+  const spinner = document.getElementById('pay-spinner');
+  btn.disabled = true;
+  btnText.style.display = 'none';
+  spinner.style.display = 'block';
+  errEl.textContent = '';
+
+  try {
+    // Step 1: Create PaymentIntent on backend
+    const res = await fetch(BACKEND_URL + '/create-payment-intent', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        amount: amount * 100, // Stripe uses cents
+        currency: 'usd',
+        description: serviceText,
+        receipt_email: email,
+        metadata: { customer_name: name, service: serviceText }
+      })
+    });
+
+    if (!res.ok) throw new Error('Server error. Please try again.');
+    const { clientSecret } = await res.json();
+
+    // Step 2: Confirm card payment
+    const { error, paymentIntent } = await stripe.confirmCardPayment(clientSecret, {
+      payment_method: {
+        card: cardElement,
+        billing_details: { name: name, email: email }
+      }
+    });
+
+    if (error) {
+      errEl.textContent = error.message;
+      btn.disabled = false;
+      btnText.style.display = 'inline';
+      spinner.style.display = 'none';
+    } else if (paymentIntent.status === 'succeeded') {
+      // Success!
+      document.getElementById('stripe-form').style.display = 'none';
+      document.getElementById('pay-success').style.display = 'block';
+    }
+  } catch (err) {
+    errEl.textContent = err.message || 'Payment failed. Please try again or contact Fritz at (276) 247-0921.';
+    btn.disabled = false;
+    btnText.style.display = 'inline';
+    spinner.style.display = 'none';
+  }
+}
+
+// ===== CRYPTO (NOWPayments) =====
+let selectedCrypto = 'btc';
+
+function selectCrypto(coin) {
+  selectedCrypto = coin;
+  document.getElementById('btn-btc').style.borderColor = coin === 'btc' ? 'var(--purple)' : 'var(--border)';
+  document.getElementById('btn-btc').style.background = coin === 'btc' ? 'rgba(123,47,190,0.15)' : 'transparent';
+  document.getElementById('btn-xmr').style.borderColor = coin === 'xmr' ? 'var(--purple)' : 'var(--border)';
+  document.getElementById('btn-xmr').style.background = coin === 'xmr' ? 'rgba(123,47,190,0.15)' : 'transparent';
+  document.getElementById('crypto-btn-text').textContent = 'Pay with ' + (coin === 'btc' ? 'Bitcoin' : 'Monero');
+}
+
+function cryptoUpdateAmount() {
+  const sel = document.getElementById('crypto-service');
+  const amtInput = document.getElementById('crypto-amount');
+  if (sel.value) {
+    amtInput.value = sel.value;
+  } else {
+    amtInput.value = '';
+  }
+}
+
+async function handleCryptoPayment() {
+  const amount = parseInt(document.getElementById('crypto-amount').value);
+  const errEl = document.getElementById('crypto-error');
+  const service = document.getElementById('crypto-service');
+  const serviceText = service.options[service.selectedIndex]?.text || 'Detailing Service';
+
+  if (!amount || amount < 1) { errEl.textContent = 'Please select a service first.'; return; }
+
+  const btn = document.getElementById('crypto-pay-btn');
+  const btnText = document.getElementById('crypto-btn-text');
+  const spinner = document.getElementById('crypto-spinner');
+  btn.disabled = true;
+  btnText.style.display = 'none';
+  spinner.style.display = 'block';
+  errEl.textContent = '';
+
+  try {
+    const res = await fetch(BACKEND_URL + '/create-crypto-invoice', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        amount: amount,
+        currency: selectedCrypto,
+        description: serviceText
+      })
+    });
+
+    if (!res.ok) {
+      const data = await res.json();
+      throw new Error(data.error || 'Failed to create invoice');
+    }
+
+    const data = await res.json();
+    window.location.href = data.invoice_url;
+  } catch (err) {
+    // Fallback: show wallet address directly
+    btn.disabled = false;
+    btnText.style.display = 'inline';
+    spinner.style.display = 'none';
+    if (selectedCrypto === 'xmr') {
+      document.getElementById('crypto-form').innerHTML = `
+        <div style="text-align:center;padding:16px 0">
+          <h4 style="font-family:'Oswald',sans-serif;font-size:18px;text-transform:uppercase;margin-bottom:12px">Send $${amount} in Monero (XMR)</h4>
+          <p style="color:var(--gray);font-size:13px;margin-bottom:16px">Send the equivalent of <strong style="color:var(--purple-light)">$${amount} USD</strong> in XMR to:</p>
+          <div style="background:var(--dark);border:1px solid var(--border);border-radius:8px;padding:14px;word-break:break-all;font-family:monospace;font-size:11px;color:var(--gray-light);margin-bottom:16px;user-select:all">859L8t1ctm9We2Dq1BBBHwH1qfr7ZwSdkdoK7fnadoHBgfmRmzAmQ6xTrfpfdotuagE2erCUV8YxqGYQ5RAhewmdJSMWorA</div>
+          <button onclick="navigator.clipboard.writeText('859L8t1ctm9We2Dq1BBBHwH1qfr7ZwSdkdoK7fnadoHBgfmRmzAmQ6xTrfpfdotuagE2erCUV8YxqGYQ5RAhewmdJSMWorA');this.textContent='Copied!'" class="btn btn-outline" style="width:100%;justify-content:center;margin-bottom:12px">Copy XMR Address</button>
+          <p style="color:var(--gray);font-size:12px">After sending, text Fritz at <a href="sms:+12762470921" style="color:var(--purple-light)">(276) 247-0921</a> with the TX ID to confirm.</p>
+        </div>`;
+    } else {
+      errEl.textContent = 'BTC payments coming soon. Text Fritz at (276) 247-0921 to arrange BTC payment.';
+    }
+  }
+}
+
+// Init crypto button state
+selectCrypto('xmr');
+
+// ===== CASH INVOICE GENERATOR =====
+const invoicePrices = {
+  sedan: {
+    'Premium Wash': 90, 'Decontamination': 50, 'Paint Correction': 150, 'Wax': 125,
+    'Trim Restoration': 40, 'Tire Shine': 25, 'Headlight Restoration': 50,
+    'Ceramic Glass Protection': 25, 'Engine Bay Clean': 75, 'Ceramic Coat': 1000,
+    'Interior Clean': 100, 'Carpet Shampoo': 40, 'Steam Clean': 40,
+    'Maintenance Package': 150, 'The Shiny Package': 275, 'Wash, Clay, Seal': 140
+  },
+  suv: {
+    'Premium Wash': 125, 'Decontamination': 75, 'Paint Correction': 175, 'Wax': 150,
+    'Trim Restoration': 40, 'Tire Shine': 25, 'Headlight Restoration': 50,
+    'Ceramic Glass Protection': 25, 'Engine Bay Clean': 75, 'Ceramic Coat': 1500,
+    'Interior Clean': 125, 'Carpet Shampoo': 60, 'Steam Clean': 50,
+    'Maintenance Package': 200, 'The Shiny Package': 350, 'Wash, Clay, Seal': 200
+  },
+  truck: {
+    'Premium Wash': 125, 'Decontamination': 75, 'Paint Correction': 175, 'Wax': 150,
+    'Trim Restoration': 40, 'Tire Shine': 25, 'Headlight Restoration': 50,
+    'Ceramic Glass Protection': 25, 'Engine Bay Clean': 75, 'Ceramic Coat': 1250,
+    'Interior Clean': 100, 'Carpet Shampoo': 40, 'Steam Clean': 40,
+    'Maintenance Package': 180, 'The Shiny Package': 325, 'Wash, Clay, Seal': 200
+  }
+};
+
+function invUpdateServices() {
+  const vehicle = document.getElementById('inv-vehicle').value;
+  const prices = invoicePrices[vehicle];
+  const container = document.getElementById('inv-services');
+  container.innerHTML = '';
+
+  const categories = {
+    'Exterior': ['Premium Wash','Decontamination','Paint Correction','Wax','Trim Restoration','Tire Shine','Headlight Restoration','Ceramic Glass Protection','Engine Bay Clean','Ceramic Coat'],
+    'Interior': ['Interior Clean','Carpet Shampoo','Steam Clean'],
+    'Packages': ['Maintenance Package','The Shiny Package','Wash, Clay, Seal']
+  };
+
+  for (const [cat, items] of Object.entries(categories)) {
+    const label = document.createElement('div');
+    label.style.cssText = 'font-size:11px;color:var(--gray);text-transform:uppercase;letter-spacing:1px;padding:6px 0 4px;font-family:Rajdhani,sans-serif;font-weight:600;border-bottom:1px solid rgba(255,255,255,0.05)';
+    label.textContent = cat;
+    container.appendChild(label);
+
+    items.forEach(name => {
+      const price = prices[name];
+      const row = document.createElement('label');
+      row.style.cssText = 'display:flex;align-items:center;gap:10px;padding:8px 4px;cursor:pointer;font-size:14px;color:var(--gray-light)';
+      row.innerHTML = '<input type="checkbox" value="' + name + '" data-price="' + price + '" onchange="invCalcTotal()" style="accent-color:var(--purple);width:16px;height:16px;cursor:pointer"><span style="flex:1">' + name + '</span><span style="color:var(--purple-light);font-family:Rajdhani,sans-serif;font-weight:700">$' + price.toLocaleString() + '</span>';
+      container.appendChild(row);
+    });
+  }
+  invCalcTotal();
+}
+
+function invCalcTotal() {
+  const checks = document.querySelectorAll('#inv-services input[type=checkbox]:checked');
+  let total = 0;
+  checks.forEach(c => total += parseInt(c.dataset.price));
+  document.getElementById('inv-total').textContent = '$' + total.toLocaleString();
+}
+
+function generateInvoice() {
+  const name = document.getElementById('inv-name').value.trim() || 'Walk-in Customer';
+  const vehicle = document.getElementById('inv-vehicle');
+  const vehicleText = vehicle.options[vehicle.selectedIndex].text;
+  const notes = document.getElementById('inv-notes').value.trim();
+  const checks = document.querySelectorAll('#inv-services input[type=checkbox]:checked');
+
+  if (checks.length === 0) {
+    alert('Please select at least one service.');
+    return;
+  }
+
+  let total = 0;
+  let rows = '';
+  checks.forEach(c => {
+    const price = parseInt(c.dataset.price);
+    total += price;
+    rows += '<tr><td style="padding:10px 16px;border-bottom:1px solid #eee;font-size:14px">' + c.value + '</td><td style="padding:10px 16px;border-bottom:1px solid #eee;text-align:right;font-weight:700;font-size:14px">$' + price.toLocaleString() + '</td></tr>';
+  });
+
+  const now = new Date();
+  const date = now.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+  const time = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+  const invNum = 'FD-' + now.getFullYear() + String(now.getMonth()+1).padStart(2,'0') + String(now.getDate()).padStart(2,'0') + '-' + String(now.getHours()).padStart(2,'0') + String(now.getMinutes()).padStart(2,'0');
+
+  const html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Invoice ' + invNum + '</title><style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:Arial,Helvetica,sans-serif;color:#222;max-width:600px;margin:0 auto;padding:32px 24px}@media print{body{padding:16px}}</style></head><body>'
+    + '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:32px;border-bottom:3px solid #7B2FBE;padding-bottom:20px">'
+    + '<div><h1 style="font-size:24px;color:#7B2FBE;margin-bottom:4px">Fritz\'s Detail on the Go</h1><p style="font-size:13px;color:#666">Mobile Detailing — Southwest Virginia</p><p style="font-size:13px;color:#666">(276) 247-0921 | fritzdetailing.net</p></div>'
+    + '<div style="text-align:right"><p style="font-size:20px;font-weight:700;color:#7B2FBE;margin-bottom:4px">INVOICE</p><p style="font-size:13px;color:#666">' + invNum + '</p><p style="font-size:13px;color:#666">' + date + ' at ' + time + '</p></div>'
+    + '</div>'
+    + '<div style="display:flex;gap:24px;margin-bottom:24px">'
+    + '<div style="flex:1;background:#f8f7fc;border-radius:8px;padding:14px 16px"><p style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:#999;margin-bottom:4px">Customer</p><p style="font-size:16px;font-weight:700">' + name + '</p></div>'
+    + '<div style="flex:1;background:#f8f7fc;border-radius:8px;padding:14px 16px"><p style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:#999;margin-bottom:4px">Vehicle Type</p><p style="font-size:16px;font-weight:700">' + vehicleText + '</p></div>'
+    + '</div>'
+    + '<table style="width:100%;border-collapse:collapse;margin-bottom:20px"><thead><tr style="background:#7B2FBE;color:#fff"><th style="padding:10px 16px;text-align:left;font-size:13px;text-transform:uppercase;letter-spacing:1px">Service</th><th style="padding:10px 16px;text-align:right;font-size:13px;text-transform:uppercase;letter-spacing:1px">Price</th></tr></thead><tbody>' + rows + '</tbody></table>'
+    + (notes ? '<div style="background:#f8f7fc;border-radius:8px;padding:14px 16px;margin-bottom:20px"><p style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:#999;margin-bottom:4px">Notes</p><p style="font-size:14px">' + notes + '</p></div>' : '')
+    + '<div style="display:flex;justify-content:space-between;align-items:center;background:#7B2FBE;color:#fff;border-radius:8px;padding:16px 20px"><span style="font-size:18px;font-weight:700;text-transform:uppercase;letter-spacing:2px">Total Due</span><span style="font-size:28px;font-weight:700">$' + total.toLocaleString() + '</span></div>'
+    + '<div style="text-align:center;margin-top:24px;padding-top:16px;border-top:1px solid #eee"><p style="font-size:12px;color:#999">Payment Method: <strong style="color:#1D9E75">CASH</strong></p><p style="font-size:12px;color:#999;margin-top:4px">Thank you for your business!</p></div>'
+    + '<script>window.onload=function(){window.print()}<\/script>'
+    + '</body></html>';
+
+  const w = window.open('', '_blank', 'width=650,height=800');
+  w.document.write(html);
+  w.document.close();
+}
+
+// Init invoice services on load
+invUpdateServices();
+
+// ===== DYNAMIC PRICING LOADER =====
+// Loads pricing from pricing.json so admin panel changes update everything
+async function loadDynamicPricing() {
+  try {
+    const res = await fetch('/pricing.json?t=' + Date.now());
+    if (!res.ok) return;
+    const data = await res.json();
+
+    // 1. Update pricing tables
+    for (const [key, tier] of Object.entries(data)) {
+      const container = document.getElementById('pricing-' + key);
+      if (!container) continue;
+
+      // Build exterior rows
+      let extRows = '';
+      for (const [name, price] of Object.entries(tier.exterior || {})) {
+        extRows += `<div class="pricing-row"><span class="name">${name}</span><span class="price">$${price.toLocaleString()}</span></div>`;
+      }
+
+      // Build interior rows
+      let intRows = '';
+      for (const [name, price] of Object.entries(tier.interior || {})) {
+        intRows += `<div class="pricing-row"><span class="name">${name}</span><span class="price">$${price.toLocaleString()}</span></div>`;
+      }
+
+      // Build package cards
+      const pkgs = Object.entries(tier.packages || {});
+      let pkgCards = '';
+      pkgs.forEach(([name, price], i) => {
+        const featured = i === 1 ? ' featured' : '';
+        pkgCards += `<div class="package-card${featured}">
+          <div class="package-name">${name}</div>
+          <div class="package-price"><sup>$</sup>${price.toLocaleString()}</div>
+          <div class="package-desc">${i===0?'Keep your ride looking fresh with a regular maintenance detail.':i===1?'Our most popular full-service package for a complete transformation.':'Deep wash with clay bar decontamination and sealant protection.'}</div>
+          <a href="#payment" class="btn btn-primary" style="width:100%;justify-content:center">Book Now</a>
+        </div>`;
+      });
+
+      container.innerHTML = `
+        <div class="pricing-grid">
+          <div class="pricing-col">
+            <div class="pricing-col-header"><h3>Exterior</h3></div>
+            ${extRows}
+          </div>
+          <div class="pricing-col">
+            <div class="pricing-col-header"><h3>Interior</h3></div>
+            ${intRows}
+          </div>
+        </div>
+        <div class="packages-section">
+          <h3 style="font-family:'Oswald',sans-serif;font-size:26px;text-align:center;text-transform:uppercase;margin-bottom:24px;font-weight:600">Packages</h3>
+          <div class="package-cards">${pkgCards}</div>
+        </div>`;
+    }
+
+    // 2. Update Stripe dropdown
+    const stripeSelect = document.getElementById('card-service');
+    if (stripeSelect) {
+      let opts = '<option value="">Select a service...</option>';
+      for (const [key, tier] of Object.entries(data)) {
+        for (const [section, items] of Object.entries({exterior: tier.exterior, interior: tier.interior, packages: tier.packages})) {
+          const sLabel = section.charAt(0).toUpperCase() + section.slice(1);
+          opts += `<optgroup label="${tier.label} — ${sLabel}">`;
+          for (const [name, price] of Object.entries(items || {})) {
+            opts += `<option value="${price}">${name} — $${price.toLocaleString()}</option>`;
+          }
+          opts += '</optgroup>';
+        }
+      }
+      stripeSelect.innerHTML = opts;
+    }
+
+    // 3. Update crypto dropdown
+    const cryptoSelect = document.getElementById('crypto-service');
+    if (cryptoSelect) {
+      let opts = '<option value="">Select a service...</option>';
+      for (const [key, tier] of Object.entries(data)) {
+        opts += `<optgroup label="${tier.label}">`;
+        for (const [section, items] of Object.entries({exterior: tier.exterior, interior: tier.interior, packages: tier.packages})) {
+          for (const [name, price] of Object.entries(items || {})) {
+            opts += `<option value="${price}">${name} — $${price.toLocaleString()}</option>`;
+          }
+        }
+        opts += '</optgroup>';
+      }
+      cryptoSelect.innerHTML = opts;
+    }
+
+    // 4. Update invoice pricing data
+    if (typeof invoicePrices !== 'undefined') {
+      for (const [key, tier] of Object.entries(data)) {
+        invoicePrices[key] = { ...tier.exterior, ...tier.interior, ...tier.packages };
+      }
+      if (typeof invUpdateServices === 'function') invUpdateServices();
+    }
+
+    // Re-observe new elements for fade animation
+    document.querySelectorAll('.pricing-col,.package-card').forEach(el => {
+      el.style.opacity = '1';
+      el.style.transform = 'translateY(0)';
+    });
+
+  } catch(e) { console.log('Using hardcoded pricing (pricing.json not available)'); }
+}
+loadDynamicPricing();
+</script>
+</body>
+</html>

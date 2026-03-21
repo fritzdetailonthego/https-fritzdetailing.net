@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fritz's Detail on the Go — Invoice Generator</title>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Rajdhani:wght@400;500;600;700&family=Open+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+--purple:#7B2FBE;--purple-light:#9B4FDE;--purple-dark:#5A1F8E;
+--black:#0A0A0A;--dark:#121212;--dark-card:#1A1A1A;
+--white:#FFFFFF;--gray:#999;--gray-light:#CCC;
+--border:rgba(123,47,190,0.25);
+}
+body{font-family:'Open Sans',sans-serif;background:var(--black);color:var(--white);min-height:100vh}
+
+.page-header{background:rgba(10,10,10,0.95);border-bottom:1px solid var(--border);padding:16px 24px;display:flex;align-items:center;justify-content:space-between}
+.page-header a{color:var(--purple-light);text-decoration:none;font-family:'Rajdhani',sans-serif;font-weight:600;font-size:14px;text-transform:uppercase;letter-spacing:1px}
+.page-title{font-family:'Oswald',sans-serif;font-size:18px;font-weight:600;letter-spacing:1px;text-transform:uppercase}
+.page-title span{color:var(--purple-light)}
+
+.container{max-width:900px;margin:0 auto;padding:32px 24px}
+.section-label{font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:2px;color:var(--purple-light);margin-bottom:16px}
+
+/* FORM */
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px}
+.form-group{display:flex;flex-direction:column;gap:6px}
+.form-group.full{grid-column:1/-1}
+.form-label{font-size:12px;color:var(--gray);text-transform:uppercase;letter-spacing:1px;font-family:'Rajdhani',sans-serif;font-weight:600}
+.form-input,.form-select,.form-textarea{width:100%;padding:12px 14px;background:var(--dark);border:1px solid var(--border);border-radius:8px;color:#fff;font-size:15px;font-family:'Open Sans',sans-serif;outline:none;transition:border-color .2s}
+.form-input:focus,.form-select:focus,.form-textarea:focus{border-color:var(--purple)}
+.form-select{cursor:pointer;-webkit-appearance:none;appearance:none}
+.form-textarea{resize:vertical;min-height:60px}
+
+/* LINE ITEMS */
+.line-items{margin-bottom:24px}
+.line-item{display:grid;grid-template-columns:1fr 100px 60px;gap:12px;align-items:end;margin-bottom:12px}
+.line-item-header{display:grid;grid-template-columns:1fr 100px 60px;gap:12px;margin-bottom:8px}
+.line-item-header span{font-size:11px;color:var(--gray);text-transform:uppercase;letter-spacing:1px;font-family:'Rajdhani',sans-serif;font-weight:600}
+.remove-btn{width:36px;height:42px;background:rgba(226,75,74,0.1);border:1px solid rgba(226,75,74,0.3);border-radius:8px;color:#E24B4A;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s}
+.remove-btn:hover{background:rgba(226,75,74,0.2);border-color:#E24B4A}
+.add-line{background:rgba(123,47,190,0.1);border:1px dashed var(--border);border-radius:8px;padding:10px;text-align:center;cursor:pointer;color:var(--purple-light);font-family:'Rajdhani',sans-serif;font-weight:600;font-size:14px;text-transform:uppercase;letter-spacing:1px;transition:all .2s}
+.add-line:hover{background:rgba(123,47,190,0.2);border-color:var(--purple)}
+
+/* TOTALS */
+.totals{display:flex;flex-direction:column;align-items:flex-end;gap:8px;margin-bottom:32px;padding-top:16px;border-top:1px solid var(--border)}
+.total-row{display:flex;gap:24px;align-items:center}
+.total-label{font-size:14px;color:var(--gray);min-width:80px;text-align:right}
+.total-value{font-family:'Rajdhani',sans-serif;font-size:20px;font-weight:700;min-width:100px;text-align:right}
+.total-row.grand .total-label{color:var(--white);font-weight:600}
+.total-row.grand .total-value{font-size:28px;color:var(--purple-light)}
+
+/* BUTTONS */
+.btn-row{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:32px}
+.btn{font-family:'Rajdhani',sans-serif;font-weight:700;font-size:15px;letter-spacing:1.5px;text-transform:uppercase;padding:12px 28px;border-radius:8px;border:none;cursor:pointer;display:inline-flex;align-items:center;gap:8px;transition:all .2s}
+.btn-primary{background:var(--purple);color:#fff}
+.btn-primary:hover{background:var(--purple-light)}
+.btn-outline{background:transparent;color:var(--white);border:2px solid var(--border)}
+.btn-outline:hover{border-color:var(--purple);color:var(--purple-light)}
+.btn-success{background:#1D9E75;color:#fff}
+.btn-success:hover{background:#25b888}
+
+.btn svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+
+/* INVOICE PREVIEW */
+.preview-section{margin-top:40px;border-top:1px solid var(--border);padding-top:32px}
+
+/* PRINTABLE INVOICE */
+#invoice-print{background:#fff;color:#111;border-radius:12px;overflow:hidden;max-width:700px}
+.inv-header{background:linear-gradient(135deg,#1a1a2e,#2d1b4e);color:#fff;padding:32px;display:flex;justify-content:space-between;align-items:flex-start}
+.inv-brand h1{font-family:'Oswald',sans-serif;font-size:24px;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px}
+.inv-brand p{font-size:13px;opacity:0.7}
+.inv-number{text-align:right}
+.inv-number h2{font-family:'Oswald',sans-serif;font-size:28px;text-transform:uppercase;letter-spacing:2px;margin-bottom:4px}
+.inv-number p{font-size:13px;opacity:0.7}
+
+.inv-info{display:grid;grid-template-columns:1fr 1fr;gap:24px;padding:24px 32px;border-bottom:1px solid #eee}
+.inv-info-block h3{font-family:'Rajdhani',sans-serif;font-size:11px;text-transform:uppercase;letter-spacing:2px;color:#999;margin-bottom:6px;font-weight:600}
+.inv-info-block p{font-size:14px;line-height:1.5;color:#333}
+
+.inv-table{width:100%;border-collapse:collapse;margin:0}
+.inv-table thead{background:#f8f7fc}
+.inv-table th{font-family:'Rajdhani',sans-serif;font-size:11px;text-transform:uppercase;letter-spacing:1.5px;color:#999;font-weight:600;padding:12px 32px;text-align:left}
+.inv-table th:last-child{text-align:right}
+.inv-table td{padding:14px 32px;border-bottom:1px solid #f0f0f0;font-size:14px;color:#333}
+.inv-table td:last-child{text-align:right;font-weight:600}
+.inv-table tbody tr:last-child td{border-bottom:none}
+
+.inv-totals{padding:16px 32px 24px;display:flex;justify-content:flex-end}
+.inv-totals-inner{min-width:220px}
+.inv-total-row{display:flex;justify-content:space-between;padding:6px 0;font-size:14px;color:#666}
+.inv-total-row.grand{border-top:2px solid #7B2FBE;margin-top:8px;padding-top:12px;font-size:20px;font-weight:700;color:#111}
+.inv-total-row.grand span:last-child{color:#7B2FBE}
+
+.inv-footer{background:#f8f7fc;padding:20px 32px;text-align:center}
+.inv-footer p{font-size:12px;color:#999}
+.inv-footer .pay-links{margin-top:8px;font-size:13px;color:#7B2FBE;font-weight:600}
+
+.inv-notes{padding:16px 32px;border-top:1px solid #eee}
+.inv-notes h3{font-family:'Rajdhani',sans-serif;font-size:11px;text-transform:uppercase;letter-spacing:2px;color:#999;margin-bottom:6px;font-weight:600}
+.inv-notes p{font-size:13px;color:#666;line-height:1.5}
+
+/* PRINT STYLES */
+@media print{
+  body{background:#fff!important}
+  .page-header,.form-section,.btn-row,.section-label,.preview-section>h3,.no-print{display:none!important}
+  #invoice-print{max-width:100%;border-radius:0;box-shadow:none}
+  .container{padding:0;max-width:100%}
+}
+
+/* MOBILE */
+@media(max-width:600px){
+  .form-grid{grid-template-columns:1fr}
+  .form-group.full{grid-column:auto}
+  .line-item{grid-template-columns:1fr 80px 44px}
+  .inv-header{flex-direction:column;gap:16px}
+  .inv-info{grid-template-columns:1fr}
+  .btn-row{flex-direction:column}
+  .btn{width:100%;justify-content:center}
+}
+
+/* Toast notification */
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(100px);background:#1D9E75;color:#fff;padding:14px 28px;border-radius:10px;font-family:'Rajdhani',sans-serif;font-weight:600;font-size:15px;letter-spacing:1px;z-index:999;transition:transform .3s ease;pointer-events:none}
+.toast.show{transform:translateX(-50%) translateY(0)}
+</style>
+</head>
+<body>
+
+<div class="page-header">
+  <a href="index.html">&larr; Back to Site</a>
+  <div class="page-title">Fritz's <span>Invoice</span></div>
+  <span></span>
+</div>
+
+<div class="container">
+
+  <!-- FORM SECTION -->
+  <div class="form-section">
+    <div class="section-label">Customer Info</div>
+    <div class="form-grid">
+      <div class="form-group">
+        <span class="form-label">Customer Name</span>
+        <input class="form-input" id="cust-name" placeholder="John Doe">
+      </div>
+      <div class="form-group">
+        <span class="form-label">Phone / Email</span>
+        <input class="form-input" id="cust-contact" placeholder="(555) 123-4567 or email">
+      </div>
+      <div class="form-group">
+        <span class="form-label">Vehicle</span>
+        <input class="form-input" id="cust-vehicle" placeholder="2022 Toyota Camry (Black)">
+      </div>
+      <div class="form-group">
+        <span class="form-label">Date</span>
+        <input class="form-input" type="date" id="inv-date">
+      </div>
+    </div>
+
+    <div class="section-label">Services</div>
+    <div class="line-items" id="line-items">
+      <div class="line-item-header">
+        <span>Service</span>
+        <span>Price</span>
+        <span></span>
+      </div>
+      <!-- Line items injected here -->
+    </div>
+    <div class="add-line" onclick="addLineItem()">+ Add Service</div>
+
+    <div style="margin-top:16px">
+      <div class="form-group">
+        <span class="form-label">Notes (optional)</span>
+        <textarea class="form-textarea" id="inv-notes" placeholder="Any special instructions, follow-up recommendations, etc."></textarea>
+      </div>
+    </div>
+
+    <div class="totals" id="totals-display">
+      <div class="total-row"><span class="total-label">Subtotal</span><span class="total-value" id="subtotal">$0</span></div>
+      <div class="total-row grand"><span class="total-label">Total</span><span class="total-value" id="grand-total">$0</span></div>
+    </div>
+
+    <div class="section-label">Payment Status</div>
+    <div class="form-grid" style="margin-bottom:32px">
+      <div class="form-group">
+        <span class="form-label">Status</span>
+        <select class="form-select" id="pay-status">
+          <option value="Due on Service">Due on Service</option>
+          <option value="Paid — Cash">Paid — Cash</option>
+          <option value="Paid — Card">Paid — Card</option>
+          <option value="Paid — Cash App">Paid — Cash App</option>
+          <option value="Paid — Crypto">Paid — Crypto</option>
+          <option value="Deposit Received">Deposit Received</option>
+          <option value="Past Due">Past Due</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="btn-row no-print">
+      <button class="btn btn-primary" onclick="generateInvoice()">
+        <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+        Generate Invoice
+      </button>
+    </div>
+  </div>
+
+  <!-- PREVIEW -->
+  <div class="preview-section" id="preview-section" style="display:none">
+    <div class="section-label">Invoice Preview</div>
+    
+    <div class="btn-row no-print" style="margin-bottom:24px">
+      <button class="btn btn-primary" onclick="window.print()">
+        <svg viewBox="0 0 24 24"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+        Print
+      </button>
+      <button class="btn btn-success" onclick="shareText()">
+        <svg viewBox="0 0 24 24"><path d="M22 2L11 13"/><path d="M22 2L15 22L11 13L2 9L22 2Z"/></svg>
+        Text to Customer
+      </button>
+      <button class="btn btn-outline" onclick="copyInvoice()">
+        <svg viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+        Copy Text
+      </button>
+    </div>
+
+    <div id="invoice-print">
+      <!-- Generated invoice goes here -->
+    </div>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// Set today's date
+document.getElementById('inv-date').valueAsDate = new Date();
+
+// Invoice counter
+let invoiceNum = 'FD-' + String(Math.floor(Math.random()*9000)+1000);
+
+// Service presets for quick add
+const services = {
+  'Sedan/Coupe/Hatch': {
+    'Premium Wash': 90, 'Decontamination': 50, 'Paint Correction': 150,
+    'Wax': 125, 'Trim Restoration': 40, 'Tire Shine': 25,
+    'Headlight Restoration': 50, 'Ceramic Glass Protection': 25,
+    'Engine Bay Clean': 75, 'Ceramic Coat': 1000,
+    'Interior Clean': 100, 'Carpet Shampoo': 40, 'Steam Clean': 40,
+    'Maintenance Package': 150, 'The Shiny Package': 275, 'Wash, Clay, Seal': 140
+  },
+  'SUV/Minivan/Van': {
+    'Premium Wash': 125, 'Decontamination': 75, 'Paint Correction': 175,
+    'Wax': 150, 'Trim Restoration': 40, 'Tire Shine': 25,
+    'Headlight Restoration': 50, 'Ceramic Glass Protection': 25,
+    'Engine Bay Clean': 75, 'Ceramic Coat': 1500,
+    'Interior Clean': 125, 'Carpet Shampoo': 60, 'Steam Clean': 50,
+    'Maintenance Package': 200, 'The Shiny Package': 350, 'Wash, Clay, Seal': 200
+  },
+  'Truck': {
+    'Premium Wash': 125, 'Decontamination': 75, 'Paint Correction': 175,
+    'Wax': 150, 'Trim Restoration': 40, 'Tire Shine': 25,
+    'Headlight Restoration': 50, 'Ceramic Glass Protection': 25,
+    'Engine Bay Clean': 75, 'Ceramic Coat': 1250,
+    'Interior Clean': 100, 'Carpet Shampoo': 40, 'Steam Clean': 40,
+    'Maintenance Package': 180, 'The Shiny Package': 325, 'Wash, Clay, Seal': 200
+  }
+};
+
+let lineCount = 0;
+
+function addLineItem(serviceName='', price='') {
+  lineCount++;
+  const id = lineCount;
+  const container = document.getElementById('line-items');
+  
+  // Build service options
+  let options = '<option value="">Select or type custom...</option>';
+  for (const [category, items] of Object.entries(services)) {
+    options += `<optgroup label="${category}">`;
+    for (const [name, p] of Object.entries(items)) {
+      const sel = (serviceName === name) ? 'selected' : '';
+      options += `<option value="${name}|${p}" ${sel}>${name} — $${p.toLocaleString()}</option>`;
+    }
+    options += '</optgroup>';
+  }
+  options += '<option value="custom">Custom service (Fritz only)</option>';
+
+  const row = document.createElement('div');
+  row.className = 'line-item';
+  row.id = 'line-'+id;
+  row.innerHTML = `
+    <div>
+      <select class="form-select service-select" onchange="serviceSelected(this,${id})" style="margin-bottom:4px">${options}</select>
+      <input class="form-input service-name" id="sname-${id}" placeholder="Service name" value="${serviceName}" style="display:${serviceName && !Object.values(services).some(c=>c[serviceName]) ? 'block' : 'none'}">
+    </div>
+    <input class="form-input line-price" id="price-${id}" type="number" min="0" placeholder="0" value="${price}" oninput="calcTotal()">
+    <button class="remove-btn" onclick="removeLine(${id})">×</button>
+  `;
+  container.appendChild(row);
+  calcTotal();
+}
+
+function serviceSelected(sel, id) {
+  const nameInput = document.getElementById('sname-'+id);
+  const priceInput = document.getElementById('price-'+id);
+  if (sel.value === 'custom') {
+    nameInput.style.display = 'block';
+    nameInput.value = '';
+    priceInput.value = '';
+    nameInput.focus();
+  } else if (sel.value) {
+    const [name, price] = sel.value.split('|');
+    nameInput.style.display = 'none';
+    nameInput.value = name;
+    priceInput.value = price;
+  } else {
+    nameInput.style.display = 'none';
+    nameInput.value = '';
+    priceInput.value = '';
+  }
+  calcTotal();
+}
+
+function removeLine(id) {
+  document.getElementById('line-'+id)?.remove();
+  calcTotal();
+}
+
+function calcTotal() {
+  let total = 0;
+  document.querySelectorAll('.line-price').forEach(el => {
+    total += parseFloat(el.value) || 0;
+  });
+  document.getElementById('subtotal').textContent = '$' + total.toLocaleString();
+  document.getElementById('grand-total').textContent = '$' + total.toLocaleString();
+}
+
+function getLineItems() {
+  const items = [];
+  document.querySelectorAll('.line-item').forEach(row => {
+    const sel = row.querySelector('.service-select');
+    const nameInput = row.querySelector('.service-name');
+    const priceInput = row.querySelector('.line-price');
+    let name = '';
+    if (sel.value === 'custom') {
+      name = nameInput.value;
+    } else if (sel.value) {
+      name = sel.value.split('|')[0];
+    }
+    const price = parseFloat(priceInput.value) || 0;
+    if (name && price) items.push({ name, price });
+  });
+  return items;
+}
+
+function generateInvoice() {
+  const name = document.getElementById('cust-name').value || 'Customer';
+  const contact = document.getElementById('cust-contact').value || '';
+  const vehicle = document.getElementById('cust-vehicle').value || '';
+  const date = document.getElementById('inv-date').value;
+  const notes = document.getElementById('inv-notes').value;
+  const status = document.getElementById('pay-status').value;
+  const items = getLineItems();
+  
+  if (items.length === 0) {
+    showToast('Add at least one service');
+    return;
+  }
+
+  const total = items.reduce((s, i) => s + i.price, 0);
+  const formattedDate = new Date(date + 'T12:00:00').toLocaleDateString('en-US', { year:'numeric', month:'long', day:'numeric' });
+
+  let tableRows = items.map(i => `
+    <tr>
+      <td>${i.name}</td>
+      <td style="text-align:right">$${i.price.toLocaleString()}</td>
+    </tr>
+  `).join('');
+
+  const statusColor = status.startsWith('Paid') ? '#1D9E75' : status === 'Past Due' ? '#E24B4A' : '#7B2FBE';
+
+  const html = `
+    <div class="inv-header">
+      <div class="inv-brand">
+        <h1>Fritz's Detail on the Go</h1>
+        <p>Mobile Detailing — Southwest Virginia</p>
+        <p>(276) 247-0921</p>
+      </div>
+      <div class="inv-number">
+        <h2>Invoice</h2>
+        <p>${invoiceNum}</p>
+        <p>${formattedDate}</p>
+        <div style="margin-top:8px;display:inline-block;background:${statusColor};padding:4px 14px;border-radius:20px;font-size:12px;font-weight:600;letter-spacing:1px;text-transform:uppercase">${status}</div>
+      </div>
+    </div>
+    <div class="inv-info">
+      <div class="inv-info-block">
+        <h3>Bill To</h3>
+        <p><strong>${name}</strong></p>
+        ${contact ? '<p>'+contact+'</p>' : ''}
+        ${vehicle ? '<p>'+vehicle+'</p>' : ''}
+      </div>
+      <div class="inv-info-block">
+        <h3>Payment Methods</h3>
+        <p>Cash App: $zackfritz08</p>
+        <p>Card: fritzdetailing.net</p>
+        <p>Crypto: BTC & XMR accepted</p>
+        <p>Cash accepted</p>
+      </div>
+    </div>
+    <table class="inv-table">
+      <thead><tr><th>Service</th><th style="text-align:right">Amount</th></tr></thead>
+      <tbody>${tableRows}</tbody>
+    </table>
+    <div class="inv-totals">
+      <div class="inv-totals-inner">
+        <div class="inv-total-row"><span>Subtotal</span><span>$${total.toLocaleString()}</span></div>
+        <div class="inv-total-row grand"><span>Total</span><span>$${total.toLocaleString()}</span></div>
+      </div>
+    </div>
+    ${notes ? '<div class="inv-notes"><h3>Notes</h3><p>'+notes.replace(/\n/g,'<br>')+'</p></div>' : ''}
+    <div class="inv-footer">
+      <p>Thank you for choosing Fritz's Detail on the Go!</p>
+      <p class="pay-links">fritzdetailing.net | (276) 247-0921</p>
+    </div>
+  `;
+
+  document.getElementById('invoice-print').innerHTML = html;
+  document.getElementById('preview-section').style.display = 'block';
+  document.getElementById('preview-section').scrollIntoView({ behavior: 'smooth' });
+  showToast('Invoice generated!');
+}
+
+function getPlainTextInvoice() {
+  const name = document.getElementById('cust-name').value || 'Customer';
+  const contact = document.getElementById('cust-contact').value || '';
+  const vehicle = document.getElementById('cust-vehicle').value || '';
+  const date = document.getElementById('inv-date').value;
+  const notes = document.getElementById('inv-notes').value;
+  const status = document.getElementById('pay-status').value;
+  const items = getLineItems();
+  const total = items.reduce((s, i) => s + i.price, 0);
+  const formattedDate = new Date(date + 'T12:00:00').toLocaleDateString('en-US', { year:'numeric', month:'long', day:'numeric' });
+
+  let text = `FRITZ'S DETAIL ON THE GO\nMobile Detailing — SWVA\n(276) 247-0921\n`;
+  text += `━━━━━━━━━━━━━━━━━━\n`;
+  text += `Invoice: ${invoiceNum}\nDate: ${formattedDate}\n`;
+  text += `━━━━━━━━━━━━━━━━━━\n`;
+  text += `Customer: ${name}\n`;
+  if (vehicle) text += `Vehicle: ${vehicle}\n`;
+  text += `\nServices:\n`;
+  items.forEach(i => {
+    text += `  ${i.name} — $${i.price.toLocaleString()}\n`;
+  });
+  text += `\n━━━━━━━━━━━━━━━━━━\n`;
+  text += `TOTAL: $${total.toLocaleString()}\nStatus: ${status}\n`;
+  text += `━━━━━━━━━━━━━━━━━━\n`;
+  if (notes) text += `\nNotes: ${notes}\n`;
+  text += `\nPayment Options:\n`;
+  text += `  Cash App: $zackfritz08\n`;
+  text += `  Card: fritzdetailing.net\n`;
+  text += `  Crypto: BTC & XMR accepted\n`;
+  text += `  Cash accepted at service\n`;
+  text += `\nThank you for choosing Fritz's! 🚗✨`;
+  return text;
+}
+
+function shareText() {
+  const contact = document.getElementById('cust-contact').value || '';
+  const text = getPlainTextInvoice();
+  const encoded = encodeURIComponent(text);
+  
+  // Try to detect if it's a phone number or email
+  const isPhone = /[\d\(\)\-\+\s]{7,}/.test(contact);
+  const isEmail = /@/.test(contact);
+  
+  if (isPhone) {
+    const cleanPhone = contact.replace(/[^\d+]/g, '');
+    window.open(`sms:${cleanPhone}?body=${encoded}`, '_blank');
+  } else if (isEmail) {
+    window.open(`mailto:${contact}?subject=Invoice ${invoiceNum} — Fritz's Detail on the Go&body=${encoded}`, '_blank');
+  } else if (navigator.share) {
+    navigator.share({ title: 'Invoice — Fritz\'s Detail on the Go', text: text });
+  } else {
+    copyInvoice();
+  }
+}
+
+function copyInvoice() {
+  const text = getPlainTextInvoice();
+  navigator.clipboard.writeText(text).then(() => {
+    showToast('Invoice copied to clipboard!');
+  }).catch(() => {
+    // Fallback
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    ta.remove();
+    showToast('Invoice copied!');
+  });
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+// Start with one empty line item
+addLineItem();
+</script>
+</body>
+</html>

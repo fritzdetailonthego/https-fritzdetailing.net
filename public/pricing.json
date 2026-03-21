@@ -1,0 +1,77 @@
+{
+  "sedan": {
+    "label": "Sedan / Coupe / Hatchback",
+    "exterior": {
+      "Premium Wash": 90,
+      "Decontamination": 50,
+      "Paint Correction": 150,
+      "Wax": 125,
+      "Trim Restoration": 40,
+      "Tire Shine": 25,
+      "Headlight Restoration": 50,
+      "Ceramic Glass Protection": 25,
+      "Engine Bay Clean": 75,
+      "Ceramic Coat": 1000
+    },
+    "interior": {
+      "Interior Clean": 100,
+      "Carpet Shampoo": 40,
+      "Steam Clean": 40
+    },
+    "packages": {
+      "Maintenance": 150,
+      "The Shiny Package": 275,
+      "Wash, Clay, Seal": 140
+    }
+  },
+  "suv": {
+    "label": "SUV / Minivan / Van",
+    "exterior": {
+      "Premium Wash": 125,
+      "Decontamination": 75,
+      "Paint Correction": 175,
+      "Wax": 150,
+      "Trim Restoration": 40,
+      "Tire Shine": 25,
+      "Headlight Restoration": 50,
+      "Ceramic Glass Protection": 25,
+      "Engine Bay Clean": 75,
+      "Ceramic Coat": 1500
+    },
+    "interior": {
+      "Interior Clean": 125,
+      "Carpet Shampoo": 60,
+      "Steam Clean": 50
+    },
+    "packages": {
+      "Maintenance": 200,
+      "The Shiny Package": 350,
+      "Wash, Clay, Seal": 200
+    }
+  },
+  "truck": {
+    "label": "Trucks",
+    "exterior": {
+      "Premium Wash": 125,
+      "Decontamination": 75,
+      "Paint Correction": 175,
+      "Wax": 150,
+      "Trim Restoration": 40,
+      "Tire Shine": 25,
+      "Headlight Restoration": 50,
+      "Ceramic Glass Protection": 25,
+      "Engine Bay Clean": 75,
+      "Ceramic Coat": 1250
+    },
+    "interior": {
+      "Interior Clean": 100,
+      "Carpet Shampoo": 40,
+      "Steam Clean": 40
+    },
+    "packages": {
+      "Maintenance": 180,
+      "The Shiny Package": 325,
+      "Wash, Clay, Seal": 200
+    }
+  }
+}
