@@ -117,10 +117,24 @@ let adminPassword = '';
 async function doLogin() {
   const pw = document.getElementById('pw-input').value;
   if (!pw) { document.getElementById('login-error').textContent = 'Enter a password'; return; }
-  adminPassword = pw;
 
-  // Try loading pricing to verify connection works
+  document.getElementById('login-error').textContent = 'Checking...';
+
   try {
+    // Verify password against server
+    const authRes = await fetch('/api/verify-admin', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: pw })
+    });
+    const authData = await authRes.json();
+    if (!authRes.ok) {
+      document.getElementById('login-error').textContent = authData.error || 'Wrong password';
+      return;
+    }
+
+    // Password verified — store it and load pricing
+    adminPassword = pw;
     const res = await fetch('/pricing.json?t=' + Date.now());
     if (!res.ok) throw new Error('Failed to load pricing');
     pricingData = await res.json();
@@ -128,7 +142,7 @@ async function doLogin() {
     document.getElementById('admin-screen').style.display = 'block';
     renderEditor();
   } catch(e) {
-    document.getElementById('login-error').textContent = 'Could not load pricing data.';
+    document.getElementById('login-error').textContent = e.message || 'Could not load pricing data.';
   }
 }
 
