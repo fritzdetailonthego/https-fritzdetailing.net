@@ -95,11 +95,16 @@ body{font-family:'Open Sans',sans-serif;background:var(--black);color:var(--whit
   <div class="toolbar">
     <button class="btn btn-green" onclick="savePricing()">Save & Deploy</button>
     <button class="btn btn-outline" onclick="downloadCSV()">Download CSV</button>
-    <label class="btn btn-outline" style="cursor:pointer">
-      Upload CSV
-      <input type="file" accept=".csv" onchange="uploadCSV(event)" style="display:none">
-    </label>
+    <label class="btn btn-outline" style="cursor:pointer">Upload CSV<input type="file" accept=".csv" onchange="uploadCSV(event)" style="display:none"></label>
     <button class="btn btn-outline" onclick="resetPricing()">Reset to Saved</button>
+    <button class="btn btn-outline" onclick="undoPricing()" title="Restore the last saved version">↩ Undo</button>
+    <button class="btn btn-outline" style="color:var(--red);border-color:rgba(226,75,74,0.3)" onclick="resetToOriginal()" title="Reset to original deploy pricing">Reset to Original</button>
+  </div>
+
+  <!-- REVISION HISTORY -->
+  <div style="margin-top:8px;margin-bottom:12px">
+    <button class="btn btn-outline" style="font-size:12px;padding:6px 14px" onclick="toggleRevisions()">📋 View Revision History</button>
+    <div id="revision-list" style="display:none;margin-top:10px;background:var(--dark);border:1px solid var(--border);border-radius:8px;max-height:200px;overflow-y:auto;padding:8px"></div>
   </div>
 
   <div id="status-bar" class="status-bar"></div>
@@ -317,12 +322,19 @@ async function savePricing() {
   const statusBar = document.getElementById('status-bar');
   statusBar.className = 'status-bar';
   statusBar.style.display = 'block';
-  statusBar.textContent = 'Saving...';
+  statusBar.textContent = 'Saving revision & deploying...';
   statusBar.style.background = 'rgba(123,47,190,0.15)';
   statusBar.style.borderColor = 'rgba(123,47,190,0.3)';
   statusBar.style.color = 'var(--purple-light)';
 
   try {
+    // Save current state as revision BEFORE overwriting
+    await fetch('/api/pricing-revisions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: adminPassword, action: 'save', pricing: pricingData })
+    }).catch(() => {}); // Don't block if blob not set up yet
+
     const res = await fetch('/api/save-pricing', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -332,11 +344,102 @@ async function savePricing() {
     if (!res.ok) throw new Error(data.error);
     statusBar.className = 'status-bar success';
     statusBar.textContent = data.message || 'Saved! Site will redeploy in ~30 seconds.';
-    showToast('Pricing saved!');
+    showToast('Pricing saved! Revision stored.');
   } catch(e) {
     statusBar.className = 'status-bar error';
     statusBar.textContent = e.message || 'Save failed';
   }
+}
+
+// Undo — restore the most recent revision
+async function undoPricing() {
+  if (!confirm('⚠️ UNDO: This will revert pricing to the LAST saved state. Are you sure?')) return;
+  try {
+    const listRes = await fetch('/api/pricing-revisions', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: adminPassword, action: 'list' })
+    });
+    const listData = await listRes.json();
+    if (!listData.revisions || listData.revisions.length === 0) { showToast('No revisions to undo to'); return; }
+    
+    const latest = listData.revisions[0];
+    const restoreRes = await fetch('/api/pricing-revisions', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: adminPassword, action: 'restore', revisionUrl: latest.url })
+    });
+    const restoreData = await restoreRes.json();
+    if (!restoreData.pricing) throw new Error('Could not restore');
+    pricingData = restoreData.pricing;
+    renderEditor();
+    showToast('Restored to: ' + new Date(latest.timestamp).toLocaleString());
+  } catch(e) { showToast(e.message || 'Undo failed'); }
+}
+
+// Reset to original deploy state
+async function resetToOriginal() {
+  const phrase = prompt('⚠️ RESET TO ORIGINAL: This will wipe ALL pricing changes back to the very first version.\n\nType "RESET PRICING" to confirm:');
+  if (phrase !== 'RESET PRICING') { showToast('Reset cancelled'); return; }
+  try {
+    const listRes = await fetch('/api/pricing-revisions', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: adminPassword, action: 'list' })
+    });
+    const listData = await listRes.json();
+    if (!listData.revisions || listData.revisions.length === 0) { showToast('No revisions stored'); return; }
+    
+    const oldest = listData.revisions[listData.revisions.length - 1];
+    const restoreRes = await fetch('/api/pricing-revisions', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: adminPassword, action: 'restore', revisionUrl: oldest.url })
+    });
+    const restoreData = await restoreRes.json();
+    if (!restoreData.pricing) throw new Error('Could not restore');
+    pricingData = restoreData.pricing;
+    renderEditor();
+    showToast('Reset to original! Click Save & Deploy to apply.');
+  } catch(e) { showToast(e.message || 'Reset failed'); }
+}
+
+// Revision history toggle
+async function toggleRevisions() {
+  const el = document.getElementById('revision-list');
+  if (el.style.display !== 'none') { el.style.display = 'none'; return; }
+  el.style.display = 'block';
+  el.innerHTML = '<div style="color:var(--gray);padding:8px;font-size:13px">Loading revisions...</div>';
+  try {
+    const res = await fetch('/api/pricing-revisions', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: adminPassword, action: 'list' })
+    });
+    const data = await res.json();
+    if (!data.revisions || data.revisions.length === 0) {
+      el.innerHTML = '<div style="color:var(--gray);padding:8px;font-size:13px">No revisions yet. Revisions are created each time you save.</div>';
+      return;
+    }
+    el.innerHTML = data.revisions.map((r, i) => {
+      const d = new Date(r.timestamp);
+      const label = i === 0 ? ' (latest)' : i === data.revisions.length - 1 ? ' (original)' : '';
+      return `<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 10px;border-bottom:1px solid rgba(255,255,255,0.03);font-size:13px">
+        <span style="color:var(--gray-light)">${d.toLocaleDateString()} ${d.toLocaleTimeString()}${label}</span>
+        <button onclick="restoreRevision('${r.url}')" style="background:var(--purple);color:#fff;border:none;padding:4px 12px;border-radius:4px;cursor:pointer;font-family:'Rajdhani',sans-serif;font-weight:600;font-size:12px;text-transform:uppercase">Restore</button>
+      </div>`;
+    }).join('');
+  } catch(e) { el.innerHTML = '<div style="color:var(--red);padding:8px;font-size:13px">' + (e.message || 'Failed to load. Set up Blob Storage first.') + '</div>'; }
+}
+
+async function restoreRevision(url) {
+  if (!confirm('Restore this revision? (You\'ll still need to Save & Deploy to apply it.)')) return;
+  try {
+    const res = await fetch('/api/pricing-revisions', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: adminPassword, action: 'restore', revisionUrl: url })
+    });
+    const data = await res.json();
+    if (!data.pricing) throw new Error('Could not restore');
+    pricingData = data.pricing;
+    renderEditor();
+    showToast('Revision loaded! Click Save & Deploy to apply.');
+  } catch(e) { showToast(e.message || 'Restore failed'); }
 }
 
 function downloadCSV() {
