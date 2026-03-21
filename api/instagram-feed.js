@@ -34,7 +34,9 @@ module.exports = async (req, res) => {
               const mediaUrl = cleanUrl + '/media/?size=l';
               const mediaRes = await fetch(mediaUrl, { redirect: 'follow' });
               if (mediaRes.ok && mediaRes.url) {
-                images.push({ ...item, url: mediaRes.url });
+                // Proxy through our server to bypass hotlink blocking
+                const proxyUrl = '/api/image-proxy?url=' + encodeURIComponent(mediaRes.url);
+                images.push({ ...item, url: proxyUrl });
               } else {
                 // If media redirect fails, skip
                 images.push({ ...item, url: '' });
@@ -66,7 +68,8 @@ module.exports = async (req, res) => {
         const mediaUrl = cleanUrl + '/media/?size=l';
         const mediaRes = await fetch(mediaUrl, { redirect: 'follow' });
         if (mediaRes.ok) {
-          return res.json({ success: true, imageUrl: mediaRes.url, original: url });
+          const proxyUrl = '/api/image-proxy?url=' + encodeURIComponent(mediaRes.url);
+          return res.json({ success: true, imageUrl: proxyUrl, original: url });
         }
       }
       // Not an Instagram URL or fetch failed — treat as direct image
