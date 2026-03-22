@@ -492,7 +492,7 @@ nav a:hover{color:var(--purple-light)}
     <p class="section-sub">Based in Glade Spring — Fritz brings all professional-grade equipment and premium products directly to your driveway, office, or wherever your vehicle is parked.</p>
 
     <!-- WEEKEND CALLOUT -->
-    <div style="background:linear-gradient(135deg,rgba(29,158,117,0.12),rgba(123,47,190,0.08));border:1px solid rgba(29,158,117,0.3);border-radius:12px;padding:20px 24px;margin:24px 0;display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+    <div id="weekend-badge" style="background:linear-gradient(135deg,rgba(29,158,117,0.12),rgba(123,47,190,0.08));border:1px solid rgba(29,158,117,0.3);border-radius:12px;padding:20px 24px;margin:24px 0;display:none;align-items:center;gap:16px;flex-wrap:wrap">
       <div style="background:rgba(29,158,117,0.2);width:48px;height:48px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#1D9E75" stroke-width="2" stroke-linecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
       </div>
@@ -1306,6 +1306,30 @@ async function loadGallery() {
   }
 }
 loadGallery();
+
+// ===== SITE CONFIG =====
+async function loadSiteConfig() {
+  try {
+    const res = await fetch('/site-config.json?t=' + Date.now());
+    if (!res.ok) return;
+    const cfg = await res.json();
+
+    // Weekend badge
+    const weekendEl = document.getElementById('weekend-badge');
+    if (weekendEl) weekendEl.style.display = cfg.worksWeekends !== false ? 'flex' : 'none';
+
+    // Pricing section
+    if (cfg.showPricing === false) {
+      const pricingEl = document.getElementById('pricing');
+      if (pricingEl) pricingEl.style.display = 'none';
+    }
+  } catch(e) {
+    // Default: show everything
+    const weekendEl = document.getElementById('weekend-badge');
+    if (weekendEl) weekendEl.style.display = 'flex';
+  }
+}
+loadSiteConfig();
 </script>
 </body>
 </html>

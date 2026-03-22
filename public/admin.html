@@ -89,6 +89,56 @@ body{font-family:'Open Sans',sans-serif;background:var(--black);color:var(--whit
 
 <!-- ADMIN PANEL -->
 <div id="admin-screen">
+
+  <!-- SITE SETTINGS -->
+  <div class="section-label">Site Settings</div>
+  <p style="color:var(--gray);font-size:14px;margin-bottom:16px">Quick toggles that update the live site. Changes deploy automatically.</p>
+
+  <div id="settings-panel" style="display:flex;flex-wrap:wrap;gap:12px;margin-bottom:24px">
+    <label style="display:flex;align-items:center;gap:10px;background:var(--dark);border:1px solid var(--border);border-radius:10px;padding:14px 18px;cursor:pointer;transition:all .2s;flex:1;min-width:200px" id="toggle-weekends">
+      <div style="position:relative;width:44px;height:24px;flex-shrink:0">
+        <input type="checkbox" id="cfg-weekends" onchange="updateToggle('worksWeekends',this.checked)" style="opacity:0;width:0;height:0;position:absolute">
+        <div class="toggle-track" style="position:absolute;inset:0;background:rgba(255,255,255,0.1);border-radius:12px;transition:background .2s"></div>
+        <div class="toggle-thumb" style="position:absolute;top:2px;left:2px;width:20px;height:20px;background:#fff;border-radius:50%;transition:transform .2s"></div>
+      </div>
+      <div>
+        <div style="font-family:'Oswald',sans-serif;font-size:14px;text-transform:uppercase;font-weight:600;letter-spacing:0.5px">Works Weekends</div>
+        <div style="font-size:12px;color:var(--gray)">Shows "Open Weekends" badge on site</div>
+      </div>
+    </label>
+
+    <label style="display:flex;align-items:center;gap:10px;background:var(--dark);border:1px solid var(--border);border-radius:10px;padding:14px 18px;cursor:pointer;transition:all .2s;flex:1;min-width:200px" id="toggle-clients">
+      <div style="position:relative;width:44px;height:24px;flex-shrink:0">
+        <input type="checkbox" id="cfg-clients" onchange="updateToggle('acceptingNewClients',this.checked)" style="opacity:0;width:0;height:0;position:absolute">
+        <div class="toggle-track" style="position:absolute;inset:0;background:rgba(255,255,255,0.1);border-radius:12px;transition:background .2s"></div>
+        <div class="toggle-thumb" style="position:absolute;top:2px;left:2px;width:20px;height:20px;background:#fff;border-radius:50%;transition:transform .2s"></div>
+      </div>
+      <div>
+        <div style="font-family:'Oswald',sans-serif;font-size:14px;text-transform:uppercase;font-weight:600;letter-spacing:0.5px">Accepting New Clients</div>
+        <div style="font-size:12px;color:var(--gray)">Shows availability banner on site</div>
+      </div>
+    </label>
+
+    <label style="display:flex;align-items:center;gap:10px;background:var(--dark);border:1px solid var(--border);border-radius:10px;padding:14px 18px;cursor:pointer;transition:all .2s;flex:1;min-width:200px" id="toggle-pricing">
+      <div style="position:relative;width:44px;height:24px;flex-shrink:0">
+        <input type="checkbox" id="cfg-pricing" onchange="updateToggle('showPricing',this.checked)" style="opacity:0;width:0;height:0;position:absolute">
+        <div class="toggle-track" style="position:absolute;inset:0;background:rgba(255,255,255,0.1);border-radius:12px;transition:background .2s"></div>
+        <div class="toggle-thumb" style="position:absolute;top:2px;left:2px;width:20px;height:20px;background:#fff;border-radius:50%;transition:transform .2s"></div>
+      </div>
+      <div>
+        <div style="font-family:'Oswald',sans-serif;font-size:14px;text-transform:uppercase;font-weight:600;letter-spacing:0.5px">Show Pricing</div>
+        <div style="font-size:12px;color:var(--gray)">Toggle pricing section visibility</div>
+      </div>
+    </label>
+  </div>
+  <div id="settings-status" style="font-size:13px;color:var(--gray);margin-bottom:24px;min-height:20px"></div>
+
+  <style>
+    input[type="checkbox"]:checked ~ .toggle-track{background:var(--green)!important}
+    input[type="checkbox"]:checked ~ .toggle-thumb{transform:translateX(20px)!important}
+  </style>
+
+  <div style="border-top:1px solid var(--border);padding-top:32px;margin-bottom:0">
   <div class="section-label">Manage Pricing</div>
   <p style="color:var(--gray);font-size:14px;margin-bottom:20px">Edit prices below. Changes update the entire website — pricing tables, payment forms, and invoices. Hit Save when done.</p>
 
@@ -594,12 +644,50 @@ async function saveGallery() {
 }
 
 // Load gallery on login
+// ===== SITE SETTINGS =====
+let siteConfig = { worksWeekends: true, acceptingNewClients: true, showPricing: true };
+
+async function loadSiteConfig() {
+  try {
+    const res = await fetch('/site-config.json?t=' + Date.now());
+    if (res.ok) siteConfig = await res.json();
+  } catch(e) {}
+  // Set toggle states
+  document.getElementById('cfg-weekends').checked = siteConfig.worksWeekends !== false;
+  document.getElementById('cfg-clients').checked = siteConfig.acceptingNewClients !== false;
+  document.getElementById('cfg-pricing').checked = siteConfig.showPricing !== false;
+}
+
+async function updateToggle(key, value) {
+  siteConfig[key] = value;
+  const statusEl = document.getElementById('settings-status');
+  statusEl.textContent = 'Saving...';
+  statusEl.style.color = 'var(--purple-light)';
+  try {
+    const res = await fetch('/api/save-config', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: adminPassword, config: siteConfig })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error);
+    statusEl.textContent = '✓ ' + key + ' ' + (value ? 'ON' : 'OFF') + ' — site updating in ~30s';
+    statusEl.style.color = 'var(--green)';
+    showToast(key + ' → ' + (value ? 'ON' : 'OFF'));
+    setTimeout(() => { statusEl.textContent = ''; }, 4000);
+  } catch(e) {
+    statusEl.textContent = 'Save failed: ' + (e.message || 'Unknown error');
+    statusEl.style.color = 'var(--red)';
+  }
+}
+
 const origDoLogin = doLogin;
 doLogin = async function() {
   await origDoLogin();
   if (pricingData) {
     loadGallery();
     loadSales();
+    loadSiteConfig();
   }
 };
 
