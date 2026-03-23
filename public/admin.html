@@ -415,7 +415,7 @@ async function undoPricing() {
     const latest = listData.revisions[0];
     const restoreRes = await fetch('/api/pricing-revisions', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ password: adminPassword, action: 'restore', revisionUrl: latest.url })
+      body: JSON.stringify({ password: adminPassword, action: 'restore', revisionIndex: latest.index })
     });
     const restoreData = await restoreRes.json();
     if (!restoreData.pricing) throw new Error('Could not restore');
@@ -440,7 +440,7 @@ async function resetToOriginal() {
     const oldest = listData.revisions[listData.revisions.length - 1];
     const restoreRes = await fetch('/api/pricing-revisions', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ password: adminPassword, action: 'restore', revisionUrl: oldest.url })
+      body: JSON.stringify({ password: adminPassword, action: 'restore', revisionIndex: oldest.index })
     });
     const restoreData = await restoreRes.json();
     if (!restoreData.pricing) throw new Error('Could not restore');
@@ -471,18 +471,18 @@ async function toggleRevisions() {
       const label = i === 0 ? ' (latest)' : i === data.revisions.length - 1 ? ' (original)' : '';
       return `<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 10px;border-bottom:1px solid rgba(255,255,255,0.03);font-size:13px">
         <span style="color:var(--gray-light)">${d.toLocaleDateString()} ${d.toLocaleTimeString()}${label}</span>
-        <button onclick="restoreRevision('${r.url}')" style="background:var(--purple);color:#fff;border:none;padding:4px 12px;border-radius:4px;cursor:pointer;font-family:'Rajdhani',sans-serif;font-weight:600;font-size:12px;text-transform:uppercase">Restore</button>
+        <button onclick="restoreRevision(${r.index})" style="background:var(--purple);color:#fff;border:none;padding:4px 12px;border-radius:4px;cursor:pointer;font-family:'Rajdhani',sans-serif;font-weight:600;font-size:12px;text-transform:uppercase">Restore</button>
       </div>`;
     }).join('');
   } catch(e) { el.innerHTML = '<div style="color:var(--red);padding:8px;font-size:13px">' + (e.message || 'Failed to load. Set up Blob Storage first.') + '</div>'; }
 }
 
-async function restoreRevision(url) {
+async function restoreRevision(index) {
   if (!confirm('Restore this revision? (You\'ll still need to Save & Deploy to apply it.)')) return;
   try {
     const res = await fetch('/api/pricing-revisions', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ password: adminPassword, action: 'restore', revisionUrl: url })
+      body: JSON.stringify({ password: adminPassword, action: 'restore', revisionIndex: index })
     });
     const data = await res.json();
     if (!data.pricing) throw new Error('Could not restore');

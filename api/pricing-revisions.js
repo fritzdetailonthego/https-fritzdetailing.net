@@ -15,41 +15,61 @@ module.exports = async (req, res) => {
     return res.status(401).json({ error: 'Unauthorized' });
   }
 
+  const token = process.env.BLOB_READ_WRITE_TOKEN;
+
+  // Helper: read revisions array from blob
+  async function readRevisions() {
+    try {
+      const { blobs } = await list({ prefix: 'pricing-revisions-data', token });
+      if (blobs.length > 0) {
+        const r = await fetch(blobs[0].url, { headers: { Authorization: `Bearer ${token}` } });
+        if (r.ok) return await r.json();
+      }
+    } catch(e) {}
+    return [];
+  }
+
+  // Helper: write revisions array to blob
+  async function writeRevisions(revisions) {
+    await put('pricing-revisions-data.json', JSON.stringify(revisions), {
+      contentType: 'application/json',
+      addRandomSuffix: false,
+      allowOverwrite: true,
+      token
+    });
+  }
+
   try {
     if (action === 'save') {
-      // Save current pricing as a revision before overwriting
-      const ts = new Date().toISOString();
-      const filename = `pricing-revisions/${ts}.json`;
-      await put(filename, JSON.stringify(pricing, null, 2), {
-        access: 'public', contentType: 'application/json', addRandomSuffix: false
-      });
-      return res.json({ success: true, revision: ts });
+      const revisions = await readRevisions();
+      revisions.push({ timestamp: new Date().toISOString(), pricing });
+      // Keep last 50 revisions
+      if (revisions.length > 50) revisions.splice(0, revisions.length - 50);
+      await writeRevisions(revisions);
+      return res.json({ success: true, revision: revisions.length });
     }
 
     if (action === 'list') {
-      // List all revisions
-      const revisions = [];
-      let cursor;
-      do {
-        const result = await list({ prefix: 'pricing-revisions/', cursor, limit: 100 });
-        for (const blob of result.blobs) {
-          const ts = blob.pathname.replace('pricing-revisions/', '').replace('.json', '');
-          revisions.push({ timestamp: ts, url: blob.url, size: blob.size });
-        }
-        cursor = result.cursor;
-      } while (cursor);
-      revisions.sort((a, b) => b.timestamp.localeCompare(a.timestamp));
-      return res.json({ revisions });
+      const revisions = await readRevisions();
+      const list = revisions.map((r, i) => ({
+        index: i,
+        timestamp: r.timestamp
+      })).reverse();
+      return res.json({ revisions: list });
     }
 
     if (action === 'restore') {
-      // Fetch a specific revision
-      const { revisionUrl } = req.body;
-      if (!revisionUrl) return res.status(400).json({ error: 'Missing revisionUrl' });
-      const r = await fetch(revisionUrl);
-      if (!r.ok) throw new Error('Could not fetch revision');
-      const data = await r.json();
-      return res.json({ success: true, pricing: data });
+      const { revisionIndex } = req.body;
+      const revisions = await readRevisions();
+      const idx = revisionIndex !== undefined ? revisionIndex : (req.body.revisionUrl ? -1 : -1);
+      if (idx >= 0 && idx < revisions.length) {
+        return res.json({ success: true, pricing: revisions[idx].pricing });
+      }
+      // Fallback: try last revision
+      if (revisions.length > 0) {
+        return res.json({ success: true, pricing: revisions[revisions.length - 1].pricing });
+      }
+      return res.status(404).json({ error: 'No revisions found' });
     }
 
     res.status(400).json({ error: 'Invalid action. Use save, list, or restore.' });
