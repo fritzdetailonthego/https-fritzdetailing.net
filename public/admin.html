@@ -180,6 +180,32 @@ body{font-family:'Open Sans',sans-serif;background:var(--black);color:var(--whit
     <div id="gallery-status" class="status-bar" style="margin-top:12px"></div>
   </div>
 
+  <!-- BOOKING MANAGEMENT -->
+  <div style="margin-top:48px;padding-top:32px;border-top:1px solid var(--border)">
+    <div class="section-label">Bookings & Schedule</div>
+    <p style="color:var(--gray);font-size:14px;margin-bottom:16px">Customers book at <a href="/book.html" target="_blank" style="color:var(--purple-light)">/book.html</a>. Manage availability and view upcoming bookings below.</p>
+
+    <!-- Upcoming bookings -->
+    <div style="font-family:'Rajdhani',sans-serif;font-size:13px;text-transform:uppercase;letter-spacing:1.5px;color:var(--purple-light);font-weight:600;margin-bottom:8px">Upcoming Bookings</div>
+    <div id="bookings-list" style="margin-bottom:24px"><p style="color:var(--gray);font-size:14px">Loading...</p></div>
+
+    <!-- Quick block -->
+    <div style="font-family:'Rajdhani',sans-serif;font-size:13px;text-transform:uppercase;letter-spacing:1.5px;color:var(--purple-light);font-weight:600;margin:16px 0 8px">Block a Date</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px">
+      <input type="date" class="input" id="block-date" style="width:auto;margin:0;flex:1;min-width:150px">
+      <input class="input" id="block-reason" placeholder="Reason (optional)" style="width:auto;margin:0;flex:1;min-width:150px">
+      <button class="btn btn-outline" style="width:auto;padding:10px 16px;font-size:13px" onclick="blockDate()">Block Full Day</button>
+    </div>
+    <div id="blocked-dates-list" style="margin-bottom:16px"></div>
+
+    <!-- Weekly hours -->
+    <details style="margin-top:16px">
+      <summary style="cursor:pointer;font-family:'Rajdhani',sans-serif;font-size:13px;text-transform:uppercase;letter-spacing:1.5px;color:var(--purple-light);font-weight:600;margin-bottom:8px">Edit Weekly Hours & Slot Duration</summary>
+      <div id="availability-editor" style="margin-top:12px"></div>
+      <button class="btn btn-green" style="margin-top:12px" onclick="saveAvailability()">Save Availability</button>
+    </details>
+  </div>
+
   <!-- SALES DASHBOARD -->
   <div style="margin-top:48px;padding-top:32px;border-top:1px solid var(--border)">
     <div class="section-label">Sales & Commission Tracker</div>
@@ -644,6 +670,126 @@ async function saveGallery() {
 }
 
 // Load gallery on login
+// ===== BOOKINGS =====
+let availabilityConfig = null;
+
+async function loadBookings() {
+  try {
+    const res = await fetch('/api/bookings', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'list-bookings', password: adminPassword })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error);
+
+    const today = new Date().toISOString().split('T')[0];
+    const upcoming = (data.bookings || []).filter(b => b.date >= today && b.status !== 'cancelled');
+    const el = document.getElementById('bookings-list');
+
+    if (upcoming.length === 0) {
+      el.innerHTML = '<p style="color:var(--gray);font-size:14px">No upcoming bookings.</p>';
+      return;
+    }
+
+    el.innerHTML = upcoming.map(b => {
+      const d = new Date(b.date + 'T12:00:00');
+      const dateStr = d.toLocaleDateString('en-US', { weekday:'short', month:'short', day:'numeric' });
+      const h = parseInt(b.time.split(':')[0]); const m = b.time.split(':')[1];
+      const timeStr = (h > 12 ? h-12 : h) + ':' + m + (h >= 12 ? ' PM' : ' AM');
+      return '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:var(--dark);border:1px solid var(--border);border-radius:8px;margin-bottom:6px;font-size:13px">' +
+        '<div><strong style="color:var(--white)">' + b.name + '</strong> <span style="color:var(--gray)">(' + b.phone + ')</span><br>' +
+        '<span style="color:var(--purple-light)">' + dateStr + ' at ' + timeStr + '</span>' +
+        (b.service ? ' <span style="color:var(--gray)">- ' + b.service + '</span>' : '') +
+        (b.vehicle ? ' <span style="color:var(--gray)">- ' + b.vehicle + '</span>' : '') + '</div>' +
+        '<button onclick="cancelBooking(\'' + b.id + '\')" style="background:none;border:1px solid rgba(226,75,74,0.3);color:var(--red);padding:4px 10px;border-radius:4px;cursor:pointer;font-size:11px;font-family:Rajdhani,sans-serif;font-weight:600;text-transform:uppercase">Cancel</button></div>';
+    }).join('');
+  } catch(e) {
+    document.getElementById('bookings-list').innerHTML = '<p style="color:var(--red);font-size:14px">' + (e.message || 'Failed to load bookings') + '</p>';
+  }
+}
+
+async function cancelBooking(id) {
+  if (!confirm('Cancel this booking?')) return;
+  await fetch('/api/bookings', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'cancel-booking', password: adminPassword, bookingId: id })
+  });
+  loadBookings();
+  showToast('Booking cancelled');
+}
+
+async function loadAvailability() {
+  try {
+    const res = await fetch('/api/bookings', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'get-availability', password: adminPassword })
+    });
+    availabilityConfig = await res.json();
+    renderAvailabilityEditor();
+    renderBlockedDates();
+  } catch(e) {}
+}
+
+function renderAvailabilityEditor() {
+  if (!availabilityConfig) return;
+  const days = ['mon','tue','wed','thu','fri','sat','sun'];
+  const labels = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+  let html = '<div style="display:grid;gap:8px">';
+  days.forEach((d, i) => {
+    const cfg = availabilityConfig.weeklyHours[d];
+    html += '<div style="display:flex;gap:8px;align-items:center;font-size:13px">' +
+      '<label style="width:90px;font-weight:600">' + labels[i] + '</label>' +
+      '<input type="checkbox" ' + (cfg.open ? 'checked' : '') + ' onchange="availabilityConfig.weeklyHours[\'' + d + '\'].open=this.checked">' +
+      '<input type="time" class="input" value="' + cfg.start + '" style="width:auto;margin:0;padding:6px 8px;font-size:13px" onchange="availabilityConfig.weeklyHours[\'' + d + '\'].start=this.value">' +
+      '<span style="color:var(--gray)">to</span>' +
+      '<input type="time" class="input" value="' + cfg.end + '" style="width:auto;margin:0;padding:6px 8px;font-size:13px" onchange="availabilityConfig.weeklyHours[\'' + d + '\'].end=this.value">' +
+    '</div>';
+  });
+  html += '</div><div style="margin-top:12px;font-size:13px"><label>Slot duration (minutes): <input type="number" class="input" value="' + (availabilityConfig.slotDuration || 120) + '" style="width:80px;margin:0;padding:6px 8px;display:inline;font-size:13px" onchange="availabilityConfig.slotDuration=parseInt(this.value)"></label></div>';
+  document.getElementById('availability-editor').innerHTML = html;
+}
+
+function renderBlockedDates() {
+  if (!availabilityConfig) return;
+  const el = document.getElementById('blocked-dates-list');
+  const dates = availabilityConfig.blockedDates || [];
+  if (dates.length === 0) { el.innerHTML = ''; return; }
+  el.innerHTML = '<div style="display:flex;flex-wrap:wrap;gap:6px">' + dates.map(d =>
+    '<span style="background:rgba(226,75,74,0.1);border:1px solid rgba(226,75,74,0.3);border-radius:6px;padding:4px 10px;font-size:12px;color:var(--red);display:flex;align-items:center;gap:6px">' + d +
+    '<button onclick="unblockDate(\'' + d + '\')" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:14px">&times;</button></span>'
+  ).join('') + '</div>';
+}
+
+async function blockDate() {
+  const date = document.getElementById('block-date').value;
+  if (!date) { showToast('Pick a date'); return; }
+  await fetch('/api/bookings', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'block', password: adminPassword, date, reason: document.getElementById('block-reason').value })
+  });
+  document.getElementById('block-date').value = '';
+  document.getElementById('block-reason').value = '';
+  loadAvailability();
+  showToast('Date blocked');
+}
+
+async function unblockDate(date) {
+  await fetch('/api/bookings', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'unblock', password: adminPassword, date })
+  });
+  loadAvailability();
+  showToast('Date unblocked');
+}
+
+async function saveAvailability() {
+  await fetch('/api/bookings', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'save-availability', password: adminPassword, availability: availabilityConfig })
+  });
+  showToast('Availability saved');
+}
+
 // ===== SITE SETTINGS =====
 let siteConfig = { worksWeekends: true, acceptingNewClients: true, showPricing: true };
 
@@ -688,6 +834,8 @@ doLogin = async function() {
     loadGallery();
     loadSales();
     loadSiteConfig();
+    loadBookings();
+    loadAvailability();
   }
 };
 

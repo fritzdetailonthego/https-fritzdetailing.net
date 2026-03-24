@@ -1,0 +1,300 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Book an Appointment — Fritz's Detail on the Go</title>
+<meta name="description" content="Book your mobile car detailing appointment with Fritz's Detail on the Go. Pick a date and time, we come to you in Southwest Virginia.">
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Rajdhani:wght@400;500;600;700&family=Open+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--purple:#7B2FBE;--purple-light:#9B4FDE;--black:#0A0A0A;--dark:#121212;--dark-card:#1A1A1A;--white:#FFF;--gray:#999;--gray-light:#CCC;--border:rgba(123,47,190,0.25);--green:#1D9E75;--red:#E24B4A}
+body{font-family:'Open Sans',sans-serif;background:var(--black);color:var(--white);line-height:1.6;min-height:100vh}
+.header{position:fixed;top:0;left:0;right:0;z-index:100;padding:12px 24px;background:rgba(10,10,10,0.92);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.header-brand{display:flex;align-items:center;gap:10px;text-decoration:none}
+.header-brand span{font-family:'Oswald',sans-serif;font-size:18px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:#fff}
+.header-brand em{color:var(--purple-light);font-style:normal}
+.container{max-width:600px;margin:0 auto;padding:100px 20px 40px}
+h1{font-family:'Oswald',sans-serif;font-size:28px;text-transform:uppercase;font-weight:700;margin-bottom:8px;text-align:center}
+h1 em{color:var(--purple-light);font-style:normal}
+.subtitle{color:var(--gray);text-align:center;margin-bottom:32px;font-size:15px}
+.step{display:none;animation:fadeIn .3s ease}
+.step.active{display:block}
+@keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.step-label{font-family:'Rajdhani',sans-serif;font-size:13px;text-transform:uppercase;letter-spacing:2px;color:var(--purple-light);font-weight:600;margin-bottom:12px}
+.step-title{font-family:'Oswald',sans-serif;font-size:22px;text-transform:uppercase;margin-bottom:16px;font-weight:600}
+
+/* Calendar */
+.cal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+.cal-header button{background:var(--dark-card);border:1px solid var(--border);color:#fff;width:36px;height:36px;border-radius:8px;cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center}
+.cal-header button:hover{border-color:var(--purple)}
+.cal-month{font-family:'Oswald',sans-serif;font-size:18px;text-transform:uppercase;letter-spacing:1px}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:24px}
+.cal-day-label{text-align:center;font-size:11px;color:var(--gray);font-family:'Rajdhani',sans-serif;font-weight:600;text-transform:uppercase;padding:4px}
+.cal-day{text-align:center;padding:10px 4px;border-radius:8px;cursor:pointer;font-size:14px;font-weight:500;transition:all .15s;border:1px solid transparent}
+.cal-day:hover:not(.disabled):not(.empty){background:rgba(123,47,190,0.15);border-color:var(--purple)}
+.cal-day.selected{background:var(--purple);color:#fff;font-weight:700}
+.cal-day.disabled{color:rgba(255,255,255,0.15);cursor:default}
+.cal-day.today{border-color:var(--purple);color:var(--purple-light)}
+.cal-day.empty{cursor:default}
+
+/* Slots */
+.slots-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px;margin-bottom:24px}
+.slot{background:var(--dark-card);border:1px solid var(--border);border-radius:8px;padding:12px;text-align:center;cursor:pointer;font-family:'Rajdhani',sans-serif;font-weight:600;font-size:15px;transition:all .15s}
+.slot:hover{border-color:var(--purple);background:rgba(123,47,190,0.1)}
+.slot.selected{background:var(--purple);color:#fff;border-color:var(--purple)}
+.no-slots{color:var(--gray);text-align:center;padding:32px;font-size:15px}
+
+/* Form */
+.input{width:100%;padding:12px 14px;background:var(--dark);border:1px solid var(--border);border-radius:8px;color:#fff;font-size:15px;font-family:'Open Sans',sans-serif;outline:none;margin-bottom:12px;transition:border .2s}
+.input:focus{border-color:var(--purple)}
+.input::placeholder{color:var(--gray)}
+.btn{font-family:'Rajdhani',sans-serif;font-weight:700;font-size:16px;letter-spacing:2px;text-transform:uppercase;padding:14px 28px;border-radius:8px;border:none;cursor:pointer;width:100%;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:8px}
+.btn-primary{background:var(--purple);color:#fff}
+.btn-primary:hover{background:var(--purple-light)}
+.btn-outline{background:transparent;color:var(--white);border:2px solid var(--border);margin-top:8px}
+.btn:disabled{opacity:0.5;cursor:not-allowed}
+
+/* Progress */
+.progress{display:flex;gap:8px;justify-content:center;margin-bottom:24px}
+.progress-dot{width:10px;height:10px;border-radius:50%;background:rgba(255,255,255,0.1);transition:background .2s}
+.progress-dot.active{background:var(--purple)}
+.progress-dot.done{background:var(--green)}
+
+/* Success */
+.success-box{text-align:center;padding:40px 20px}
+.success-box .checkmark{width:64px;height:64px;background:rgba(29,158,117,0.15);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 20px}
+.success-box h2{font-family:'Oswald',sans-serif;font-size:28px;text-transform:uppercase;color:var(--green);margin-bottom:8px}
+.confirm-detail{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid rgba(255,255,255,0.05);font-size:14px}
+.confirm-detail .label{color:var(--gray)}
+.error-msg{background:rgba(226,75,74,0.1);border:1px solid rgba(226,75,74,0.3);color:var(--red);padding:12px;border-radius:8px;font-size:14px;margin-bottom:12px;display:none}
+</style></head>
+<body>
+<header class="header">
+  <a href="/" class="header-brand"><img src="/logo.jpg" alt="Fritz's Detail" style="height:42px;border-radius:4px"><span>Fritz's <em>Detail</em></span></a>
+  <a href="tel:+12762470921" style="color:var(--gray-light);text-decoration:none;font-family:'Rajdhani',sans-serif;font-size:14px;font-weight:600">(276) 247-0921</a>
+</header>
+
+<div class="container">
+  <h1>Book Your <em>Detail</em></h1>
+  <p class="subtitle">Pick a date, choose a time, and we'll come to you.</p>
+
+  <div class="progress">
+    <div class="progress-dot active" id="dot-1"></div>
+    <div class="progress-dot" id="dot-2"></div>
+    <div class="progress-dot" id="dot-3"></div>
+  </div>
+
+  <!-- STEP 1: Pick a date -->
+  <div class="step active" id="step-1">
+    <div class="step-label">Step 1 of 3</div>
+    <div class="step-title">Pick a Date</div>
+    <div class="cal-header">
+      <button onclick="changeMonth(-1)">&#8249;</button>
+      <div class="cal-month" id="cal-month"></div>
+      <button onclick="changeMonth(1)">&#8250;</button>
+    </div>
+    <div class="cal-grid" id="cal-grid"></div>
+  </div>
+
+  <!-- STEP 2: Pick a time -->
+  <div class="step" id="step-2">
+    <div class="step-label">Step 2 of 3</div>
+    <div class="step-title">Pick a Time</div>
+    <p id="selected-date-label" style="color:var(--gray);font-size:14px;margin-bottom:16px"></p>
+    <div id="slots-container"><div class="no-slots">Loading available times...</div></div>
+    <button class="btn btn-outline" onclick="goStep(1)">Back</button>
+  </div>
+
+  <!-- STEP 3: Your info -->
+  <div class="step" id="step-3">
+    <div class="step-label">Step 3 of 3</div>
+    <div class="step-title">Your Info</div>
+    <div id="book-error" class="error-msg"></div>
+    <input class="input" id="bk-name" placeholder="Your name *" required>
+    <input class="input" id="bk-phone" placeholder="Phone number *" type="tel" required>
+    <input class="input" id="bk-vehicle" placeholder="Vehicle (e.g. 2020 Honda Civic)">
+    <select class="input" id="bk-service" style="cursor:pointer">
+      <option value="">What service do you need?</option>
+      <option>Premium Wash</option>
+      <option>Interior Clean</option>
+      <option>Paint Correction</option>
+      <option>Ceramic Coating</option>
+      <option>The Shiny Package</option>
+      <option>Maintenance Package</option>
+      <option>Wash Clay Seal</option>
+      <option>Other (describe in notes)</option>
+    </select>
+    <textarea class="input" id="bk-notes" placeholder="Notes (optional)" rows="2" style="resize:vertical"></textarea>
+    <button class="btn btn-primary" id="book-btn" onclick="submitBooking()">Confirm Booking</button>
+    <button class="btn btn-outline" onclick="goStep(2)">Back</button>
+  </div>
+
+  <!-- SUCCESS -->
+  <div class="step" id="step-success">
+    <div class="success-box">
+      <div class="checkmark"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#1D9E75" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg></div>
+      <h2>You're Booked!</h2>
+      <p style="color:var(--gray);margin-bottom:24px">Fritz will be at your location at the scheduled time.</p>
+      <div id="confirm-details" style="background:var(--dark-card);border:1px solid var(--border);border-radius:12px;padding:16px;text-align:left;margin-bottom:24px"></div>
+      <p style="color:var(--gray);font-size:13px">Questions? Text Fritz at <a href="sms:+12762470921" style="color:var(--purple-light)">(276) 247-0921</a></p>
+      <a href="/" class="btn btn-outline" style="margin-top:16px;text-decoration:none;display:inline-flex;width:auto">Back to Home</a>
+    </div>
+  </div>
+</div>
+
+<script>
+let currentMonth = new Date().getMonth();
+let currentYear = new Date().getFullYear();
+let selectedDate = null;
+let selectedTime = null;
+let selectedTimeLabel = null;
+
+function goStep(n) {
+  document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
+  document.getElementById('step-' + n).classList.add('active');
+  for (let i = 1; i <= 3; i++) {
+    const dot = document.getElementById('dot-' + i);
+    dot.className = 'progress-dot' + (i < n ? ' done' : i === n ? ' active' : '');
+  }
+}
+
+function renderCalendar() {
+  const today = new Date();
+  today.setHours(0,0,0,0);
+  const maxDate = new Date(today);
+  maxDate.setDate(maxDate.getDate() + 30);
+
+  const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  document.getElementById('cal-month').textContent = monthNames[currentMonth] + ' ' + currentYear;
+
+  const firstDay = new Date(currentYear, currentMonth, 1).getDay();
+  const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+
+  let html = ['S','M','T','W','T','F','S'].map(d => '<div class="cal-day-label">' + d + '</div>').join('');
+
+  for (let i = 0; i < firstDay; i++) html += '<div class="cal-day empty"></div>';
+
+  for (let d = 1; d <= daysInMonth; d++) {
+    const date = new Date(currentYear, currentMonth, d);
+    const dateStr = currentYear + '-' + String(currentMonth+1).padStart(2,'0') + '-' + String(d).padStart(2,'0');
+    const isPast = date < today;
+    const isTooFar = date > maxDate;
+    const isToday = date.getTime() === today.getTime();
+    const isSelected = dateStr === selectedDate;
+
+    let cls = 'cal-day';
+    if (isPast || isTooFar) cls += ' disabled';
+    else if (isSelected) cls += ' selected';
+    else if (isToday) cls += ' today';
+
+    const onclick = (isPast || isTooFar) ? '' : ' onclick="pickDate(\'' + dateStr + '\')"';
+    html += '<div class="' + cls + '"' + onclick + '>' + d + '</div>';
+  }
+
+  document.getElementById('cal-grid').innerHTML = html;
+}
+
+function changeMonth(dir) {
+  currentMonth += dir;
+  if (currentMonth > 11) { currentMonth = 0; currentYear++; }
+  if (currentMonth < 0) { currentMonth = 11; currentYear--; }
+  renderCalendar();
+}
+
+async function pickDate(dateStr) {
+  selectedDate = dateStr;
+  selectedTime = null;
+  renderCalendar();
+
+  const d = new Date(dateStr + 'T12:00:00');
+  const opts = { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' };
+  document.getElementById('selected-date-label').textContent = d.toLocaleDateString('en-US', opts);
+
+  goStep(2);
+  document.getElementById('slots-container').innerHTML = '<div class="no-slots">Loading available times...</div>';
+
+  try {
+    const res = await fetch('/api/bookings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'get-slots', date: dateStr })
+    });
+    const data = await res.json();
+
+    if (data.closed) {
+      document.getElementById('slots-container').innerHTML = '<div class="no-slots">Fritz is not available on this day. Try another date.</div>';
+      return;
+    }
+    if (data.blocked) {
+      document.getElementById('slots-container').innerHTML = '<div class="no-slots">This date is blocked. Try another date.</div>';
+      return;
+    }
+    if (!data.slots || data.slots.length === 0) {
+      document.getElementById('slots-container').innerHTML = '<div class="no-slots">No available slots on this date. Try another day.</div>';
+      return;
+    }
+
+    document.getElementById('slots-container').innerHTML = '<div class="slots-grid">' +
+      data.slots.map(s => '<div class="slot" onclick="pickTime(\'' + s.time + '\',\'' + s.label + '\',this)">' + s.label + '</div>').join('') +
+    '</div>';
+  } catch(e) {
+    document.getElementById('slots-container').innerHTML = '<div class="no-slots" style="color:var(--red)">Could not load slots. Try again.</div>';
+  }
+}
+
+function pickTime(time, label, el) {
+  selectedTime = time;
+  selectedTimeLabel = label;
+  document.querySelectorAll('.slot').forEach(s => s.classList.remove('selected'));
+  el.classList.add('selected');
+  setTimeout(() => goStep(3), 200);
+}
+
+async function submitBooking() {
+  const name = document.getElementById('bk-name').value.trim();
+  const phone = document.getElementById('bk-phone').value.trim();
+  const vehicle = document.getElementById('bk-vehicle').value.trim();
+  const service = document.getElementById('bk-service').value;
+  const notes = document.getElementById('bk-notes').value.trim();
+  const errEl = document.getElementById('book-error');
+
+  if (!name || !phone) {
+    errEl.textContent = 'Name and phone number are required.';
+    errEl.style.display = 'block';
+    return;
+  }
+  errEl.style.display = 'none';
+
+  const btn = document.getElementById('book-btn');
+  btn.disabled = true;
+  btn.textContent = 'Booking...';
+
+  try {
+    const res = await fetch('/api/bookings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'book', date: selectedDate, time: selectedTime, name, phone, vehicle, service, notes })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error);
+
+    const d = new Date(selectedDate + 'T12:00:00');
+    document.getElementById('confirm-details').innerHTML =
+      '<div class="confirm-detail"><span class="label">Date</span><span>' + d.toLocaleDateString('en-US', { weekday:'long', month:'long', day:'numeric' }) + '</span></div>' +
+      '<div class="confirm-detail"><span class="label">Time</span><span>' + selectedTimeLabel + '</span></div>' +
+      '<div class="confirm-detail"><span class="label">Name</span><span>' + name + '</span></div>' +
+      '<div class="confirm-detail"><span class="label">Phone</span><span>' + phone + '</span></div>' +
+      (vehicle ? '<div class="confirm-detail"><span class="label">Vehicle</span><span>' + vehicle + '</span></div>' : '') +
+      (service ? '<div class="confirm-detail"><span class="label">Service</span><span>' + service + '</span></div>' : '');
+
+    document.querySelectorAll('.progress-dot').forEach(d => d.className = 'progress-dot done');
+    document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
+    document.getElementById('step-success').classList.add('active');
+  } catch(e) {
+    errEl.textContent = e.message || 'Booking failed. Try again or text Fritz directly.';
+    errEl.style.display = 'block';
+    btn.disabled = false;
+    btn.textContent = 'Confirm Booking';
+  }
+}
+
+renderCalendar();
+</script>
+</body></html>
