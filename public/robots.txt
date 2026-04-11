@@ -3,3 +3,4 @@ Allow: /
 Disallow: /admin.html
 Disallow: /api/
 Sitemap: https://fritzdetailing.net/sitemap.xml
+<!-- wake-up ping 1775947843 -->
