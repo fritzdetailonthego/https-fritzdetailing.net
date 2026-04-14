@@ -821,8 +821,27 @@ nav a:hover{color:var(--purple-light)}
     <a href="invoice.html">Invoice</a>
     <a href="#contact">Contact</a>
   </div>
-  <p>&copy; 2026 Fritz's Detail on the Go. All rights reserved. | <a href="https://fritzdetailing.net" style="color:var(--purple-light);text-decoration:none">fritzdetailing.net</a> | Southwest Virginia Mobile Detailing</p>
+  <p>&copy; 2026 Fritz's Detail on the Go<span id="admin-trigger" style="cursor:default;user-select:none" onclick="fritzAdminTap()">.</span> All rights reserved. | <a href="https://fritzdetailing.net" style="color:var(--purple-light);text-decoration:none">fritzdetailing.net</a> | Southwest Virginia Mobile Detailing</p>
 </footer>
+<script>
+// Hidden admin access: 5 taps on the period after "2026"
+let _adminTaps = 0, _adminTapTimer = null;
+function fritzAdminTap() {
+  _adminTaps++;
+  clearTimeout(_adminTapTimer);
+  _adminTapTimer = setTimeout(() => { _adminTaps = 0; }, 2000);
+  if (_adminTaps >= 5) {
+    _adminTaps = 0;
+    window.location.href = '/admin.html';
+  }
+}
+// Also: keyboard shortcut Ctrl+Shift+A
+document.addEventListener('keydown', function(e) {
+  if (e.ctrlKey && e.shiftKey && e.key === 'A') {
+    window.location.href = '/admin.html';
+  }
+});
+</script>
 
 <script src="https://js.stripe.com/v3/"></script>
 <script>
@@ -1106,13 +1125,30 @@ function invUpdateServices() {
       container.appendChild(row);
     });
   }
+
+  // Custom fees (loaded from /api/fees)
+  if (window.customFees && window.customFees.length > 0) {
+    const label = document.createElement('div');
+    label.style.cssText = 'font-size:11px;color:var(--gray);text-transform:uppercase;letter-spacing:1px;padding:10px 0 4px;font-family:Rajdhani,sans-serif;font-weight:600;border-bottom:1px solid rgba(255,255,255,0.05);border-top:1px solid rgba(255,255,255,0.05);margin-top:6px';
+    label.textContent = 'Add-Ons & Fees';
+    container.appendChild(label);
+
+    window.customFees.forEach(f => {
+      const row = document.createElement('label');
+      row.style.cssText = 'display:flex;align-items:center;gap:10px;padding:8px 4px;cursor:pointer;font-size:14px;color:var(--gray-light)';
+      const desc = f.description ? '<br><span style="font-size:11px;color:var(--gray)">' + f.description + '</span>' : '';
+      row.innerHTML = '<input type="checkbox" value="' + f.name + '" data-price="' + f.amount + '" data-fee="1" onchange="invCalcTotal()" style="accent-color:var(--purple);width:16px;height:16px;cursor:pointer;flex-shrink:0"><span style="flex:1">' + f.name + desc + '</span><span style="color:var(--purple-light);font-family:Rajdhani,sans-serif;font-weight:700">$' + f.amount.toLocaleString() + '</span>';
+      container.appendChild(row);
+    });
+  }
+
   invCalcTotal();
 }
 
 function invCalcTotal() {
   const checks = document.querySelectorAll('#inv-services input[type=checkbox]:checked');
   let total = 0;
-  checks.forEach(c => total += parseInt(c.dataset.price));
+  checks.forEach(c => total += parseFloat(c.dataset.price));
   document.getElementById('inv-total').textContent = '$' + total.toLocaleString();
 }
 
@@ -1163,6 +1199,14 @@ function generateInvoice() {
 }
 
 // Init invoice services on load
+window.customFees = [];
+fetch('/api/fees', {
+  method: 'POST', headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ action: 'public-list' })
+}).then(r => r.json()).then(d => {
+  window.customFees = d.fees || [];
+  if (typeof invUpdateServices === 'function') invUpdateServices();
+}).catch(() => {});
 invUpdateServices();
 
 // ===== DYNAMIC PRICING LOADER =====

@@ -166,7 +166,12 @@ body{font-family:'Open Sans',sans-serif;background:var(--black);color:var(--whit
       </div>
       <!-- Line items injected here -->
     </div>
-    <div class="add-line" onclick="addLineItem()">+ Add Service</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <div class="add-line" onclick="addLineItem()" style="flex:1;min-width:160px">+ Add Service</div>
+      <div class="add-line" onclick="showFeesMenu(event)" style="flex:1;min-width:160px;background:rgba(29,158,117,0.1);border-color:rgba(29,158,117,0.3);color:#1D9E75;position:relative">+ Add Fee / Add-On
+        <div id="fees-menu" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--dark-card);border:1px solid var(--border);border-radius:8px;margin-top:4px;padding:6px;z-index:10;text-align:left;max-height:260px;overflow-y:auto"></div>
+      </div>
+    </div>
 
     <div style="margin-top:16px">
       <div class="form-group">
@@ -502,6 +507,52 @@ function copyInvoice() {
     showToast('Invoice copied!');
   });
 }
+
+// ===== CUSTOM FEES =====
+let _customFees = [];
+
+async function loadCustomFees() {
+  try {
+    const res = await fetch('/api/fees');
+    if (!res.ok) return;
+    const data = await res.json();
+    _customFees = data.fees || [];
+  } catch(e) {}
+}
+
+function showFeesMenu(event) {
+  event.stopPropagation();
+  const menu = document.getElementById('fees-menu');
+  if (!menu) return;
+  if (menu.style.display === 'block') { menu.style.display = 'none'; return; }
+
+  if (_customFees.length === 0) {
+    menu.innerHTML = '<div style="padding:12px;color:var(--gray);font-size:13px">No fees set up yet. Add them in the admin panel.</div>';
+  } else {
+    menu.innerHTML = _customFees.map(f =>
+      '<div onclick="addFeeAsLine(\'' + f.name.replace(/'/g, "\\'") + '\',' + f.amount + ');event.stopPropagation()" style="padding:10px 12px;border-radius:6px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;font-size:14px;color:var(--white)" onmouseover="this.style.background=\'rgba(123,47,190,0.15)\'" onmouseout="this.style.background=\'transparent\'">' +
+        '<div><strong>' + f.name + '</strong>' + (f.description ? '<br><span style="color:var(--gray);font-size:11px">' + f.description + '</span>' : '') + '</div>' +
+        '<span style="color:var(--purple-light);font-family:Rajdhani,sans-serif;font-weight:700">$' + f.amount + '</span>' +
+      '</div>'
+    ).join('');
+  }
+  menu.style.display = 'block';
+
+  // Close on outside click
+  setTimeout(() => {
+    document.addEventListener('click', function closeMenu() {
+      menu.style.display = 'none';
+      document.removeEventListener('click', closeMenu);
+    }, { once: true });
+  }, 0);
+}
+
+function addFeeAsLine(name, price) {
+  addLineItem(name, price);
+  document.getElementById('fees-menu').style.display = 'none';
+}
+
+loadCustomFees();
 
 function showToast(msg) {
   const t = document.getElementById('toast');

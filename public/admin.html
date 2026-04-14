@@ -206,6 +206,21 @@ body{font-family:'Open Sans',sans-serif;background:var(--black);color:var(--whit
     </details>
   </div>
 
+  <!-- CUSTOM FEES -->
+  <div style="margin-top:48px;padding-top:32px;border-top:1px solid var(--border)">
+    <div class="section-label">Custom Fees & Add-Ons</div>
+    <p style="color:var(--gray);font-size:14px;margin-bottom:16px">Add extra charges like distance, heavy pet hair, excessive dirt, etc. These show up as checkboxes in the invoice generator and card payment form.</p>
+
+    <div id="fees-list" style="margin-bottom:16px"></div>
+
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;background:var(--dark);border:1px solid var(--border);border-radius:8px;padding:12px">
+      <input class="input" id="fee-name" placeholder="Fee name (e.g. Heavy Pet Hair)" style="flex:2;min-width:180px;margin:0">
+      <input type="number" class="input" id="fee-amount" placeholder="Amount ($)" step="1" min="0" style="flex:1;min-width:100px;margin:0">
+      <input class="input" id="fee-desc" placeholder="Description (optional)" style="flex:2;min-width:150px;margin:0">
+      <button class="btn btn-green" style="margin:0;padding:10px 18px;font-size:13px" onclick="addFee()">+ Add Fee</button>
+    </div>
+  </div>
+
   <!-- SALES DASHBOARD -->
   <div style="margin-top:48px;padding-top:32px;border-top:1px solid var(--border)">
     <div class="section-label">Sales & Commission Tracker</div>
@@ -790,6 +805,68 @@ async function saveAvailability() {
   showToast('Availability saved');
 }
 
+// ===== FEES MANAGEMENT =====
+let feesList = [];
+
+async function loadFees() {
+  try {
+    const res = await fetch('/api/fees', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'list', password: adminPassword })
+    });
+    const data = await res.json();
+    if (res.ok) feesList = data.fees || [];
+  } catch(e) { feesList = []; }
+  renderFees();
+}
+
+function renderFees() {
+  const el = document.getElementById('fees-list');
+  if (!el) return;
+  if (feesList.length === 0) {
+    el.innerHTML = '<p style="color:var(--gray);font-size:14px;padding:12px 0">No custom fees yet. Add one below.</p>';
+    return;
+  }
+  el.innerHTML = feesList.map((f, i) =>
+    '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:var(--dark);border:1px solid var(--border);border-radius:8px;margin-bottom:6px;font-size:14px">' +
+      '<div><strong style="color:var(--white)">' + f.name + '</strong> <span style="color:var(--purple-light);font-family:Rajdhani,sans-serif;font-weight:700;margin-left:8px">$' + f.amount + '</span>' +
+      (f.description ? '<br><span style="color:var(--gray);font-size:12px">' + f.description + '</span>' : '') + '</div>' +
+      '<button onclick="removeFee(' + i + ')" style="background:none;border:1px solid rgba(226,75,74,0.3);color:var(--red);padding:4px 10px;border-radius:4px;cursor:pointer;font-size:11px;font-family:Rajdhani,sans-serif;font-weight:600;text-transform:uppercase">Remove</button>' +
+    '</div>'
+  ).join('');
+}
+
+async function addFee() {
+  const name = document.getElementById('fee-name').value.trim();
+  const amount = parseFloat(document.getElementById('fee-amount').value);
+  const description = document.getElementById('fee-desc').value.trim();
+  if (!name || !amount || amount <= 0) { showToast('Enter a name and amount'); return; }
+
+  feesList.push({ name, amount, description });
+  await saveFees();
+  document.getElementById('fee-name').value = '';
+  document.getElementById('fee-amount').value = '';
+  document.getElementById('fee-desc').value = '';
+  showToast('Fee added');
+}
+
+async function removeFee(index) {
+  if (!confirm('Remove this fee?')) return;
+  feesList.splice(index, 1);
+  await saveFees();
+  showToast('Fee removed');
+}
+
+async function saveFees() {
+  try {
+    await fetch('/api/fees', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'save', password: adminPassword, fees: feesList })
+    });
+    renderFees();
+  } catch(e) { showToast('Save failed'); }
+}
+
 // ===== SITE SETTINGS =====
 let siteConfig = { worksWeekends: true, acceptingNewClients: true, showPricing: true };
 
@@ -836,6 +913,7 @@ doLogin = async function() {
     loadSiteConfig();
     loadBookings();
     loadAvailability();
+    loadFees();
   }
 };
 
