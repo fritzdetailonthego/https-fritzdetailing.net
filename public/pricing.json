@@ -20,7 +20,7 @@
     },
     "packages": {
       "Maintenance": 150,
-      "The Shiny Package": 275,
+      "The Shiny Package": 350,
       "Wash, Clay, Seal": 140
     }
   },
@@ -45,7 +45,7 @@
     },
     "packages": {
       "Maintenance": 200,
-      "The Shiny Package": 350,
+      "The Shiny Package": 400,
       "Wash, Clay, Seal": 200
     }
   },
@@ -61,7 +61,8 @@
       "Headlight Restoration": 50,
       "Ceramic Glass Protection": 25,
       "Engine Bay Clean": 75,
-      "Ceramic Coat": 1250
+      "Ceramic Coat": 1250,
+      "Truck Bed Clean": 25
     },
     "interior": {
       "Interior Clean": 100,
@@ -70,7 +71,7 @@
     },
     "packages": {
       "Maintenance": 180,
-      "The Shiny Package": 325,
+      "The Shiny Package": 400,
       "Wash, Clay, Seal": 200
     }
   }
