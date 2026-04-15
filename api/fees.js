@@ -31,6 +31,7 @@ module.exports = async (req, res) => {
 
   async function writeFees(fees) {
     await put('fees-data.json', JSON.stringify(fees), {
+      access: 'private',
       contentType: 'application/json', addRandomSuffix: false, allowOverwrite: true, token
     });
   }

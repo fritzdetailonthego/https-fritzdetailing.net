@@ -32,6 +32,7 @@ module.exports = async (req, res) => {
   // Helper: write revisions array to blob
   async function writeRevisions(revisions) {
     await put('pricing-revisions-data.json', JSON.stringify(revisions), {
+      access: 'private',
       contentType: 'application/json',
       addRandomSuffix: false,
       allowOverwrite: true,

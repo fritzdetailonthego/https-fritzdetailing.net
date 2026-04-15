@@ -29,6 +29,7 @@ module.exports = async (req, res) => {
   // Helper: write bookings
   async function writeBookings(bookings) {
     await put('bookings-data.json', JSON.stringify(bookings), {
+      access: 'private',
       contentType: 'application/json', addRandomSuffix: false, allowOverwrite: true, token
     });
   }
@@ -62,6 +63,7 @@ module.exports = async (req, res) => {
 
   async function writeAvailability(config) {
     await put('availability-config.json', JSON.stringify(config), {
+      access: 'private',
       contentType: 'application/json', addRandomSuffix: false, allowOverwrite: true, token
     });
   }

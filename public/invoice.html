@@ -303,6 +303,19 @@ function addLineItem(serviceName='', price='') {
     <button class="remove-btn" onclick="removeLine(${id})">×</button>
   `;
   container.appendChild(row);
+
+  // If serviceName was provided but isn't in the dropdown, treat as custom
+  if (serviceName) {
+    const sel = row.querySelector('.service-select');
+    const matched = Array.from(sel.options).some(o => o.value && o.value.split('|')[0] === serviceName);
+    if (!matched) {
+      sel.value = 'custom';
+      const nameInput = document.getElementById('sname-'+id);
+      nameInput.style.display = 'block';
+      nameInput.value = serviceName;
+    }
+  }
+
   calcTotal();
 }
 
