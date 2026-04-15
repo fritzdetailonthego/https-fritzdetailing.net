@@ -298,6 +298,35 @@ body{font-family:'Open Sans',sans-serif;background:var(--black);color:var(--whit
 
 <div class="toast" id="toast"></div>
 
+<!-- Custom confirm modal (replaces native confirm() which blocks browser testing tools) -->
+<div id="custom-confirm" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9999;align-items:center;justify-content:center;padding:20px">
+  <div style="background:var(--dark-card);border:1px solid var(--border);border-radius:12px;padding:24px;max-width:420px;width:100%">
+    <div id="cc-msg" style="color:var(--white);font-size:15px;margin-bottom:20px;line-height:1.5"></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button id="cc-cancel" class="btn btn-outline" style="margin:0;padding:8px 18px;font-size:13px">Cancel</button>
+      <button id="cc-ok" class="btn btn-green" style="margin:0;padding:8px 18px;font-size:13px">OK</button>
+    </div>
+  </div>
+</div>
+
+<script>
+function customConfirm(message) {
+  return new Promise(resolve => {
+    const modal = document.getElementById('custom-confirm');
+    document.getElementById('cc-msg').textContent = message;
+    modal.style.display = 'flex';
+    const cleanup = (result) => {
+      modal.style.display = 'none';
+      document.getElementById('cc-ok').onclick = null;
+      document.getElementById('cc-cancel').onclick = null;
+      resolve(result);
+    };
+    document.getElementById('cc-ok').onclick = () => cleanup(true);
+    document.getElementById('cc-cancel').onclick = () => cleanup(false);
+  });
+}
+</script>
+
 <script>
 let pricingData = null;
 let adminPassword = '';
@@ -392,8 +421,8 @@ function updateName(input, tier, section) {
   delBtn.setAttribute('onclick', `deleteService(this,'${tier}','${section}','${newName}')`);
 }
 
-function deleteService(btn, tier, section, name) {
-  if (!confirm(`Remove "${name}" from ${pricingData[tier].label} ${section}?`)) return;
+async function deleteService(btn, tier, section, name) {
+  if (!await customConfirm(`Remove "${name}" from ${pricingData[tier].label} ${section}?`)) return;
   delete pricingData[tier][section][name];
   btn.closest('tr').remove();
   showToast('Service removed — save to apply');
@@ -444,7 +473,7 @@ async function savePricing() {
 
 // Undo — restore the most recent revision
 async function undoPricing() {
-  if (!confirm('⚠️ UNDO: This will revert pricing to the LAST saved state. Are you sure?')) return;
+  if (!await customConfirm('⚠️ UNDO: This will revert pricing to the LAST saved state. Are you sure?')) return;
   try {
     const listRes = await fetch('/api/pricing-revisions', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -519,7 +548,7 @@ async function toggleRevisions() {
 }
 
 async function restoreRevision(index) {
-  if (!confirm('Restore this revision? (You\'ll still need to Save & Deploy to apply it.)')) return;
+  if (!await customConfirm('Restore this revision? (You\'ll still need to Save & Deploy to apply it.)')) return;
   try {
     const res = await fetch('/api/pricing-revisions', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -599,7 +628,7 @@ function uploadCSV(event) {
 }
 
 async function resetPricing() {
-  if (!confirm('Reset all changes to last saved version?')) return;
+  if (!await customConfirm('Reset all changes to last saved version?')) return;
   const res = await fetch('/pricing.json?t=' + Date.now());
   pricingData = await res.json();
   renderEditor();
@@ -724,7 +753,7 @@ async function loadBookings() {
 }
 
 async function cancelBooking(id) {
-  if (!confirm('Cancel this booking?')) return;
+  if (!await customConfirm('Cancel this booking?')) return;
   await fetch('/api/bookings', {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ action: 'cancel-booking', password: adminPassword, bookingId: id })
@@ -851,7 +880,7 @@ async function addFee() {
 }
 
 async function removeFee(index) {
-  if (!confirm('Remove this fee?')) return;
+  if (!await customConfirm('Remove this fee?')) return;
   feesList.splice(index, 1);
   await saveFees();
   showToast('Fee removed');
@@ -859,12 +888,20 @@ async function removeFee(index) {
 
 async function saveFees() {
   try {
-    await fetch('/api/fees', {
+    const res = await fetch('/api/fees', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'save', password: adminPassword, fees: feesList })
     });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data.error || 'Save failed (' + res.status + ')');
+    }
     renderFees();
-  } catch(e) { showToast('Save failed'); }
+  } catch(e) {
+    showToast('Save failed: ' + e.message);
+    // Reload from server to show actual state
+    loadFees();
+  }
 }
 
 // ===== SITE SETTINGS =====
