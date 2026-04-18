@@ -1,5 +1,5 @@
 {
   "worksWeekends": true,
-  "acceptingNewClients": false,
+  "acceptingNewClients": true,
   "showPricing": true
 }
