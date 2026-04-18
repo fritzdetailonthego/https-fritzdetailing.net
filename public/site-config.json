@@ -1,5 +1,11 @@
 {
   "worksWeekends": true,
   "acceptingNewClients": true,
-  "showPricing": true
+  "showPricing": true,
+  "payments": {
+    "cashApp": true,
+    "card": true,
+    "crypto": true,
+    "invoice": true
+  }
 }
