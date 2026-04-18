@@ -1037,7 +1037,7 @@ async function loadSales() {
     document.getElementById('stat-count').textContent = data.summary.totalSales;
     document.getElementById('stat-revenue').textContent = '$' + data.summary.totalRevenue.toLocaleString();
     document.getElementById('stat-commission').textContent = '$' + data.summary.totalCommission.toLocaleString();
-    document.getElementById('stat-rate').textContent = Math.round(data.summary.commissionRate * 100) + '%';
+    document.getElementById('stat-rate').textContent = (+(data.summary.commissionRate * 100).toFixed(2)) + '%';
 
     const tbody = document.getElementById('sales-tbody');
     if (salesData.length === 0) {
