@@ -86,7 +86,7 @@
 --lavender-dark:#8E5BC4;
 }
 html{scroll-behavior:smooth}
-body{font-family:'Open Sans',sans-serif;background:linear-gradient(180deg,#0A0A0A 0%,#150B22 40%,#1F1430 100%);background-attachment:fixed;color:var(--white);overflow-x:hidden;line-height:1.6}
+body{font-family:'Open Sans',sans-serif;background:#0A0A0A;color:var(--white);overflow-x:hidden;line-height:1.6}
 
 /* HEADER */
 .header{position:fixed;top:0;left:0;right:0;z-index:100;padding:12px 24px;background:rgba(10,10,10,0.92);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;transition:all .3s}
@@ -97,14 +97,14 @@ body{font-family:'Open Sans',sans-serif;background:linear-gradient(180deg,#0A0A0
 nav{display:flex;gap:24px;align-items:center}
 nav a{color:var(--gray-light);text-decoration:none;font-family:'Rajdhani',sans-serif;font-size:15px;font-weight:600;text-transform:uppercase;letter-spacing:1.5px;transition:color .2s}
 nav a:hover{color:var(--purple-light)}
-.nav-cta{background:linear-gradient(135deg,var(--lavender) 0%,var(--purple) 100%);color:#fff!important;padding:8px 20px;border-radius:2px;transition:all .2s}
-.nav-cta:hover{background:linear-gradient(135deg,var(--lavender-light) 0%,var(--purple-light) 100%);transform:translateY(-1px)}
+.nav-cta{background:var(--purple);color:#fff!important;padding:8px 20px;border-radius:2px;transition:all .2s}
+.nav-cta:hover{background:var(--purple-light)}
 .hamburger{display:none;flex-direction:column;gap:5px;cursor:pointer;padding:4px}
 .hamburger span{width:24px;height:2px;background:var(--white);transition:all .3s}
 
 /* HERO */
 .hero{min-height:100vh;display:flex;align-items:center;justify-content:center;text-align:center;padding:120px 24px 80px;position:relative;overflow:hidden}
-.hero::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 50% 30%,rgba(181,126,220,0.2) 0%,rgba(123,47,190,0.1) 35%,transparent 65%)}
+
 .hero-content{max-width:800px;position:relative;z-index:2}
 .hero-logo{width:320px;max-width:90vw;margin:0 auto 32px;filter:drop-shadow(0 0 40px rgba(123,47,190,0.3))}
 .hero-tagline{font-family:'Rajdhani',sans-serif;font-size:clamp(18px,4vw,26px);color:var(--gray-light);letter-spacing:3px;text-transform:uppercase;margin-bottom:16px;font-weight:500}
@@ -113,8 +113,8 @@ nav a:hover{color:var(--purple-light)}
 .hero-sub{font-size:18px;color:var(--gray);max-width:560px;margin:0 auto 40px}
 .hero-btns{display:flex;gap:16px;justify-content:center;flex-wrap:wrap}
 .btn{font-family:'Rajdhani',sans-serif;font-weight:700;font-size:16px;letter-spacing:2px;text-transform:uppercase;padding:14px 36px;border-radius:2px;border:none;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:8px;transition:all .25s}
-.btn-primary{background:linear-gradient(135deg,var(--lavender) 0%,var(--purple) 60%,var(--purple-dark) 100%);color:#fff}
-.btn-primary:hover{background:linear-gradient(135deg,var(--lavender-light) 0%,var(--purple-light) 60%,var(--purple) 100%);transform:translateY(-2px);box-shadow:0 8px 30px var(--purple-glow)}
+.btn-primary{background:var(--purple);color:#fff}
+.btn-primary:hover{background:var(--purple-light)}
 .btn-outline{background:transparent;color:var(--white);border:2px solid var(--purple)}
 .btn-outline:hover{background:var(--purple);color:#fff}
 
@@ -128,14 +128,14 @@ nav a:hover{color:var(--purple-light)}
 /* SERVICES */
 .services-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:24px}
 .service-card{background:var(--dark-card);border:1px solid var(--border);border-radius:2px;padding:32px 24px;text-align:center;transition:all .3s}
-.service-card:hover{border-color:var(--purple);transform:translateY(-4px);background:var(--dark-card-hover)}
+.service-card:hover{border-color:var(--purple);background:var(--dark-card-hover)}
 .service-icon{width:56px;height:56px;margin:0 auto 16px;background:rgba(123,47,190,0.15);border-radius:50%;display:flex;align-items:center;justify-content:center}
 .service-icon svg{width:28px;height:28px;stroke:var(--purple-light);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 .service-card h3{font-family:'Oswald',sans-serif;font-size:20px;text-transform:uppercase;margin-bottom:8px;font-weight:600}
 .service-card p{font-size:14px;color:var(--gray);line-height:1.5}
 
 /* PRICING */
-.pricing-section{background:linear-gradient(180deg,rgba(18,18,18,0.8) 0%,rgba(31,20,48,0.9) 100%)}
+.pricing-section{background:var(--dark)}
 .vehicle-tabs{display:flex;justify-content:center;gap:8px;margin-bottom:40px;flex-wrap:wrap}
 .tab{font-family:'Rajdhani',sans-serif;font-weight:700;font-size:15px;letter-spacing:1.5px;text-transform:uppercase;padding:10px 28px;border:2px solid var(--border);border-radius:2px;background:transparent;color:var(--gray);cursor:pointer;transition:all .25s}
 .tab.active,.tab:hover{border-color:var(--purple);color:var(--white);background:rgba(123,47,190,0.15)}
@@ -156,7 +156,7 @@ nav a:hover{color:var(--purple-light)}
 .packages-section{margin-top:40px}
 .package-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:24px}
 .package-card{background:var(--dark-card);border:1px solid var(--border);border-radius:2px;padding:32px 24px;text-align:center;position:relative;overflow:hidden;transition:all .3s}
-.package-card:hover{border-color:var(--purple);transform:translateY(-4px)}
+.package-card:hover{border-color:var(--purple)}
 .package-card.featured{border-color:var(--purple)}
 .package-card.featured::before{content:'MOST POPULAR';position:absolute;top:16px;right:-32px;background:var(--purple);color:#fff;font-family:'Rajdhani',sans-serif;font-size:11px;font-weight:700;letter-spacing:1.5px;padding:4px 40px;transform:rotate(45deg)}
 .package-name{font-family:'Oswald',sans-serif;font-size:24px;text-transform:uppercase;margin-bottom:8px;font-weight:600}
@@ -168,7 +168,7 @@ nav a:hover{color:var(--purple-light)}
 .payment-section{text-align:center}
 .payment-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:20px;max-width:800px;margin:0 auto}
 .payment-card{background:var(--dark-card);border:1px solid var(--border);border-radius:2px;padding:24px 20px;text-align:center;text-decoration:none;color:var(--white);transition:all .3s;display:flex;flex-direction:column;align-items:center;gap:12px}
-.payment-card:hover{border-color:var(--purple);transform:translateY(-3px);background:var(--dark-card-hover)}
+.payment-card:hover{border-color:var(--purple);background:var(--dark-card-hover)}
 .payment-icon{width:48px;height:48px;border-radius:2px;display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:700}
 .payment-card h3{font-family:'Rajdhani',sans-serif;font-size:18px;font-weight:700;text-transform:uppercase;letter-spacing:1px}
 .payment-card p{font-size:13px;color:var(--gray)}
@@ -177,13 +177,13 @@ nav a:hover{color:var(--purple-light)}
 .pay-crypto .payment-icon{background:#FF6600;color:#fff}
 
 /* AREA */
-.area-section{background:linear-gradient(180deg,rgba(31,20,48,0.9) 0%,rgba(18,18,18,0.8) 100%);text-align:center}
+.area-section{background:var(--dark);text-align:center}
 .area-badge{display:inline-block;background:rgba(123,47,190,0.15);border:1px solid var(--border);border-radius:2px;padding:12px 32px;font-family:'Rajdhani',sans-serif;font-size:18px;font-weight:600;letter-spacing:1px;text-transform:uppercase;margin-bottom:16px}
 .area-badge svg{display:inline;vertical-align:middle;margin-right:8px}
 
 /* CTA */
 .cta-section{text-align:center;padding:80px 24px;position:relative}
-.cta-section::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at center,rgba(181,126,220,0.18) 0%,rgba(123,47,190,0.08) 40%,transparent 75%)}
+
 .cta-content{position:relative;z-index:2}
 .cta-content h2{font-family:'Oswald',sans-serif;font-size:clamp(28px,5vw,48px);text-transform:uppercase;margin-bottom:16px;font-weight:700}
 .cta-content h2 span{color:var(--purple-light)}
@@ -208,14 +208,6 @@ nav a:hover{color:var(--purple-light)}
   .payment-grid{grid-template-columns:1fr}
   .hero-btns{flex-direction:column;align-items:center}
 }
-
-/* ANIMATIONS */
-@keyframes fadeUp{from{opacity:0;transform:translateY(30px)}to{opacity:1;transform:translateY(0)}}
-.fade-up{opacity:0;animation:fadeUp .6s ease forwards}
-.fade-up.d1{animation-delay:.1s}
-.fade-up.d2{animation-delay:.2s}
-.fade-up.d3{animation-delay:.3s}
-.fade-up.d4{animation-delay:.4s}
 
 /* SCROLLBAR */
 ::-webkit-scrollbar{width:8px}
@@ -509,7 +501,7 @@ nav a:hover{color:var(--purple-light)}
     <p class="section-sub">Based in Chilhowie, VA, Fritz covers anywhere within about 40 minutes. All professional-grade equipment and premium products come directly to your driveway, office, or wherever your vehicle is parked.</p>
 
     <!-- WEEKEND CALLOUT -->
-    <div id="weekend-badge" style="background:linear-gradient(135deg,rgba(29,158,117,0.12),rgba(123,47,190,0.08));border:1px solid rgba(29,158,117,0.3);border-radius:2px;padding:20px 24px;margin:24px 0;display:none;align-items:center;gap:16px;flex-wrap:wrap">
+    <div id="weekend-badge" style="background:rgba(29,158,117,0.08);border:1px solid rgba(29,158,117,0.3);border-radius:2px;padding:20px 24px;margin:24px 0;display:none;align-items:center;gap:16px;flex-wrap:wrap">
       <div style="background:rgba(29,158,117,0.2);width:48px;height:48px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#1D9E75" stroke-width="2" stroke-linecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
       </div>
@@ -1336,7 +1328,7 @@ async function loadGallery() {
     // Show placeholder
     track.innerHTML = `
       <a href="https://instagram.com/fritzdetailonthego" target="_blank" rel="noopener" style="flex:0 0 320px;text-decoration:none;color:inherit;margin:0 auto">
-        <div style="background:linear-gradient(135deg,var(--dark-card) 0%,rgba(123,47,190,0.08) 100%);border:1px solid var(--border);border-radius:2px;height:400px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:32px;text-align:center">
+        <div style="background:var(--dark-card);border:1px solid var(--border);border-radius:2px;height:400px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:32px;text-align:center">
           <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--purple)" stroke-width="1.5"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="5"/><circle cx="17.5" cy="6.5" r="1.5"/></svg>
           <div style="font-family:'Oswald',sans-serif;font-size:20px;text-transform:uppercase;font-weight:600">Before & After</div>
           <div style="font-size:14px;color:var(--gray)">Follow @fritzdetailonthego for the latest transformations</div>

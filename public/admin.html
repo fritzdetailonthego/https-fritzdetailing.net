@@ -11,7 +11,7 @@
 --lavender:#B57EDC;
 --lavender-light:#C9A9E8;
 --lavender-dark:#8E5BC4;--green:#1D9E75;--red:#E24B4A}
-body{font-family:"Open Sans",sans-serif;background:linear-gradient(180deg,#0A0A0A 0%,#150B22 40%,#1F1430 100%);background-attachment:fixed;color:var(--white);min-height:100vh}
+body{font-family:"Open Sans",sans-serif;background:#0A0A0A;color:var(--white);min-height:100vh}
 .header{background:rgba(10,10,10,0.95);border-bottom:1px solid var(--border);padding:16px 24px;display:flex;align-items:center;justify-content:space-between}
 .header a{color:var(--purple-light);text-decoration:none;font-family:'Rajdhani',sans-serif;font-weight:600;font-size:14px;text-transform:uppercase;letter-spacing:1px}
 .header h1{font-family:'Oswald',sans-serif;font-size:18px;font-weight:600;letter-spacing:1px;text-transform:uppercase}
@@ -26,7 +26,7 @@ body{font-family:"Open Sans",sans-serif;background:linear-gradient(180deg,#0A0A0
 .input{width:100%;padding:12px 14px;background:var(--dark);border:1px solid var(--border);border-radius:2px;color:#fff;font-size:15px;font-family:'Open Sans',sans-serif;outline:none;transition:border .2s}
 .input:focus{border-color:var(--purple)}
 .btn{font-family:'Rajdhani',sans-serif;font-weight:700;font-size:15px;letter-spacing:1.5px;text-transform:uppercase;padding:12px 24px;border-radius:2px;border:none;cursor:pointer;display:inline-flex;align-items:center;gap:8px;transition:all .2s}
-.btn-primary{background:linear-gradient(135deg,var(--lavender) 0%,var(--purple) 60%,var(--purple-dark) 100%);color:#fff}
+.btn-primary{background:var(--purple);color:#fff}
 .btn-primary:hover{background:var(--purple-light)}
 .btn-outline{background:transparent;color:var(--white);border:2px solid var(--border)}
 .btn-outline:hover{border-color:var(--purple)}
@@ -476,7 +476,7 @@ async function savePricing() {
 
 // Undo — restore the most recent revision
 async function undoPricing() {
-  if (!await customConfirm('⚠️ UNDO: This will revert pricing to the LAST saved state. Are you sure?')) return;
+  if (!await customConfirm('Revert pricing to the last saved state? This undoes your current unsaved changes.')) return;
   try {
     const listRes = await fetch('/api/pricing-revisions', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -500,7 +500,7 @@ async function undoPricing() {
 
 // Reset to original deploy state
 async function resetToOriginal() {
-  const phrase = prompt('⚠️ RESET TO ORIGINAL: This will wipe ALL pricing changes back to the very first version.\n\nType "RESET PRICING" to confirm:');
+  const phrase = prompt('Reset to original pricing? This wipes all your changes back to the first version.\n\nType "RESET PRICING" to confirm:');
   if (phrase !== 'RESET PRICING') { showToast('Reset cancelled'); return; }
   try {
     const listRes = await fetch('/api/pricing-revisions', {
@@ -934,7 +934,7 @@ async function updateToggle(key, value) {
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error);
-    statusEl.textContent = '✓ ' + key + ' ' + (value ? 'ON' : 'OFF') + ' — site updating in ~30s';
+    statusEl.textContent = key + ' ' + (value ? 'ON' : 'OFF') + ' — site updating in ~30s';
     statusEl.style.color = 'var(--green)';
     showToast(key + ' → ' + (value ? 'ON' : 'OFF'));
     setTimeout(() => { statusEl.textContent = ''; }, 4000);
