@@ -7,8 +7,11 @@
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Rajdhani:wght@400;500;600;700&family=Open+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-:root{--purple:#7B2FBE;--purple-light:#9B4FDE;--black:#0A0A0A;--dark:#121212;--dark-card:#1A1A1A;--white:#FFF;--gray:#999;--gray-light:#CCC;--border:rgba(123,47,190,0.25);--green:#1D9E75;--red:#E24B4A}
-body{font-family:'Open Sans',sans-serif;background:var(--black);color:var(--white);min-height:100vh}
+:root{--purple:#7B2FBE;--purple-light:#9B4FDE;--black:#0A0A0A;--dark:#121212;--dark-card:#1A1A1A;--white:#FFF;--gray:#999;--gray-light:#CCC;--border:rgba(123,47,190,0.25);
+--lavender:#B57EDC;
+--lavender-light:#C9A9E8;
+--lavender-dark:#8E5BC4;--green:#1D9E75;--red:#E24B4A}
+body{font-family:"Open Sans",sans-serif;background:linear-gradient(180deg,#0A0A0A 0%,#150B22 40%,#1F1430 100%);background-attachment:fixed;color:var(--white);min-height:100vh}
 .header{background:rgba(10,10,10,0.95);border-bottom:1px solid var(--border);padding:16px 24px;display:flex;align-items:center;justify-content:space-between}
 .header a{color:var(--purple-light);text-decoration:none;font-family:'Rajdhani',sans-serif;font-weight:600;font-size:14px;text-transform:uppercase;letter-spacing:1px}
 .header h1{font-family:'Oswald',sans-serif;font-size:18px;font-weight:600;letter-spacing:1px;text-transform:uppercase}
@@ -19,11 +22,11 @@ body{font-family:'Open Sans',sans-serif;background:var(--black);color:var(--whit
 #login-screen{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;text-align:center}
 #login-screen h2{font-family:'Oswald',sans-serif;font-size:32px;text-transform:uppercase;margin-bottom:8px}
 #login-screen p{color:var(--gray);margin-bottom:24px}
-.login-box{background:var(--dark-card);border:1px solid var(--border);border-radius:12px;padding:32px;width:100%;max-width:360px}
-.input{width:100%;padding:12px 14px;background:var(--dark);border:1px solid var(--border);border-radius:8px;color:#fff;font-size:15px;font-family:'Open Sans',sans-serif;outline:none;transition:border .2s}
+.login-box{background:var(--dark-card);border:1px solid var(--border);border-radius:2px;padding:32px;width:100%;max-width:360px}
+.input{width:100%;padding:12px 14px;background:var(--dark);border:1px solid var(--border);border-radius:2px;color:#fff;font-size:15px;font-family:'Open Sans',sans-serif;outline:none;transition:border .2s}
 .input:focus{border-color:var(--purple)}
-.btn{font-family:'Rajdhani',sans-serif;font-weight:700;font-size:15px;letter-spacing:1.5px;text-transform:uppercase;padding:12px 24px;border-radius:8px;border:none;cursor:pointer;display:inline-flex;align-items:center;gap:8px;transition:all .2s}
-.btn-primary{background:var(--purple);color:#fff}
+.btn{font-family:'Rajdhani',sans-serif;font-weight:700;font-size:15px;letter-spacing:1.5px;text-transform:uppercase;padding:12px 24px;border-radius:2px;border:none;cursor:pointer;display:inline-flex;align-items:center;gap:8px;transition:all .2s}
+.btn-primary{background:linear-gradient(135deg,var(--lavender) 0%,var(--purple) 60%,var(--purple-dark) 100%);color:#fff}
 .btn-primary:hover{background:var(--purple-light)}
 .btn-outline{background:transparent;color:var(--white);border:2px solid var(--border)}
 .btn-outline:hover{border-color:var(--purple)}
@@ -36,7 +39,7 @@ body{font-family:'Open Sans',sans-serif;background:var(--black);color:var(--whit
 #admin-screen{display:none}
 .section-label{font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:2px;color:var(--purple-light);margin-bottom:12px}
 .toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:24px}
-.status-bar{padding:10px 16px;border-radius:8px;font-size:14px;margin-bottom:24px;display:none}
+.status-bar{padding:10px 16px;border-radius:2px;font-size:14px;margin-bottom:24px;display:none}
 .status-bar.success{display:block;background:rgba(29,158,117,0.15);border:1px solid rgba(29,158,117,0.3);color:var(--green)}
 .status-bar.error{display:block;background:rgba(226,75,74,0.15);border:1px solid rgba(226,75,74,0.3);color:var(--red)}
 
@@ -51,16 +54,16 @@ body{font-family:'Open Sans',sans-serif;background:var(--black);color:var(--whit
 .price-table td{padding:6px 12px;border-bottom:1px solid rgba(255,255,255,0.03)}
 .price-table td:nth-child(2){text-align:right}
 .price-table .cat-header{background:rgba(123,47,190,0.08);font-family:'Rajdhani',sans-serif;font-weight:700;font-size:13px;text-transform:uppercase;letter-spacing:1px;color:var(--purple-light);padding:10px 12px}
-.price-input{width:90px;padding:6px 8px;background:var(--dark);border:1px solid var(--border);border-radius:6px;color:#fff;font-size:14px;font-weight:600;text-align:right;font-family:'Rajdhani',sans-serif;outline:none}
+.price-input{width:90px;padding:6px 8px;background:var(--dark);border:1px solid var(--border);border-radius:2px;color:#fff;font-size:14px;font-weight:600;text-align:right;font-family:'Rajdhani',sans-serif;outline:none}
 .price-input:focus{border-color:var(--purple)}
-.name-input{width:100%;padding:6px 8px;background:transparent;border:1px solid transparent;border-radius:6px;color:var(--gray-light);font-size:14px;font-family:'Open Sans',sans-serif;outline:none}
+.name-input{width:100%;padding:6px 8px;background:transparent;border:1px solid transparent;border-radius:2px;color:var(--gray-light);font-size:14px;font-family:'Open Sans',sans-serif;outline:none}
 .name-input:focus{border-color:var(--border);background:var(--dark)}
 .del-btn{background:none;border:none;color:var(--red);cursor:pointer;font-size:16px;opacity:0.4;transition:opacity .2s;padding:4px 8px}
 .del-btn:hover{opacity:1}
-.add-row-btn{font-size:13px;color:var(--purple-light);background:none;border:1px dashed var(--border);border-radius:6px;padding:6px 16px;cursor:pointer;font-family:'Rajdhani',sans-serif;font-weight:600;text-transform:uppercase;letter-spacing:1px;transition:all .2s;margin-top:4px}
+.add-row-btn{font-size:13px;color:var(--purple-light);background:none;border:1px dashed var(--border);border-radius:2px;padding:6px 16px;cursor:pointer;font-family:'Rajdhani',sans-serif;font-weight:600;text-transform:uppercase;letter-spacing:1px;transition:all .2s;margin-top:4px}
 .add-row-btn:hover{border-color:var(--purple);background:rgba(123,47,190,0.1)}
 
-.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(100px);background:var(--green);color:#fff;padding:14px 28px;border-radius:10px;font-family:'Rajdhani',sans-serif;font-weight:600;font-size:15px;letter-spacing:1px;z-index:999;transition:transform .3s;pointer-events:none}
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(100px);background:var(--green);color:#fff;padding:14px 28px;border-radius:2px;font-family:'Rajdhani',sans-serif;font-weight:600;font-size:15px;letter-spacing:1px;z-index:999;transition:transform .3s;pointer-events:none}
 .toast.show{transform:translateX(-50%) translateY(0)}
 
 @media(max-width:600px){.toolbar{flex-direction:column}.toolbar .btn{width:100%;justify-content:center}}
@@ -69,7 +72,7 @@ body{font-family:'Open Sans',sans-serif;background:var(--black);color:var(--whit
 <body>
 
 <div class="header">
-  <a href="index.html" style="display:flex;align-items:center;gap:10px"><img src="/logo.jpg" alt="Fritz's Detail" style="height:36px;width:auto;border-radius:4px">&larr; Back to Site</a>
+  <a href="index.html" style="display:flex;align-items:center;gap:10px"><img src="/logo.jpg" alt="Fritz's Detail" style="height:36px;width:auto;border-radius:2px">&larr; Back to Site</a>
   <h1>Admin <span>Panel</span></h1>
   <span></span>
 </div>
@@ -95,10 +98,10 @@ body{font-family:'Open Sans',sans-serif;background:var(--black);color:var(--whit
   <p style="color:var(--gray);font-size:14px;margin-bottom:16px">Quick toggles that update the live site. Changes deploy automatically.</p>
 
   <div id="settings-panel" style="display:flex;flex-wrap:wrap;gap:12px;margin-bottom:24px">
-    <label style="display:flex;align-items:center;gap:10px;background:var(--dark);border:1px solid var(--border);border-radius:10px;padding:14px 18px;cursor:pointer;transition:all .2s;flex:1;min-width:200px" id="toggle-weekends">
+    <label style="display:flex;align-items:center;gap:10px;background:var(--dark);border:1px solid var(--border);border-radius:2px;padding:14px 18px;cursor:pointer;transition:all .2s;flex:1;min-width:200px" id="toggle-weekends">
       <div style="position:relative;width:44px;height:24px;flex-shrink:0">
         <input type="checkbox" id="cfg-weekends" onchange="updateToggle('worksWeekends',this.checked)" style="opacity:0;width:0;height:0;position:absolute">
-        <div class="toggle-track" style="position:absolute;inset:0;background:rgba(255,255,255,0.1);border-radius:12px;transition:background .2s"></div>
+        <div class="toggle-track" style="position:absolute;inset:0;background:rgba(255,255,255,0.1);border-radius:2px;transition:background .2s"></div>
         <div class="toggle-thumb" style="position:absolute;top:2px;left:2px;width:20px;height:20px;background:#fff;border-radius:50%;transition:transform .2s"></div>
       </div>
       <div>
@@ -107,10 +110,10 @@ body{font-family:'Open Sans',sans-serif;background:var(--black);color:var(--whit
       </div>
     </label>
 
-    <label style="display:flex;align-items:center;gap:10px;background:var(--dark);border:1px solid var(--border);border-radius:10px;padding:14px 18px;cursor:pointer;transition:all .2s;flex:1;min-width:200px" id="toggle-clients">
+    <label style="display:flex;align-items:center;gap:10px;background:var(--dark);border:1px solid var(--border);border-radius:2px;padding:14px 18px;cursor:pointer;transition:all .2s;flex:1;min-width:200px" id="toggle-clients">
       <div style="position:relative;width:44px;height:24px;flex-shrink:0">
         <input type="checkbox" id="cfg-clients" onchange="updateToggle('acceptingNewClients',this.checked)" style="opacity:0;width:0;height:0;position:absolute">
-        <div class="toggle-track" style="position:absolute;inset:0;background:rgba(255,255,255,0.1);border-radius:12px;transition:background .2s"></div>
+        <div class="toggle-track" style="position:absolute;inset:0;background:rgba(255,255,255,0.1);border-radius:2px;transition:background .2s"></div>
         <div class="toggle-thumb" style="position:absolute;top:2px;left:2px;width:20px;height:20px;background:#fff;border-radius:50%;transition:transform .2s"></div>
       </div>
       <div>
@@ -119,10 +122,10 @@ body{font-family:'Open Sans',sans-serif;background:var(--black);color:var(--whit
       </div>
     </label>
 
-    <label style="display:flex;align-items:center;gap:10px;background:var(--dark);border:1px solid var(--border);border-radius:10px;padding:14px 18px;cursor:pointer;transition:all .2s;flex:1;min-width:200px" id="toggle-pricing">
+    <label style="display:flex;align-items:center;gap:10px;background:var(--dark);border:1px solid var(--border);border-radius:2px;padding:14px 18px;cursor:pointer;transition:all .2s;flex:1;min-width:200px" id="toggle-pricing">
       <div style="position:relative;width:44px;height:24px;flex-shrink:0">
         <input type="checkbox" id="cfg-pricing" onchange="updateToggle('showPricing',this.checked)" style="opacity:0;width:0;height:0;position:absolute">
-        <div class="toggle-track" style="position:absolute;inset:0;background:rgba(255,255,255,0.1);border-radius:12px;transition:background .2s"></div>
+        <div class="toggle-track" style="position:absolute;inset:0;background:rgba(255,255,255,0.1);border-radius:2px;transition:background .2s"></div>
         <div class="toggle-thumb" style="position:absolute;top:2px;left:2px;width:20px;height:20px;background:#fff;border-radius:50%;transition:transform .2s"></div>
       </div>
       <div>
@@ -154,7 +157,7 @@ body{font-family:'Open Sans',sans-serif;background:var(--black);color:var(--whit
   <!-- REVISION HISTORY -->
   <div style="margin-top:8px;margin-bottom:12px">
     <button class="btn btn-outline" style="font-size:12px;padding:6px 14px" onclick="toggleRevisions()">📋 View Revision History</button>
-    <div id="revision-list" style="display:none;margin-top:10px;background:var(--dark);border:1px solid var(--border);border-radius:8px;max-height:200px;overflow-y:auto;padding:8px"></div>
+    <div id="revision-list" style="display:none;margin-top:10px;background:var(--dark);border:1px solid var(--border);border-radius:2px;max-height:200px;overflow-y:auto;padding:8px"></div>
   </div>
 
   <div id="status-bar" class="status-bar"></div>
@@ -213,7 +216,7 @@ body{font-family:'Open Sans',sans-serif;background:var(--black);color:var(--whit
 
     <div id="fees-list" style="margin-bottom:16px"></div>
 
-    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;background:var(--dark);border:1px solid var(--border);border-radius:8px;padding:12px">
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;background:var(--dark);border:1px solid var(--border);border-radius:2px;padding:12px">
       <input class="input" id="fee-name" placeholder="Fee name (e.g. Heavy Pet Hair)" style="flex:2;min-width:180px;margin:0">
       <input type="number" class="input" id="fee-amount" placeholder="Amount ($)" step="1" min="0" style="flex:1;min-width:100px;margin:0">
       <input class="input" id="fee-desc" placeholder="Description (optional)" style="flex:2;min-width:150px;margin:0">
@@ -228,19 +231,19 @@ body{font-family:'Open Sans',sans-serif;background:var(--black);color:var(--whit
 
     <!-- SUMMARY CARDS -->
     <div id="sales-summary" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:24px">
-      <div style="background:var(--dark);border:1px solid var(--border);border-radius:10px;padding:16px;text-align:center">
+      <div style="background:var(--dark);border:1px solid var(--border);border-radius:2px;padding:16px;text-align:center">
         <div style="font-size:13px;color:var(--gray);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Total Sales</div>
         <div id="stat-count" style="font-family:'Rajdhani',sans-serif;font-size:32px;font-weight:700;color:var(--purple-light)">—</div>
       </div>
-      <div style="background:var(--dark);border:1px solid var(--border);border-radius:10px;padding:16px;text-align:center">
+      <div style="background:var(--dark);border:1px solid var(--border);border-radius:2px;padding:16px;text-align:center">
         <div style="font-size:13px;color:var(--gray);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Total Revenue</div>
         <div id="stat-revenue" style="font-family:'Rajdhani',sans-serif;font-size:32px;font-weight:700;color:var(--white)">—</div>
       </div>
-      <div style="background:var(--dark);border:1px solid rgba(29,158,117,0.3);border-radius:10px;padding:16px;text-align:center">
+      <div style="background:var(--dark);border:1px solid rgba(29,158,117,0.3);border-radius:2px;padding:16px;text-align:center">
         <div style="font-size:13px;color:#1D9E75;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Your Commission</div>
         <div id="stat-commission" style="font-family:'Rajdhani',sans-serif;font-size:32px;font-weight:700;color:#1D9E75">—</div>
       </div>
-      <div style="background:var(--dark);border:1px solid var(--border);border-radius:10px;padding:16px;text-align:center">
+      <div style="background:var(--dark);border:1px solid var(--border);border-radius:2px;padding:16px;text-align:center">
         <div style="font-size:13px;color:var(--gray);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Rate</div>
         <div id="stat-rate" style="font-family:'Rajdhani',sans-serif;font-size:32px;font-weight:700;color:var(--purple-light)">—</div>
       </div>
@@ -254,7 +257,7 @@ body{font-family:'Open Sans',sans-serif;background:var(--black);color:var(--whit
     </div>
 
     <!-- MANUAL SALE FORM -->
-    <div id="manual-sale-form" style="display:none;background:var(--dark);border:1px solid var(--border);border-radius:10px;padding:20px;margin-bottom:20px">
+    <div id="manual-sale-form" style="display:none;background:var(--dark);border:1px solid var(--border);border-radius:2px;padding:20px;margin-bottom:20px">
       <div style="font-family:'Rajdhani',sans-serif;font-size:14px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--purple-light);margin-bottom:12px">Log Cash / Crypto / Other Sale</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
         <input class="input" id="ms-customer" placeholder="Customer name">
@@ -300,7 +303,7 @@ body{font-family:'Open Sans',sans-serif;background:var(--black);color:var(--whit
 
 <!-- Custom confirm modal (replaces native confirm() which blocks browser testing tools) -->
 <div id="custom-confirm" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9999;align-items:center;justify-content:center;padding:20px">
-  <div style="background:var(--dark-card);border:1px solid var(--border);border-radius:12px;padding:24px;max-width:420px;width:100%">
+  <div style="background:var(--dark-card);border:1px solid var(--border);border-radius:2px;padding:24px;max-width:420px;width:100%">
     <div id="cc-msg" style="color:var(--white);font-size:15px;margin-bottom:20px;line-height:1.5"></div>
     <div style="display:flex;gap:8px;justify-content:flex-end">
       <button id="cc-cancel" class="btn btn-outline" style="margin:0;padding:8px 18px;font-size:13px">Cancel</button>
@@ -541,7 +544,7 @@ async function toggleRevisions() {
       const label = i === 0 ? ' (latest)' : i === data.revisions.length - 1 ? ' (original)' : '';
       return `<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 10px;border-bottom:1px solid rgba(255,255,255,0.03);font-size:13px">
         <span style="color:var(--gray-light)">${d.toLocaleDateString()} ${d.toLocaleTimeString()}${label}</span>
-        <button onclick="restoreRevision(${r.index})" style="background:var(--purple);color:#fff;border:none;padding:4px 12px;border-radius:4px;cursor:pointer;font-family:'Rajdhani',sans-serif;font-weight:600;font-size:12px;text-transform:uppercase">Restore</button>
+        <button onclick="restoreRevision(${r.index})" style="background:var(--purple);color:#fff;border:none;padding:4px 12px;border-radius:2px;cursor:pointer;font-family:'Rajdhani',sans-serif;font-weight:600;font-size:12px;text-transform:uppercase">Restore</button>
       </div>`;
     }).join('');
   } catch(e) { el.innerHTML = '<div style="color:var(--red);padding:8px;font-size:13px">' + (e.message || 'Failed to load. Set up Blob Storage first.') + '</div>'; }
@@ -661,8 +664,8 @@ function renderGalleryEditor() {
   }
 
   container.innerHTML = galleryData.images.map((img, i) => `
-    <div style="display:flex;gap:12px;align-items:center;margin-bottom:12px;background:var(--dark);border:1px solid var(--border);border-radius:8px;padding:12px">
-      <div style="flex:0 0 60px;height:60px;border-radius:6px;overflow:hidden;background:var(--dark-card)">
+    <div style="display:flex;gap:12px;align-items:center;margin-bottom:12px;background:var(--dark);border:1px solid var(--border);border-radius:2px;padding:12px">
+      <div style="flex:0 0 60px;height:60px;border-radius:2px;overflow:hidden;background:var(--dark-card)">
         ${img.url ? `<img src="${img.url}" style="width:100%;height:100%;object-fit:cover" onerror="this.style.display='none'">` : '<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:var(--gray);font-size:11px">No img</div>'}
       </div>
       <div style="flex:1;display:flex;flex-direction:column;gap:6px">
@@ -740,12 +743,12 @@ async function loadBookings() {
       const dateStr = d.toLocaleDateString('en-US', { weekday:'short', month:'short', day:'numeric' });
       const h = parseInt(b.time.split(':')[0]); const m = b.time.split(':')[1];
       const timeStr = (h > 12 ? h-12 : h) + ':' + m + (h >= 12 ? ' PM' : ' AM');
-      return '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:var(--dark);border:1px solid var(--border);border-radius:8px;margin-bottom:6px;font-size:13px">' +
+      return '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:var(--dark);border:1px solid var(--border);border-radius:2px;margin-bottom:6px;font-size:13px">' +
         '<div><strong style="color:var(--white)">' + b.name + '</strong> <span style="color:var(--gray)">(' + b.phone + ')</span><br>' +
         '<span style="color:var(--purple-light)">' + dateStr + ' at ' + timeStr + '</span>' +
         (b.service ? ' <span style="color:var(--gray)">- ' + b.service + '</span>' : '') +
         (b.vehicle ? ' <span style="color:var(--gray)">- ' + b.vehicle + '</span>' : '') + '</div>' +
-        '<button onclick="cancelBooking(\'' + b.id + '\')" style="background:none;border:1px solid rgba(226,75,74,0.3);color:var(--red);padding:4px 10px;border-radius:4px;cursor:pointer;font-size:11px;font-family:Rajdhani,sans-serif;font-weight:600;text-transform:uppercase">Cancel</button></div>';
+        '<button onclick="cancelBooking(\'' + b.id + '\')" style="background:none;border:1px solid rgba(226,75,74,0.3);color:var(--red);padding:4px 10px;border-radius:2px;cursor:pointer;font-size:11px;font-family:Rajdhani,sans-serif;font-weight:600;text-transform:uppercase">Cancel</button></div>';
     }).join('');
   } catch(e) {
     document.getElementById('bookings-list').innerHTML = '<p style="color:var(--red);font-size:14px">' + (e.message || 'Failed to load bookings') + '</p>';
@@ -799,7 +802,7 @@ function renderBlockedDates() {
   const dates = availabilityConfig.blockedDates || [];
   if (dates.length === 0) { el.innerHTML = ''; return; }
   el.innerHTML = '<div style="display:flex;flex-wrap:wrap;gap:6px">' + dates.map(d =>
-    '<span style="background:rgba(226,75,74,0.1);border:1px solid rgba(226,75,74,0.3);border-radius:6px;padding:4px 10px;font-size:12px;color:var(--red);display:flex;align-items:center;gap:6px">' + d +
+    '<span style="background:rgba(226,75,74,0.1);border:1px solid rgba(226,75,74,0.3);border-radius:2px;padding:4px 10px;font-size:12px;color:var(--red);display:flex;align-items:center;gap:6px">' + d +
     '<button onclick="unblockDate(\'' + d + '\')" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:14px">&times;</button></span>'
   ).join('') + '</div>';
 }
@@ -857,10 +860,10 @@ function renderFees() {
     return;
   }
   el.innerHTML = feesList.map((f, i) =>
-    '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:var(--dark);border:1px solid var(--border);border-radius:8px;margin-bottom:6px;font-size:14px">' +
+    '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:var(--dark);border:1px solid var(--border);border-radius:2px;margin-bottom:6px;font-size:14px">' +
       '<div><strong style="color:var(--white)">' + f.name + '</strong> <span style="color:var(--purple-light);font-family:Rajdhani,sans-serif;font-weight:700;margin-left:8px">$' + f.amount + '</span>' +
       (f.description ? '<br><span style="color:var(--gray);font-size:12px">' + f.description + '</span>' : '') + '</div>' +
-      '<button onclick="removeFee(' + i + ')" style="background:none;border:1px solid rgba(226,75,74,0.3);color:var(--red);padding:4px 10px;border-radius:4px;cursor:pointer;font-size:11px;font-family:Rajdhani,sans-serif;font-weight:600;text-transform:uppercase">Remove</button>' +
+      '<button onclick="removeFee(' + i + ')" style="background:none;border:1px solid rgba(226,75,74,0.3);color:var(--red);padding:4px 10px;border-radius:2px;cursor:pointer;font-size:11px;font-family:Rajdhani,sans-serif;font-weight:600;text-transform:uppercase">Remove</button>' +
     '</div>'
   ).join('');
 }
@@ -991,7 +994,7 @@ async function loadSales() {
         <td style="padding:10px 12px;color:var(--gray-light)">${s.service}</td>
         <td style="padding:10px 12px;text-align:right;font-family:'Rajdhani',sans-serif;font-weight:700;font-size:15px">$${s.amount.toLocaleString()}</td>
         <td style="padding:10px 12px;text-align:right;font-family:'Rajdhani',sans-serif;font-weight:700;font-size:15px;color:#1D9E75">$${s.commission.toLocaleString()}</td>
-        <td style="padding:10px 12px;text-align:center"><span style="background:${color};color:#fff;padding:3px 10px;border-radius:20px;font-size:11px;font-family:'Rajdhani',sans-serif;font-weight:600;text-transform:uppercase;letter-spacing:0.5px">${s.paymentMethod}</span></td>
+        <td style="padding:10px 12px;text-align:center"><span style="background:${color};color:#fff;padding:3px 10px;border-radius:2px;font-size:11px;font-family:'Rajdhani',sans-serif;font-weight:600;text-transform:uppercase;letter-spacing:0.5px">${s.paymentMethod}</span></td>
       </tr>`;
     }).join('');
 

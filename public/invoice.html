@@ -12,8 +12,11 @@
 --black:#0A0A0A;--dark:#121212;--dark-card:#1A1A1A;
 --white:#FFFFFF;--gray:#999;--gray-light:#CCC;
 --border:rgba(123,47,190,0.25);
+--lavender:#B57EDC;
+--lavender-light:#C9A9E8;
+--lavender-dark:#8E5BC4;
 }
-body{font-family:'Open Sans',sans-serif;background:var(--black);color:var(--white);min-height:100vh}
+body{font-family:"Open Sans",sans-serif;background:linear-gradient(180deg,#0A0A0A 0%,#150B22 40%,#1F1430 100%);background-attachment:fixed;color:var(--white);min-height:100vh}
 
 .page-header{background:rgba(10,10,10,0.95);border-bottom:1px solid var(--border);padding:16px 24px;display:flex;align-items:center;justify-content:space-between}
 .page-header a{color:var(--purple-light);text-decoration:none;font-family:'Rajdhani',sans-serif;font-weight:600;font-size:14px;text-transform:uppercase;letter-spacing:1px}
@@ -28,7 +31,7 @@ body{font-family:'Open Sans',sans-serif;background:var(--black);color:var(--whit
 .form-group{display:flex;flex-direction:column;gap:6px}
 .form-group.full{grid-column:1/-1}
 .form-label{font-size:12px;color:var(--gray);text-transform:uppercase;letter-spacing:1px;font-family:'Rajdhani',sans-serif;font-weight:600}
-.form-input,.form-select,.form-textarea{width:100%;padding:12px 14px;background:var(--dark);border:1px solid var(--border);border-radius:8px;color:#fff;font-size:15px;font-family:'Open Sans',sans-serif;outline:none;transition:border-color .2s}
+.form-input,.form-select,.form-textarea{width:100%;padding:12px 14px;background:var(--dark);border:1px solid var(--border);border-radius:2px;color:#fff;font-size:15px;font-family:'Open Sans',sans-serif;outline:none;transition:border-color .2s}
 .form-input:focus,.form-select:focus,.form-textarea:focus{border-color:var(--purple)}
 .form-select{cursor:pointer;-webkit-appearance:none;appearance:none}
 .form-textarea{resize:vertical;min-height:60px}
@@ -38,9 +41,9 @@ body{font-family:'Open Sans',sans-serif;background:var(--black);color:var(--whit
 .line-item{display:grid;grid-template-columns:1fr 100px 60px;gap:12px;align-items:end;margin-bottom:12px}
 .line-item-header{display:grid;grid-template-columns:1fr 100px 60px;gap:12px;margin-bottom:8px}
 .line-item-header span{font-size:11px;color:var(--gray);text-transform:uppercase;letter-spacing:1px;font-family:'Rajdhani',sans-serif;font-weight:600}
-.remove-btn{width:36px;height:42px;background:rgba(226,75,74,0.1);border:1px solid rgba(226,75,74,0.3);border-radius:8px;color:#E24B4A;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s}
+.remove-btn{width:36px;height:42px;background:rgba(226,75,74,0.1);border:1px solid rgba(226,75,74,0.3);border-radius:2px;color:#E24B4A;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s}
 .remove-btn:hover{background:rgba(226,75,74,0.2);border-color:#E24B4A}
-.add-line{background:rgba(123,47,190,0.1);border:1px dashed var(--border);border-radius:8px;padding:10px;text-align:center;cursor:pointer;color:var(--purple-light);font-family:'Rajdhani',sans-serif;font-weight:600;font-size:14px;text-transform:uppercase;letter-spacing:1px;transition:all .2s}
+.add-line{background:rgba(123,47,190,0.1);border:1px dashed var(--border);border-radius:2px;padding:10px;text-align:center;cursor:pointer;color:var(--purple-light);font-family:'Rajdhani',sans-serif;font-weight:600;font-size:14px;text-transform:uppercase;letter-spacing:1px;transition:all .2s}
 .add-line:hover{background:rgba(123,47,190,0.2);border-color:var(--purple)}
 
 /* TOTALS */
@@ -53,8 +56,8 @@ body{font-family:'Open Sans',sans-serif;background:var(--black);color:var(--whit
 
 /* BUTTONS */
 .btn-row{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:32px}
-.btn{font-family:'Rajdhani',sans-serif;font-weight:700;font-size:15px;letter-spacing:1.5px;text-transform:uppercase;padding:12px 28px;border-radius:8px;border:none;cursor:pointer;display:inline-flex;align-items:center;gap:8px;transition:all .2s}
-.btn-primary{background:var(--purple);color:#fff}
+.btn{font-family:'Rajdhani',sans-serif;font-weight:700;font-size:15px;letter-spacing:1.5px;text-transform:uppercase;padding:12px 28px;border-radius:2px;border:none;cursor:pointer;display:inline-flex;align-items:center;gap:8px;transition:all .2s}
+.btn-primary{background:linear-gradient(135deg,var(--lavender) 0%,var(--purple) 60%,var(--purple-dark) 100%);color:#fff}
 .btn-primary:hover{background:var(--purple-light)}
 .btn-outline{background:transparent;color:var(--white);border:2px solid var(--border)}
 .btn-outline:hover{border-color:var(--purple);color:var(--purple-light)}
@@ -67,7 +70,7 @@ body{font-family:'Open Sans',sans-serif;background:var(--black);color:var(--whit
 .preview-section{margin-top:40px;border-top:1px solid var(--border);padding-top:32px}
 
 /* PRINTABLE INVOICE */
-#invoice-print{background:#fff;color:#111;border-radius:12px;overflow:hidden;max-width:700px}
+#invoice-print{background:#fff;color:#111;border-radius:2px;overflow:hidden;max-width:700px}
 .inv-header{background:linear-gradient(135deg,#1a1a2e,#2d1b4e);color:#fff;padding:32px;display:flex;justify-content:space-between;align-items:flex-start}
 .inv-brand h1{font-family:'Oswald',sans-serif;font-size:24px;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px}
 .inv-brand p{font-size:13px;opacity:0.7}
@@ -121,14 +124,14 @@ body{font-family:'Open Sans',sans-serif;background:var(--black);color:var(--whit
 }
 
 /* Toast notification */
-.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(100px);background:#1D9E75;color:#fff;padding:14px 28px;border-radius:10px;font-family:'Rajdhani',sans-serif;font-weight:600;font-size:15px;letter-spacing:1px;z-index:999;transition:transform .3s ease;pointer-events:none}
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(100px);background:#1D9E75;color:#fff;padding:14px 28px;border-radius:2px;font-family:'Rajdhani',sans-serif;font-weight:600;font-size:15px;letter-spacing:1px;z-index:999;transition:transform .3s ease;pointer-events:none}
 .toast.show{transform:translateX(-50%) translateY(0)}
 </style>
 </head>
 <body>
 
 <div class="page-header">
-  <a href="index.html" style="display:flex;align-items:center;gap:10px"><img src="/logo.jpg" alt="Fritz's Detail" style="height:36px;width:auto;border-radius:4px">&larr; Back to Site</a>
+  <a href="index.html" style="display:flex;align-items:center;gap:10px"><img src="/logo.jpg" alt="Fritz's Detail" style="height:36px;width:auto;border-radius:2px">&larr; Back to Site</a>
   <div class="page-title">Fritz's <span>Invoice</span></div>
   <span></span>
 </div>
@@ -170,7 +173,7 @@ body{font-family:'Open Sans',sans-serif;background:var(--black);color:var(--whit
       <div class="add-line" onclick="addLineItem()" style="flex:1;min-width:160px">+ Add Service</div>
       <div class="add-line" id="fees-btn" onclick="toggleFeesMenu()" style="flex:1;min-width:160px;background:rgba(29,158,117,0.1);border-color:rgba(29,158,117,0.3);color:#1D9E75">+ Add Fee / Add-On</div>
     </div>
-    <div id="fees-menu" style="display:none;background:var(--dark-card);border:1px solid var(--border);border-radius:8px;margin-top:8px;padding:6px;max-height:260px;overflow-y:auto"></div>
+    <div id="fees-menu" style="display:none;background:var(--dark-card);border:1px solid var(--border);border-radius:2px;margin-top:8px;padding:6px;max-height:260px;overflow-y:auto"></div>
 
     <div style="margin-top:16px">
       <div class="form-group">
@@ -408,7 +411,7 @@ function generateInvoice() {
         <h2>Invoice</h2>
         <p>${invoiceNum}</p>
         <p>${formattedDate}</p>
-        <div style="margin-top:8px;display:inline-block;background:${statusColor};padding:4px 14px;border-radius:20px;font-size:12px;font-weight:600;letter-spacing:1px;text-transform:uppercase">${status}</div>
+        <div style="margin-top:8px;display:inline-block;background:${statusColor};padding:4px 14px;border-radius:2px;font-size:12px;font-weight:600;letter-spacing:1px;text-transform:uppercase">${status}</div>
       </div>
     </div>
     <div class="inv-info">
@@ -558,7 +561,7 @@ function toggleFeesMenu() {
     menu.innerHTML = '<div style="padding:12px;color:var(--gray);font-size:13px">No custom fees set up yet. Add them in the admin panel under "Custom Fees & Add-Ons".</div>';
   } else {
     menu.innerHTML = _customFees.map((f, i) =>
-      '<div data-fee-idx="' + i + '" class="fee-option" style="padding:10px 12px;border-radius:6px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;font-size:14px;color:var(--white)">' +
+      '<div data-fee-idx="' + i + '" class="fee-option" style="padding:10px 12px;border-radius:2px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;font-size:14px;color:var(--white)">' +
         '<div><strong>' + escapeHtml(f.name) + '</strong>' + (f.description ? '<br><span style="color:var(--gray);font-size:11px">' + escapeHtml(f.description) + '</span>' : '') + '</div>' +
         '<span style="color:var(--purple-light);font-family:Rajdhani,sans-serif;font-weight:700">$' + f.amount + '</span>' +
       '</div>'

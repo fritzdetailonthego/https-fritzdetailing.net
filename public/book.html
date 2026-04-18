@@ -4,8 +4,11 @@
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Rajdhani:wght@400;500;600;700&family=Open+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-:root{--purple:#7B2FBE;--purple-light:#9B4FDE;--black:#0A0A0A;--dark:#121212;--dark-card:#1A1A1A;--white:#FFF;--gray:#999;--gray-light:#CCC;--border:rgba(123,47,190,0.25);--green:#1D9E75;--red:#E24B4A}
-body{font-family:'Open Sans',sans-serif;background:var(--black);color:var(--white);line-height:1.6;min-height:100vh}
+:root{--purple:#7B2FBE;--purple-light:#9B4FDE;--black:#0A0A0A;--dark:#121212;--dark-card:#1A1A1A;--white:#FFF;--gray:#999;--gray-light:#CCC;--border:rgba(123,47,190,0.25);
+--lavender:#B57EDC;
+--lavender-light:#C9A9E8;
+--lavender-dark:#8E5BC4;--green:#1D9E75;--red:#E24B4A}
+body{font-family:"Open Sans",sans-serif;background:linear-gradient(180deg,#0A0A0A 0%,#150B22 40%,#1F1430 100%);background-attachment:fixed;color:var(--white);line-height:1.6;min-height:100vh}
 .header{position:fixed;top:0;left:0;right:0;z-index:100;padding:12px 24px;background:rgba(10,10,10,0.92);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
 .header-brand{display:flex;align-items:center;gap:10px;text-decoration:none}
 .header-brand span{font-family:'Oswald',sans-serif;font-size:18px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:#fff}
@@ -22,12 +25,12 @@ h1 em{color:var(--purple-light);font-style:normal}
 
 /* Calendar */
 .cal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
-.cal-header button{background:var(--dark-card);border:1px solid var(--border);color:#fff;width:36px;height:36px;border-radius:8px;cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center}
+.cal-header button{background:var(--dark-card);border:1px solid var(--border);color:#fff;width:36px;height:36px;border-radius:2px;cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center}
 .cal-header button:hover{border-color:var(--purple)}
 .cal-month{font-family:'Oswald',sans-serif;font-size:18px;text-transform:uppercase;letter-spacing:1px}
 .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:24px}
 .cal-day-label{text-align:center;font-size:11px;color:var(--gray);font-family:'Rajdhani',sans-serif;font-weight:600;text-transform:uppercase;padding:4px}
-.cal-day{text-align:center;padding:10px 4px;border-radius:8px;cursor:pointer;font-size:14px;font-weight:500;transition:all .15s;border:1px solid transparent}
+.cal-day{text-align:center;padding:10px 4px;border-radius:2px;cursor:pointer;font-size:14px;font-weight:500;transition:all .15s;border:1px solid transparent}
 .cal-day:hover:not(.disabled):not(.empty){background:rgba(123,47,190,0.15);border-color:var(--purple)}
 .cal-day.selected{background:var(--purple);color:#fff;font-weight:700}
 .cal-day.disabled{color:rgba(255,255,255,0.15);cursor:default}
@@ -36,17 +39,17 @@ h1 em{color:var(--purple-light);font-style:normal}
 
 /* Slots */
 .slots-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px;margin-bottom:24px}
-.slot{background:var(--dark-card);border:1px solid var(--border);border-radius:8px;padding:12px;text-align:center;cursor:pointer;font-family:'Rajdhani',sans-serif;font-weight:600;font-size:15px;transition:all .15s}
+.slot{background:var(--dark-card);border:1px solid var(--border);border-radius:2px;padding:12px;text-align:center;cursor:pointer;font-family:'Rajdhani',sans-serif;font-weight:600;font-size:15px;transition:all .15s}
 .slot:hover{border-color:var(--purple);background:rgba(123,47,190,0.1)}
 .slot.selected{background:var(--purple);color:#fff;border-color:var(--purple)}
 .no-slots{color:var(--gray);text-align:center;padding:32px;font-size:15px}
 
 /* Form */
-.input{width:100%;padding:12px 14px;background:var(--dark);border:1px solid var(--border);border-radius:8px;color:#fff;font-size:15px;font-family:'Open Sans',sans-serif;outline:none;margin-bottom:12px;transition:border .2s}
+.input{width:100%;padding:12px 14px;background:var(--dark);border:1px solid var(--border);border-radius:2px;color:#fff;font-size:15px;font-family:'Open Sans',sans-serif;outline:none;margin-bottom:12px;transition:border .2s}
 .input:focus{border-color:var(--purple)}
 .input::placeholder{color:var(--gray)}
-.btn{font-family:'Rajdhani',sans-serif;font-weight:700;font-size:16px;letter-spacing:2px;text-transform:uppercase;padding:14px 28px;border-radius:8px;border:none;cursor:pointer;width:100%;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:8px}
-.btn-primary{background:var(--purple);color:#fff}
+.btn{font-family:'Rajdhani',sans-serif;font-weight:700;font-size:16px;letter-spacing:2px;text-transform:uppercase;padding:14px 28px;border-radius:2px;border:none;cursor:pointer;width:100%;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:8px}
+.btn-primary{background:linear-gradient(135deg,var(--lavender) 0%,var(--purple) 60%,var(--purple-dark) 100%);color:#fff}
 .btn-primary:hover{background:var(--purple-light)}
 .btn-outline{background:transparent;color:var(--white);border:2px solid var(--border);margin-top:8px}
 .btn:disabled{opacity:0.5;cursor:not-allowed}
@@ -63,11 +66,11 @@ h1 em{color:var(--purple-light);font-style:normal}
 .success-box h2{font-family:'Oswald',sans-serif;font-size:28px;text-transform:uppercase;color:var(--green);margin-bottom:8px}
 .confirm-detail{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid rgba(255,255,255,0.05);font-size:14px}
 .confirm-detail .label{color:var(--gray)}
-.error-msg{background:rgba(226,75,74,0.1);border:1px solid rgba(226,75,74,0.3);color:var(--red);padding:12px;border-radius:8px;font-size:14px;margin-bottom:12px;display:none}
+.error-msg{background:rgba(226,75,74,0.1);border:1px solid rgba(226,75,74,0.3);color:var(--red);padding:12px;border-radius:2px;font-size:14px;margin-bottom:12px;display:none}
 </style></head>
 <body>
 <header class="header">
-  <a href="/" class="header-brand"><img src="/logo.jpg" alt="Fritz's Detail" style="height:42px;border-radius:4px"><span>Fritz's <em>Detail</em></span></a>
+  <a href="/" class="header-brand"><img src="/logo.jpg" alt="Fritz's Detail" style="height:42px;border-radius:2px"><span>Fritz's <em>Detail</em></span></a>
   <a href="tel:+12762470921" style="color:var(--gray-light);text-decoration:none;font-family:'Rajdhani',sans-serif;font-size:14px;font-weight:600">(276) 247-0921</a>
 </header>
 
@@ -132,7 +135,7 @@ h1 em{color:var(--purple-light);font-style:normal}
       <div class="checkmark"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#1D9E75" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg></div>
       <h2>You're Booked!</h2>
       <p style="color:var(--gray);margin-bottom:24px">Fritz will be at your location at the scheduled time.</p>
-      <div id="confirm-details" style="background:var(--dark-card);border:1px solid var(--border);border-radius:12px;padding:16px;text-align:left;margin-bottom:24px"></div>
+      <div id="confirm-details" style="background:var(--dark-card);border:1px solid var(--border);border-radius:2px;padding:16px;text-align:left;margin-bottom:24px"></div>
       <p style="color:var(--gray);font-size:13px">Questions? Text Fritz at <a href="sms:+12762470921" style="color:var(--purple-light)">(276) 247-0921</a></p>
       <a href="/" class="btn btn-outline" style="margin-top:16px;text-decoration:none;display:inline-flex;width:auto">Back to Home</a>
     </div>
