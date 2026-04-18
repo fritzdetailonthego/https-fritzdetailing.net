@@ -51,7 +51,7 @@ module.exports = async (req, res) => {
     sales.push(saleRecord);
 
     await put('sales-data.json', JSON.stringify(sales), {
-      access: 'private',
+      access: 'public',
       contentType: 'application/json',
       addRandomSuffix: false,
       allowOverwrite: true,

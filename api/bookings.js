@@ -27,7 +27,7 @@ module.exports = async (req, res) => {
 
   async function writeBookings(bookings) {
     await put('bookings-data.json', JSON.stringify(bookings), {
-      access: 'private',
+      access: 'public',
       contentType: 'application/json', addRandomSuffix: false, allowOverwrite: true, token
     });
   }
@@ -59,7 +59,7 @@ module.exports = async (req, res) => {
 
   async function writeAvailability(config) {
     await put('availability-config.json', JSON.stringify(config), {
-      access: 'private',
+      access: 'public',
       contentType: 'application/json', addRandomSuffix: false, allowOverwrite: true, token
     });
   }

@@ -30,7 +30,7 @@ module.exports = async (req, res) => {
 
   async function writeRevisions(revisions) {
     await put('pricing-revisions-data.json', JSON.stringify(revisions), {
-      access: 'private',
+      access: 'public',
       contentType: 'application/json',
       addRandomSuffix: false,
       allowOverwrite: true,
