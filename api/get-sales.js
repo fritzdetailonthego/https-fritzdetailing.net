@@ -1,4 +1,3 @@
-// Retrieves all sales from Vercel Blob Storage
 const { list } = require('@vercel/blob');
 
 module.exports = async (req, res) => {

@@ -1,4 +1,3 @@
-// Booking system — stores in Vercel Blob, manages availability
 const { put, list } = require('@vercel/blob');
 
 module.exports = async (req, res) => {
@@ -13,8 +12,8 @@ module.exports = async (req, res) => {
 
   const token = process.env.BLOB_READ_WRITE_TOKEN;
   const { action, password } = req.body;
+  const authed = password && password === process.env.ADMIN_PASSWORD;
 
-  // Helper: read bookings
   async function readBookings() {
     try {
       const { blobs } = await list({ prefix: 'bookings-data', token });
@@ -26,7 +25,6 @@ module.exports = async (req, res) => {
     return [];
   }
 
-  // Helper: write bookings
   async function writeBookings(bookings) {
     await put('bookings-data.json', JSON.stringify(bookings), {
       access: 'private',
@@ -34,7 +32,6 @@ module.exports = async (req, res) => {
     });
   }
 
-  // Helper: read availability config
   async function readAvailability() {
     try {
       const { blobs } = await list({ prefix: 'availability-config', token });
@@ -43,7 +40,6 @@ module.exports = async (req, res) => {
         if (r.ok) return await r.json();
       }
     } catch(e) {}
-    // Default availability
     return {
       weeklyHours: {
         mon: { open: true, start: '08:00', end: '18:00' },
@@ -69,7 +65,6 @@ module.exports = async (req, res) => {
   }
 
   try {
-    // PUBLIC: Get available slots for a date
     if (action === 'get-slots') {
       const { date } = req.body;
       if (!date) return res.status(400).json({ error: 'Date required' });
@@ -82,7 +77,6 @@ module.exports = async (req, res) => {
       if (!dayConfig || !dayConfig.open) return res.json({ slots: [], closed: true });
       if (avail.blockedDates.includes(date)) return res.json({ slots: [], blocked: true });
 
-      // Generate slots
       const slots = [];
       const startMin = parseInt(dayConfig.start.split(':')[0]) * 60 + parseInt(dayConfig.start.split(':')[1]);
       const endMin = parseInt(dayConfig.end.split(':')[0]) * 60 + parseInt(dayConfig.end.split(':')[1]);
@@ -105,7 +99,6 @@ module.exports = async (req, res) => {
       return res.json({ slots, date });
     }
 
-    // PUBLIC: Book a slot
     if (action === 'book') {
       const { date, time, name, phone, vehicle, service, notes } = req.body;
       if (!date || !time || !name || !phone) {
@@ -113,8 +106,6 @@ module.exports = async (req, res) => {
       }
 
       const bookings = await readBookings();
-
-      // Check if slot is still available
       const taken = bookings.some(b => b.date === date && b.time === time && b.status !== 'cancelled');
       if (taken) return res.status(409).json({ error: 'That slot was just booked. Please pick another.' });
 
@@ -134,17 +125,15 @@ module.exports = async (req, res) => {
       return res.json({ success: true, booking });
     }
 
-    // ADMIN: Get all bookings
+    if (!authed) return res.status(401).json({ error: 'Unauthorized' });
+
     if (action === 'list-bookings') {
-      if (!password || password !== process.env.ADMIN_PASSWORD) return res.status(401).json({ error: 'Unauthorized' });
       const bookings = await readBookings();
       bookings.sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
       return res.json({ bookings });
     }
 
-    // ADMIN: Cancel a booking
     if (action === 'cancel-booking') {
-      if (!password || password !== process.env.ADMIN_PASSWORD) return res.status(401).json({ error: 'Unauthorized' });
       const { bookingId } = req.body;
       const bookings = await readBookings();
       const bk = bookings.find(b => b.id === bookingId);
@@ -153,23 +142,17 @@ module.exports = async (req, res) => {
       return res.json({ success: true });
     }
 
-    // ADMIN: Get availability config
     if (action === 'get-availability') {
-      if (!password || password !== process.env.ADMIN_PASSWORD) return res.status(401).json({ error: 'Unauthorized' });
       return res.json(await readAvailability());
     }
 
-    // ADMIN: Save availability config
     if (action === 'save-availability') {
-      if (!password || password !== process.env.ADMIN_PASSWORD) return res.status(401).json({ error: 'Unauthorized' });
       const { availability } = req.body;
       await writeAvailability(availability);
       return res.json({ success: true });
     }
 
-    // ADMIN: Block a date or slot
     if (action === 'block') {
-      if (!password || password !== process.env.ADMIN_PASSWORD) return res.status(401).json({ error: 'Unauthorized' });
       const { date, time, reason } = req.body;
       const avail = await readAvailability();
       if (time) {
@@ -183,9 +166,7 @@ module.exports = async (req, res) => {
       return res.json({ success: true });
     }
 
-    // ADMIN: Unblock
     if (action === 'unblock') {
-      if (!password || password !== process.env.ADMIN_PASSWORD) return res.status(401).json({ error: 'Unauthorized' });
       const { date, time } = req.body;
       const avail = await readAvailability();
       if (time) {

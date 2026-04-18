@@ -20,7 +20,6 @@ module.exports = async (req, res) => {
         if (r.ok) return await r.json();
       }
     } catch(e) {}
-    // Defaults
     return [
       { id: 'distance', name: 'Distance Fee (30+ min)', amount: 25, type: 'flat', description: 'Added for locations beyond standard service radius' },
       { id: 'pet-hair', name: 'Heavy Pet Hair', amount: 40, type: 'flat', description: 'For vehicles with excessive pet hair requiring extra cleaning time' },

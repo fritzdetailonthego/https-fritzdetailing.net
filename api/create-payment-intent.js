@@ -2,7 +2,6 @@ const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const path = require('path');
 const fs = require('fs');
 
-// Load valid prices from pricing.json dynamically
 function getValidPrices() {
   try {
     const filePath = path.join(__dirname, '..', 'public', 'pricing.json');
@@ -19,7 +18,6 @@ function getValidPrices() {
     }
     return prices;
   } catch (e) {
-    // Fallback hardcoded prices if file not found
     return new Set([
       2500,4000,5000,6000,7500,9000,10000,12500,14000,15000,
       17500,18000,20000,27500,32500,35000,100000,125000,150000
@@ -28,7 +26,6 @@ function getValidPrices() {
 }
 
 module.exports = async (req, res) => {
-  // Handle CORS preflight
   if (req.method === 'OPTIONS') {
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');

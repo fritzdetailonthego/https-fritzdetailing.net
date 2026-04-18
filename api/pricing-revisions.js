@@ -17,7 +17,6 @@ module.exports = async (req, res) => {
 
   const token = process.env.BLOB_READ_WRITE_TOKEN;
 
-  // Helper: read revisions array from blob
   async function readRevisions() {
     try {
       const { blobs } = await list({ prefix: 'pricing-revisions-data', token });
@@ -29,7 +28,6 @@ module.exports = async (req, res) => {
     return [];
   }
 
-  // Helper: write revisions array to blob
   async function writeRevisions(revisions) {
     await put('pricing-revisions-data.json', JSON.stringify(revisions), {
       access: 'private',

@@ -341,7 +341,6 @@ async function doLogin() {
   document.getElementById('login-error').textContent = 'Checking...';
 
   try {
-    // Verify password against server
     const authRes = await fetch('/api/verify-admin', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -353,7 +352,6 @@ async function doLogin() {
       return;
     }
 
-    // Password verified — store it and load pricing
     adminPassword = pw;
     const res = await fetch('/pricing.json?t=' + Date.now());
     if (!res.ok) throw new Error('Failed to load pricing');
@@ -417,7 +415,6 @@ function updateName(input, tier, section) {
   delete pricingData[tier][section][oldName];
   pricingData[tier][section][newName] = price;
   input.dataset.orig = newName;
-  // Update the price input's onchange reference
   const priceInput = input.closest('tr').querySelector('.price-input');
   priceInput.setAttribute('onchange', `updatePrice(this,'${tier}','${section}','${newName}')`);
   const delBtn = input.closest('tr').querySelector('.del-btn');
@@ -474,7 +471,6 @@ async function savePricing() {
   }
 }
 
-// Undo — restore the most recent revision
 async function undoPricing() {
   if (!await customConfirm('Revert pricing to the last saved state? This undoes your current unsaved changes.')) return;
   try {
@@ -498,7 +494,6 @@ async function undoPricing() {
   } catch(e) { showToast(e.message || 'Undo failed'); }
 }
 
-// Reset to original deploy state
 async function resetToOriginal() {
   const phrase = prompt('Reset to original pricing? This wipes all your changes back to the first version.\n\nType "RESET PRICING" to confirm:');
   if (phrase !== 'RESET PRICING') { showToast('Reset cancelled'); return; }
@@ -523,7 +518,6 @@ async function resetToOriginal() {
   } catch(e) { showToast(e.message || 'Reset failed'); }
 }
 
-// Revision history toggle
 async function toggleRevisions() {
   const el = document.getElementById('revision-list');
   if (el.style.display !== 'none') { el.style.display = 'none'; return; }
@@ -591,7 +585,6 @@ function uploadCSV(event) {
       const lines = e.target.result.split('\n').filter(l => l.trim());
       if (lines.length < 2) throw new Error('Empty CSV');
 
-      // Reset pricing
       const newPricing = JSON.parse(JSON.stringify(pricingData));
       for (const tier of Object.values(newPricing)) {
         tier.exterior = {};
@@ -599,7 +592,6 @@ function uploadCSV(event) {
         tier.packages = {};
       }
 
-      // Map labels to keys
       const labelMap = {};
       for (const [key, tier] of Object.entries(pricingData)) {
         labelMap[tier.label.toLowerCase()] = key;
@@ -692,7 +684,6 @@ async function saveGallery() {
   statusBar.style.borderColor = 'rgba(123,47,190,0.3)';
   statusBar.style.color = 'var(--purple-light)';
 
-  // Filter out empty entries
   const cleanData = {
     ...galleryData,
     images: galleryData.images.filter(img => img.url)
@@ -716,7 +707,6 @@ async function saveGallery() {
   }
 }
 
-// Load gallery on login
 // ===== BOOKINGS =====
 let availabilityConfig = null;
 
@@ -915,7 +905,6 @@ async function loadSiteConfig() {
     const res = await fetch('/site-config.json?t=' + Date.now());
     if (res.ok) siteConfig = await res.json();
   } catch(e) {}
-  // Set toggle states
   document.getElementById('cfg-weekends').checked = siteConfig.worksWeekends !== false;
   document.getElementById('cfg-clients').checked = siteConfig.acceptingNewClients !== false;
   document.getElementById('cfg-pricing').checked = siteConfig.showPricing !== false;
@@ -971,13 +960,11 @@ async function loadSales() {
     const data = await res.json();
     salesData = data.sales || [];
 
-    // Update summary
     document.getElementById('stat-count').textContent = data.summary.totalSales;
     document.getElementById('stat-revenue').textContent = '$' + data.summary.totalRevenue.toLocaleString();
     document.getElementById('stat-commission').textContent = '$' + data.summary.totalCommission.toLocaleString();
     document.getElementById('stat-rate').textContent = Math.round(data.summary.commissionRate * 100) + '%';
 
-    // Render table
     const tbody = document.getElementById('sales-tbody');
     if (salesData.length === 0) {
       tbody.innerHTML = '<tr><td colspan="6" style="padding:24px;text-align:center;color:var(--gray)">No sales recorded yet. Sales auto-log from card payments, or use "Log Manual Sale" for cash/crypto.</td></tr>';
@@ -1025,7 +1012,6 @@ async function logManualSale() {
     const data = await res.json();
     if (!res.ok) throw new Error(data.error);
     showToast('Sale logged: $' + amount);
-    // Clear form
     document.getElementById('ms-customer').value = '';
     document.getElementById('ms-service').value = '';
     document.getElementById('ms-amount').value = '';
@@ -1070,7 +1056,6 @@ function buildAndDownloadXLSX() {
     'Status': s.status
   }));
 
-  // Add summary row
   const totalRev = salesData.reduce((s, r) => s + r.amount, 0);
   const totalComm = salesData.reduce((s, r) => s + r.commission, 0);
   rows.push({});
@@ -1085,7 +1070,6 @@ function buildAndDownloadXLSX() {
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Sales');
 
-  // Auto-size columns
   const colWidths = Object.keys(rows[0] || {}).map(k => ({ wch: Math.max(k.length, 12) }));
   ws['!cols'] = colWidths;
 

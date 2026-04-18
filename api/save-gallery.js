@@ -30,7 +30,7 @@ module.exports = async (req, res) => {
     const filePath = 'public/gallery.json';
     const apiUrl = `https://api.github.com/repos/${repo}/contents/${filePath}`;
 
-    // Get current file SHA
+    // GitHub PUT requires current SHA
     const getRes = await fetch(apiUrl, {
       headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/vnd.github.v3+json' }
     });
@@ -41,7 +41,6 @@ module.exports = async (req, res) => {
       sha = data.sha;
     }
 
-    // Update file
     const content = Buffer.from(JSON.stringify(gallery, null, 2)).toString('base64');
     const putRes = await fetch(apiUrl, {
       method: 'PUT',

@@ -33,7 +33,7 @@ module.exports = async (req, res) => {
     const filePath = 'public/pricing.json';
     const apiUrl = `https://api.github.com/repos/${repo}/contents/${filePath}`;
 
-    // Get current file SHA (needed for updates)
+    // GitHub PUT requires current SHA
     const getRes = await fetch(apiUrl, {
       headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/vnd.github.v3+json' }
     });
@@ -44,7 +44,6 @@ module.exports = async (req, res) => {
       sha = data.sha;
     }
 
-    // Update file
     const content = Buffer.from(JSON.stringify(pricing, null, 2)).toString('base64');
     const putRes = await fetch(apiUrl, {
       method: 'PUT',
@@ -65,8 +64,6 @@ module.exports = async (req, res) => {
       throw new Error(err.message || 'GitHub API error');
     }
 
-    // Also update the valid prices in the Stripe backend
-    // Build valid prices set from the pricing data
     const validPrices = new Set();
     for (const tier of Object.values(pricing)) {
       for (const section of ['exterior', 'interior', 'packages']) {

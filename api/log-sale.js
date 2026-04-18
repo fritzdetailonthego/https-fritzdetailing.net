@@ -38,7 +38,6 @@ module.exports = async (req, res) => {
       status: sale.status || 'completed'
     };
 
-    // Read existing sales, append, write back
     const token = process.env.BLOB_READ_WRITE_TOKEN;
     let sales = [];
     try {

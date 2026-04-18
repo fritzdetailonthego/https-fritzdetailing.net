@@ -1,4 +1,3 @@
-// Simple password check endpoint for admin login
 module.exports = async (req, res) => {
   if (req.method === 'OPTIONS') {
     res.setHeader('Access-Control-Allow-Origin', '*');
