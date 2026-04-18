@@ -5,7 +5,7 @@
   "payments": {
     "cashApp": true,
     "card": true,
-    "crypto": true,
+    "crypto": false,
     "invoice": true
   }
 }
