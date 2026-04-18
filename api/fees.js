@@ -1,4 +1,4 @@
-// Manage custom fees (distance, pet hair, etc.) — stored in Vercel Blob
+// Manage custom fees (distance, pet hair, etc). Stored in Vercel Blob.
 const { put, list } = require('@vercel/blob');
 
 module.exports = async (req, res) => {
@@ -36,7 +36,7 @@ module.exports = async (req, res) => {
   }
 
   try {
-    // PUBLIC GET: list fees (no auth needed — they're shown to customers)
+    // PUBLIC GET: list fees. No auth needed, they're shown to customers.
     if (req.method === 'GET') {
       const fees = await readFees();
       return res.json({ fees });

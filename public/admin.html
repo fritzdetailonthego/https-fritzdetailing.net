@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Fritz's Detail — Admin Panel</title>
+<title>Fritz's Detail | Admin Panel</title>
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Rajdhani:wght@400;500;600;700&family=Open+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -143,7 +143,7 @@ body{font-family:"Open Sans",sans-serif;background:#0A0A0A;color:var(--white);mi
 
   <div style="border-top:1px solid var(--border);padding-top:32px;margin-bottom:0">
   <div class="section-label">Manage Pricing</div>
-  <p style="color:var(--gray);font-size:14px;margin-bottom:20px">Edit prices below. Changes update the entire website — pricing tables, payment forms, and invoices. Hit Save when done.</p>
+  <p style="color:var(--gray);font-size:14px;margin-bottom:20px">Edit prices below. Changes update pricing tables, payment forms, and invoices. Hit Save when done.</p>
 
   <div class="toolbar">
     <button class="btn btn-green" onclick="savePricing()">Save & Deploy</button>
@@ -227,25 +227,25 @@ body{font-family:"Open Sans",sans-serif;background:#0A0A0A;color:var(--white);mi
   <!-- SALES DASHBOARD -->
   <div style="margin-top:48px;padding-top:32px;border-top:1px solid var(--border)">
     <div class="section-label">Sales & Commission Tracker</div>
-    <p style="color:var(--gray);font-size:14px;margin-bottom:20px">All sales are stored permanently in cloud storage — they survive every code update and deploy. Export to XLSX anytime.</p>
+    <p style="color:var(--gray);font-size:14px;margin-bottom:20px">All sales are stored permanently in cloud storage. They survive every code update and deploy. Export to XLSX anytime.</p>
 
     <!-- SUMMARY CARDS -->
     <div id="sales-summary" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:24px">
       <div style="background:var(--dark);border:1px solid var(--border);border-radius:2px;padding:16px;text-align:center">
         <div style="font-size:13px;color:var(--gray);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Total Sales</div>
-        <div id="stat-count" style="font-family:'Rajdhani',sans-serif;font-size:32px;font-weight:700;color:var(--purple-light)">—</div>
+        <div id="stat-count" style="font-family:'Rajdhani',sans-serif;font-size:32px;font-weight:700;color:var(--purple-light)">0</div>
       </div>
       <div style="background:var(--dark);border:1px solid var(--border);border-radius:2px;padding:16px;text-align:center">
         <div style="font-size:13px;color:var(--gray);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Total Revenue</div>
-        <div id="stat-revenue" style="font-family:'Rajdhani',sans-serif;font-size:32px;font-weight:700;color:var(--white)">—</div>
+        <div id="stat-revenue" style="font-family:'Rajdhani',sans-serif;font-size:32px;font-weight:700;color:var(--white)">$0</div>
       </div>
       <div style="background:var(--dark);border:1px solid rgba(29,158,117,0.3);border-radius:2px;padding:16px;text-align:center">
         <div style="font-size:13px;color:#1D9E75;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Your Commission</div>
-        <div id="stat-commission" style="font-family:'Rajdhani',sans-serif;font-size:32px;font-weight:700;color:#1D9E75">—</div>
+        <div id="stat-commission" style="font-family:'Rajdhani',sans-serif;font-size:32px;font-weight:700;color:#1D9E75">$0</div>
       </div>
       <div style="background:var(--dark);border:1px solid var(--border);border-radius:2px;padding:16px;text-align:center">
         <div style="font-size:13px;color:var(--gray);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Rate</div>
-        <div id="stat-rate" style="font-family:'Rajdhani',sans-serif;font-size:32px;font-weight:700;color:var(--purple-light)">—</div>
+        <div id="stat-rate" style="font-family:'Rajdhani',sans-serif;font-size:32px;font-weight:700;color:var(--purple-light)">0%</div>
       </div>
     </div>
 
@@ -425,7 +425,7 @@ async function deleteService(btn, tier, section, name) {
   if (!await customConfirm(`Remove "${name}" from ${pricingData[tier].label} ${section}?`)) return;
   delete pricingData[tier][section][name];
   btn.closest('tr').remove();
-  showToast('Service removed — save to apply');
+  showToast('Service removed. Save to apply.');
 }
 
 function addService(tier, section) {
@@ -435,7 +435,7 @@ function addService(tier, section) {
   if (isNaN(price)) return;
   pricingData[tier][section][name] = price;
   renderEditor();
-  showToast('Service added — save to apply');
+  showToast('Service added. Save to apply.');
 }
 
 async function savePricing() {
@@ -613,7 +613,7 @@ function uploadCSV(event) {
 
       pricingData = newPricing;
       renderEditor();
-      showToast('CSV imported — review and save');
+      showToast('CSV imported. Review and save.');
     } catch(err) {
       alert('CSV import error: ' + err.message);
     }
@@ -672,7 +672,7 @@ function renderGalleryEditor() {
 function addGalleryImage() {
   galleryData.images.push({ url: '', caption: '', type: 'detail' });
   renderGalleryEditor();
-  showToast('Image slot added — paste a URL');
+  showToast('Image slot added. Paste a URL.');
 }
 
 async function saveGallery() {
@@ -923,7 +923,7 @@ async function updateToggle(key, value) {
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error);
-    statusEl.textContent = key + ' ' + (value ? 'ON' : 'OFF') + ' — site updating in ~30s';
+    statusEl.textContent = key + ' ' + (value ? 'ON' : 'OFF') + ' · site updating in ~30s';
     statusEl.style.color = 'var(--green)';
     showToast(key + ' → ' + (value ? 'ON' : 'OFF'));
     setTimeout(() => { statusEl.textContent = ''; }, 4000);

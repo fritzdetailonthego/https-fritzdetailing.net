@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Fritz's Detail on the Go — Invoice Generator</title>
+<title>Fritz's Detail on the Go | Invoice Generator</title>
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Rajdhani:wght@400;500;600;700&family=Open+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -193,10 +193,10 @@ body{font-family:"Open Sans",sans-serif;background:#0A0A0A;color:var(--white);mi
         <span class="form-label">Status</span>
         <select class="form-select" id="pay-status">
           <option value="Due on Service">Due on Service</option>
-          <option value="Paid — Cash">Paid — Cash</option>
-          <option value="Paid — Card">Paid — Card</option>
-          <option value="Paid — Cash App">Paid — Cash App</option>
-          <option value="Paid — Crypto">Paid — Crypto</option>
+          <option value="Paid (Cash)">Paid (Cash)</option>
+          <option value="Paid (Card)">Paid (Card)</option>
+          <option value="Paid (Cash App)">Paid (Cash App)</option>
+          <option value="Paid (Crypto)">Paid (Crypto)</option>
           <option value="Deposit Received">Deposit Received</option>
           <option value="Past Due">Past Due</option>
         </select>
@@ -287,7 +287,7 @@ function addLineItem(serviceName='', price='') {
     options += `<optgroup label="${category}">`;
     for (const [name, p] of Object.entries(items)) {
       const sel = (serviceName === name) ? 'selected' : '';
-      options += `<option value="${name}|${p}" ${sel}>${name} — $${p.toLocaleString()}</option>`;
+      options += `<option value="${name}|${p}" ${sel}>${name} - $${p.toLocaleString()}</option>`;
     }
     options += '</optgroup>';
   }
@@ -404,7 +404,7 @@ function generateInvoice() {
     <div class="inv-header">
       <div class="inv-brand">
         <h1>Fritz's Detail on the Go</h1>
-        <p>Mobile Detailing — Southwest Virginia</p>
+        <p>Mobile Detailing · Southwest Virginia</p>
         <p>(276) 247-0921</p>
       </div>
       <div class="inv-number">
@@ -463,7 +463,7 @@ function getPlainTextInvoice() {
   const total = items.reduce((s, i) => s + i.price, 0);
   const formattedDate = new Date(date + 'T12:00:00').toLocaleDateString('en-US', { year:'numeric', month:'long', day:'numeric' });
 
-  let text = `FRITZ'S DETAIL ON THE GO\nMobile Detailing — SWVA\n(276) 247-0921\n`;
+  let text = `FRITZ'S DETAIL ON THE GO\nMobile Detailing · SWVA\n(276) 247-0921\n`;
   text += `━━━━━━━━━━━━━━━━━━\n`;
   text += `Invoice: ${invoiceNum}\nDate: ${formattedDate}\n`;
   text += `━━━━━━━━━━━━━━━━━━\n`;
@@ -471,7 +471,7 @@ function getPlainTextInvoice() {
   if (vehicle) text += `Vehicle: ${vehicle}\n`;
   text += `\nServices:\n`;
   items.forEach(i => {
-    text += `  ${i.name} — $${i.price.toLocaleString()}\n`;
+    text += `  ${i.name} - $${i.price.toLocaleString()}\n`;
   });
   text += `\n━━━━━━━━━━━━━━━━━━\n`;
   text += `TOTAL: $${total.toLocaleString()}\nStatus: ${status}\n`;
@@ -499,9 +499,9 @@ function shareText() {
     const cleanPhone = contact.replace(/[^\d+]/g, '');
     window.open(`sms:${cleanPhone}?body=${encoded}`, '_blank');
   } else if (isEmail) {
-    window.open(`mailto:${contact}?subject=Invoice ${invoiceNum} — Fritz's Detail on the Go&body=${encoded}`, '_blank');
+    window.open(`mailto:${contact}?subject=Invoice ${invoiceNum} from Fritz's Detail&body=${encoded}`, '_blank');
   } else if (navigator.share) {
-    navigator.share({ title: 'Invoice — Fritz\'s Detail on the Go', text: text });
+    navigator.share({ title: 'Invoice from Fritz\'s Detail on the Go', text: text });
   } else {
     copyInvoice();
   }

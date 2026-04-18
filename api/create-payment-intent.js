@@ -46,7 +46,7 @@ module.exports = async (req, res) => {
       return res.status(400).json({ error: 'Invalid amount' });
     }
 
-    // Only accept prices from the menu — no custom amounts
+    // Only accept prices from the menu. No custom amounts.
     const validPrices = getValidPrices();
     if (!validPrices.has(amount)) {
       return res.status(400).json({ error: 'Invalid price. Please select a service from the menu.' });

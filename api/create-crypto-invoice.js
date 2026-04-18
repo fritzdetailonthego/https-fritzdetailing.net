@@ -44,7 +44,7 @@ module.exports = async (req, res) => {
         price_currency: 'usd',
         pay_currency: payCurrency,
         order_id: 'FRITZ-' + Date.now(),
-        order_description: "Fritz's Detail on the Go — " + (description || 'Detailing Service'),
+        order_description: "Fritz's Detail on the Go: " + (description || 'Detailing Service'),
         success_url: 'https://fritzdetailing.net?payment=success',
         cancel_url: 'https://fritzdetailing.net?payment=cancelled'
       })

@@ -1,4 +1,4 @@
-// Serves gallery images — just reads gallery.json directly
+// Serves gallery images. Reads gallery.json directly.
 // Instagram blocks all server-side approaches, so we use direct image URLs
 // Fritz uploads photos to imgbb.com and pastes the links in the admin panel
 
