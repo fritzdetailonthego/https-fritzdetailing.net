@@ -1204,7 +1204,7 @@ loadSales = async function() {
 // Detect Stripe test mode and apply blue theme + banner
 (async function detectStripeMode() {
   try {
-    const res = await fetch('/api/stripe-mode');
+    const res = await fetch('/api/log-sale?action=mode');
     if (!res.ok) return;
     const { testMode } = await res.json();
     if (!testMode) return;

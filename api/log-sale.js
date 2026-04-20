@@ -1,15 +1,22 @@
 // Logs a sale to Vercel Blob Storage (persists across deploys).
-// Also handles delete (single) and clear-test (sweep all isTest:true).
+// Also handles delete, clear-test, and GET ?action=mode for Stripe test/live detection.
 const { put, list } = require('@vercel/blob');
 
 module.exports = async (req, res) => {
   if (req.method === 'OPTIONS') {
     res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Methods', 'POST, GET, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
     return res.status(200).end();
   }
   res.setHeader('Access-Control-Allow-Origin', '*');
+
+  // GET ?action=mode returns Stripe test/live state. No auth needed.
+  if (req.method === 'GET' && req.query?.action === 'mode') {
+    const key = process.env.STRIPE_SECRET_KEY || '';
+    return res.json({ testMode: !key.startsWith('sk_live_') });
+  }
+
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
   const token = process.env.BLOB_READ_WRITE_TOKEN;
