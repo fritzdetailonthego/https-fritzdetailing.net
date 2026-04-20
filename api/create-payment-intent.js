@@ -1,4 +1,3 @@
-const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const path = require('path');
 const fs = require('fs');
 
@@ -23,6 +22,12 @@ function getValidPrices() {
       17500,18000,20000,27500,32500,35000,100000,125000,150000
     ]);
   }
+}
+
+function readConfig() {
+  try {
+    return JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'public', 'site-config.json'), 'utf8'));
+  } catch(e) { return {}; }
 }
 
 module.exports = async (req, res) => {
@@ -52,6 +57,21 @@ module.exports = async (req, res) => {
       return res.status(400).json({ error: 'Invalid price. Please select a service from the menu.' });
     }
 
+    // Pick secret key based on admin toggle
+    const cfg = readConfig();
+    const testMode = cfg.stripeTestMode === true;
+    const secretKey = testMode ? process.env.STRIPE_SECRET_KEY_TEST : process.env.STRIPE_SECRET_KEY;
+
+    if (!secretKey) {
+      return res.status(500).json({
+        error: testMode
+          ? 'Stripe test mode is ON but STRIPE_SECRET_KEY_TEST env var is not set in Vercel.'
+          : 'STRIPE_SECRET_KEY env var is not set in Vercel.'
+      });
+    }
+
+    const stripe = require('stripe')(secretKey);
+
     const paymentIntent = await stripe.paymentIntents.create({
       amount: amount,
       currency: currency || 'usd',
@@ -67,7 +87,7 @@ module.exports = async (req, res) => {
     res.json({
       clientSecret: paymentIntent.client_secret,
       paymentIntentId: paymentIntent.id,
-      testMode: !(process.env.STRIPE_SECRET_KEY || '').startsWith('sk_live_')
+      testMode
     });
 
   } catch (error) {

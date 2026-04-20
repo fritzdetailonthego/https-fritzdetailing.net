@@ -139,7 +139,27 @@ body{font-family:"Open Sans",sans-serif;background:#0A0A0A;color:var(--white);mi
   <style>
     input[type="checkbox"]:checked ~ .toggle-track{background:var(--green)!important}
     input[type="checkbox"]:checked ~ .toggle-thumb{transform:translateX(20px)!important}
+    input#cfg-stripeTest:checked ~ .toggle-track{background:#2D7FF9!important}
   </style>
+
+  <!-- STRIPE TEST MODE -->
+  <div style="border-top:1px solid var(--border);padding-top:24px;margin-bottom:24px">
+    <div class="section-label" style="color:#5FA3FF">Stripe Test Mode</div>
+    <p style="color:var(--gray);font-size:14px;margin-bottom:16px">Switch card payments to Stripe test mode. No real charges. Site accent turns blue. Test sales auto-delete when switched back to live.</p>
+
+    <label style="display:flex;align-items:center;gap:12px;background:var(--dark);border:1px solid #2D7FF9;border-radius:2px;padding:16px 20px;cursor:pointer;max-width:520px">
+      <div style="position:relative;width:44px;height:24px;flex-shrink:0">
+        <input type="checkbox" id="cfg-stripeTest" onchange="updateStripeTestMode(this.checked)" style="opacity:0;width:0;height:0;position:absolute">
+        <div class="toggle-track" style="position:absolute;inset:0;background:rgba(255,255,255,0.1);border-radius:2px;transition:background .2s"></div>
+        <div class="toggle-thumb" style="position:absolute;top:2px;left:2px;width:20px;height:20px;background:#fff;border-radius:2px;transition:transform .2s"></div>
+      </div>
+      <div style="flex:1">
+        <div style="font-family:'Oswald',sans-serif;font-size:14px;text-transform:uppercase;font-weight:600;letter-spacing:0.5px">Enable Test Mode</div>
+        <div style="font-size:12px;color:var(--gray)" id="stripe-test-status-desc">Live mode: real card charges process normally</div>
+      </div>
+    </label>
+    <div id="stripe-test-status" style="font-size:13px;color:var(--gray);margin-top:12px;min-height:20px"></div>
+  </div>
 
   <!-- PAYMENT METHODS -->
   <div style="border-top:1px solid var(--border);padding-top:24px;margin-bottom:24px">
@@ -957,7 +977,7 @@ async function saveFees() {
 }
 
 // ===== SITE SETTINGS =====
-let siteConfig = { worksWeekends: true, acceptingNewClients: true, showPricing: true, payments: { cashApp: true, card: true, crypto: true, invoice: true } };
+let siteConfig = { worksWeekends: true, acceptingNewClients: true, showPricing: true, stripeTestMode: false, payments: { cashApp: true, card: true, crypto: true, invoice: true } };
 
 async function loadSiteConfig() {
   try {
@@ -968,6 +988,11 @@ async function loadSiteConfig() {
   document.getElementById('cfg-weekends').checked = siteConfig.worksWeekends !== false;
   document.getElementById('cfg-clients').checked = siteConfig.acceptingNewClients !== false;
   document.getElementById('cfg-pricing').checked = siteConfig.showPricing !== false;
+  const testEl = document.getElementById('cfg-stripeTest');
+  if (testEl) {
+    testEl.checked = siteConfig.stripeTestMode === true;
+    applyAdminTestTheme(siteConfig.stripeTestMode === true);
+  }
   ['cashApp','card','crypto','invoice'].forEach(k => {
     const el = document.getElementById('pm-' + k);
     if (el) el.checked = siteConfig.payments[k] !== false;
@@ -1007,6 +1032,38 @@ async function updatePayment(key, value) {
   const names = { cashApp: 'Cash App', card: 'Credit / Debit', crypto: 'Crypto', invoice: 'Cash Invoice' };
   await saveSiteConfig('payments-status', names[key] + ' ' + (value ? 'ON' : 'OFF'));
   showToast(names[key] + ' → ' + (value ? 'ON' : 'OFF'));
+}
+
+function applyAdminTestTheme(on) {
+  const existing = document.getElementById('admin-test-theme');
+  if (on && !existing) {
+    const style = document.createElement('style');
+    style.id = 'admin-test-theme';
+    style.textContent = `
+      :root {
+        --purple: #2D7FF9 !important;
+        --purple-light: #5FA3FF !important;
+        --purple-dark: #1F5AC9 !important;
+        --purple-glow: rgba(45,127,249,0.3) !important;
+      }
+    `;
+    document.head.appendChild(style);
+  } else if (!on && existing) {
+    existing.remove();
+  }
+  const desc = document.getElementById('stripe-test-status-desc');
+  if (desc) {
+    desc.textContent = on
+      ? 'Test mode: card form uses Stripe test keys, sales tagged TEST'
+      : 'Live mode: real card charges process normally';
+  }
+}
+
+async function updateStripeTestMode(value) {
+  siteConfig.stripeTestMode = value;
+  applyAdminTestTheme(value); // instant visual feedback, don't wait for redeploy
+  await saveSiteConfig('stripe-test-status', 'Stripe Test Mode ' + (value ? 'ON' : 'OFF'));
+  showToast('Stripe Test Mode → ' + (value ? 'ON' : 'OFF'));
 }
 
 const origDoLogin = doLogin;
@@ -1201,34 +1258,32 @@ loadSales = async function() {
   if (btn) btn.style.display = salesData.some(s => s.isTest) ? 'inline-flex' : 'none';
 };
 
-// Detect Stripe test mode and apply blue theme + banner
-(async function detectStripeMode() {
+// Show test-mode banner immediately on page load (theme colors applied after login via applyAdminTestTheme)
+(async function detectStripeModeBanner() {
   try {
     const res = await fetch('/api/log-sale?action=mode');
     if (!res.ok) return;
-    const { testMode } = await res.json();
+    const { testMode, hasTestKeys } = await res.json();
     if (!testMode) return;
+    const keysMissing = !hasTestKeys;
     const style = document.createElement('style');
     style.textContent = `
-      :root {
-        --purple: #2D7FF9;
-        --purple-light: #5FA3FF;
-        --purple-dark: #1F5AC9;
-        --purple-glow: rgba(45,127,249,0.3);
-        --border: rgba(45,127,249,0.3);
-      }
       #test-mode-banner {
         position:fixed;top:0;left:0;right:0;z-index:9999;
-        background:#2D7FF9;color:#fff;padding:8px 16px;text-align:center;
+        color:#fff;padding:8px 16px;text-align:center;
         font-family:'Rajdhani',sans-serif;font-weight:700;font-size:13px;
-        letter-spacing:2px;text-transform:uppercase;border-bottom:2px solid #1F5AC9
+        letter-spacing:2px;text-transform:uppercase;border-bottom:2px solid;
+        background:${keysMissing ? '#E24B4A' : '#2D7FF9'};
+        border-bottom-color:${keysMissing ? '#9B2A29' : '#1F5AC9'};
       }
       body { padding-top: 36px; }
     `;
     document.head.appendChild(style);
     const banner = document.createElement('div');
     banner.id = 'test-mode-banner';
-    banner.textContent = 'Stripe Test Mode · No real charges · Test sales auto-delete on switch to live';
+    banner.textContent = keysMissing
+      ? 'Stripe Test Mode ON · Test keys not configured · Card payments will fail'
+      : 'Stripe Test Mode · No real charges · Test sales auto-delete on switch to live';
     document.body.insertBefore(banner, document.body.firstChild);
   } catch(e) {}
 })();

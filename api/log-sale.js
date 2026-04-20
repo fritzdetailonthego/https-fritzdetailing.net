@@ -1,6 +1,14 @@
 // Logs a sale to Vercel Blob Storage (persists across deploys).
 // Also handles delete, clear-test, and GET ?action=mode for Stripe test/live detection.
 const { put, list } = require('@vercel/blob');
+const fs = require('fs');
+const path = require('path');
+
+function readConfig() {
+  try {
+    return JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'public', 'site-config.json'), 'utf8'));
+  } catch(e) { return {}; }
+}
 
 module.exports = async (req, res) => {
   if (req.method === 'OPTIONS') {
@@ -11,10 +19,17 @@ module.exports = async (req, res) => {
   }
   res.setHeader('Access-Control-Allow-Origin', '*');
 
-  // GET ?action=mode returns Stripe test/live state. No auth needed.
+  // GET ?action=mode returns Stripe test/live state and the test pk if configured.
+  // Driven by site-config.stripeTestMode (admin toggle), not env var detection.
   if (req.method === 'GET' && req.query?.action === 'mode') {
-    const key = process.env.STRIPE_SECRET_KEY || '';
-    return res.json({ testMode: !key.startsWith('sk_live_') });
+    const cfg = readConfig();
+    const testMode = cfg.stripeTestMode === true;
+    const hasTestKeys = !!(process.env.STRIPE_SECRET_KEY_TEST && process.env.STRIPE_PUBLISHABLE_KEY_TEST);
+    return res.json({
+      testMode,
+      publishableKey: testMode && hasTestKeys ? process.env.STRIPE_PUBLISHABLE_KEY_TEST : null,
+      hasTestKeys
+    });
   }
 
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
@@ -22,8 +37,8 @@ module.exports = async (req, res) => {
   const token = process.env.BLOB_READ_WRITE_TOKEN;
   const { action, password, sale, saleId } = req.body;
   const isAdmin = password && password === process.env.ADMIN_PASSWORD;
-  const stripeKey = process.env.STRIPE_SECRET_KEY || '';
-  const serverIsLive = stripeKey.startsWith('sk_live_');
+  const cfg = readConfig();
+  const serverIsLive = cfg.stripeTestMode !== true;
 
   async function readSales() {
     try {
