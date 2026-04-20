@@ -311,6 +311,7 @@ body{font-family:"Open Sans",sans-serif;background:#0A0A0A;color:var(--white);mi
       <button class="btn btn-green" onclick="exportXLSX()">Export XLSX</button>
       <button class="btn btn-outline" onclick="loadSales()">Refresh</button>
       <button class="btn btn-primary" onclick="document.getElementById('manual-sale-form').style.display=document.getElementById('manual-sale-form').style.display==='none'?'block':'none'">+ Log Manual Sale</button>
+      <button id="clear-test-btn" class="btn btn-outline" onclick="clearTestSales()" style="display:none;border-color:#2D7FF9;color:#2D7FF9">Clear Test Sales</button>
     </div>
 
     <!-- MANUAL SALE FORM -->
@@ -344,10 +345,11 @@ body{font-family:"Open Sans",sans-serif;background:#0A0A0A;color:var(--white);mi
             <th style="padding:10px 12px;text-align:right;font-family:'Rajdhani',sans-serif;font-size:12px;text-transform:uppercase;letter-spacing:1px;color:var(--gray);font-weight:600;border-bottom:1px solid var(--border)">Amount</th>
             <th style="padding:10px 12px;text-align:right;font-family:'Rajdhani',sans-serif;font-size:12px;text-transform:uppercase;letter-spacing:1px;color:#1D9E75;font-weight:600;border-bottom:1px solid var(--border)">Commission</th>
             <th style="padding:10px 12px;text-align:center;font-family:'Rajdhani',sans-serif;font-size:12px;text-transform:uppercase;letter-spacing:1px;color:var(--gray);font-weight:600;border-bottom:1px solid var(--border)">Method</th>
+            <th style="padding:10px 12px;text-align:center;font-family:'Rajdhani',sans-serif;font-size:12px;text-transform:uppercase;letter-spacing:1px;color:var(--gray);font-weight:600;border-bottom:1px solid var(--border)"></th>
           </tr>
         </thead>
         <tbody id="sales-tbody">
-          <tr><td colspan="6" style="padding:24px;text-align:center;color:var(--gray)">Loading sales...</td></tr>
+          <tr><td colspan="7" style="padding:24px;text-align:center;color:var(--gray)">Loading sales...</td></tr>
         </tbody>
       </table>
     </div>
@@ -1041,7 +1043,7 @@ async function loadSales() {
 
     const tbody = document.getElementById('sales-tbody');
     if (salesData.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="6" style="padding:24px;text-align:center;color:var(--gray)">No sales recorded yet. Sales auto-log from card payments, or use "Log Manual Sale" for cash/crypto.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="7" style="padding:24px;text-align:center;color:var(--gray)">No sales recorded yet. Sales auto-log from card payments, or use "Log Manual Sale" for cash/crypto.</td></tr>';
       return;
     }
 
@@ -1049,18 +1051,21 @@ async function loadSales() {
       const date = new Date(s.timestamp).toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' });
       const methodColors = { card:'#7B2FBE', cash:'#1D9E75', cashapp:'#00D632', crypto:'#FF6600', manual:'var(--gray)' };
       const color = methodColors[s.paymentMethod] || 'var(--gray)';
-      return `<tr style="border-bottom:1px solid rgba(255,255,255,0.03)">
+      const testBadge = s.isTest ? '<span style="background:#2D7FF9;color:#fff;padding:2px 7px;border-radius:2px;font-size:10px;font-family:Rajdhani,sans-serif;font-weight:700;letter-spacing:1px;margin-right:6px">TEST</span>' : '';
+      const rowBg = s.isTest ? 'background:rgba(45,127,249,0.06);' : '';
+      return `<tr style="border-bottom:1px solid rgba(255,255,255,0.03);${rowBg}">
         <td style="padding:10px 12px;color:var(--gray-light)">${date}</td>
-        <td style="padding:10px 12px;color:var(--white);font-weight:500">${s.customer}</td>
+        <td style="padding:10px 12px;color:var(--white);font-weight:500">${testBadge}${s.customer}</td>
         <td style="padding:10px 12px;color:var(--gray-light)">${s.service}</td>
         <td style="padding:10px 12px;text-align:right;font-family:'Rajdhani',sans-serif;font-weight:700;font-size:15px">$${s.amount.toLocaleString()}</td>
         <td style="padding:10px 12px;text-align:right;font-family:'Rajdhani',sans-serif;font-weight:700;font-size:15px;color:#1D9E75">$${s.commission.toLocaleString()}</td>
         <td style="padding:10px 12px;text-align:center"><span style="background:${color};color:#fff;padding:3px 10px;border-radius:2px;font-size:11px;font-family:'Rajdhani',sans-serif;font-weight:600;text-transform:uppercase;letter-spacing:0.5px">${s.paymentMethod}</span></td>
+        <td style="padding:10px 12px;text-align:center"><button onclick="deleteSale('${s.id}','${(s.customer||'').replace(/'/g,"\\'")}')" title="Delete this sale" style="background:none;border:1px solid rgba(226,75,74,0.4);color:var(--red);padding:4px 10px;border-radius:2px;cursor:pointer;font-size:11px;font-family:Rajdhani,sans-serif;font-weight:700">Delete</button></td>
       </tr>`;
     }).join('');
 
   } catch(e) {
-    document.getElementById('sales-tbody').innerHTML = '<tr><td colspan="6" style="padding:24px;text-align:center;color:var(--red)">' + (e.message || 'Failed to load sales. Make sure BLOB_READ_WRITE_TOKEN is set in Vercel env vars.') + '</td></tr>';
+    document.getElementById('sales-tbody').innerHTML = '<tr><td colspan="7" style="padding:24px;text-align:center;color:var(--red)">' + (e.message || 'Failed to load sales. Make sure BLOB_READ_WRITE_TOKEN is set in Vercel env vars.') + '</td></tr>';
   }
 }
 
@@ -1151,6 +1156,82 @@ function buildAndDownloadXLSX() {
   XLSX.writeFile(wb, filename);
   showToast('Exported ' + salesData.length + ' sales to ' + filename);
 }
+
+async function deleteSale(saleId, customerName) {
+  if (!await customConfirm('Delete this sale' + (customerName ? ' from ' + customerName : '') + '? This cannot be undone.')) return;
+  try {
+    const res = await fetch('/api/log-sale', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'delete', password: adminPassword, saleId })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error);
+    showToast('Sale deleted');
+    loadSales();
+  } catch(e) {
+    showToast('Delete failed: ' + e.message);
+  }
+}
+
+async function clearTestSales() {
+  const testCount = salesData.filter(s => s.isTest).length;
+  if (testCount === 0) { showToast('No test sales to clear'); return; }
+  if (!await customConfirm('Delete all ' + testCount + ' test sale' + (testCount === 1 ? '' : 's') + '? Real sales will not be affected.')) return;
+  try {
+    const res = await fetch('/api/log-sale', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'clear-test', password: adminPassword })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error);
+    showToast('Cleared ' + data.removed + ' test sale' + (data.removed === 1 ? '' : 's'));
+    loadSales();
+  } catch(e) {
+    showToast('Clear failed: ' + e.message);
+  }
+}
+
+// Show/hide the Clear Test Sales button based on whether test sales exist
+const _origLoadSales = loadSales;
+loadSales = async function() {
+  await _origLoadSales();
+  const btn = document.getElementById('clear-test-btn');
+  if (btn) btn.style.display = salesData.some(s => s.isTest) ? 'inline-flex' : 'none';
+};
+
+// Detect Stripe test mode and apply blue theme + banner
+(async function detectStripeMode() {
+  try {
+    const res = await fetch('/api/stripe-mode');
+    if (!res.ok) return;
+    const { testMode } = await res.json();
+    if (!testMode) return;
+    const style = document.createElement('style');
+    style.textContent = `
+      :root {
+        --purple: #2D7FF9;
+        --purple-light: #5FA3FF;
+        --purple-dark: #1F5AC9;
+        --purple-glow: rgba(45,127,249,0.3);
+        --border: rgba(45,127,249,0.3);
+      }
+      #test-mode-banner {
+        position:fixed;top:0;left:0;right:0;z-index:9999;
+        background:#2D7FF9;color:#fff;padding:8px 16px;text-align:center;
+        font-family:'Rajdhani',sans-serif;font-weight:700;font-size:13px;
+        letter-spacing:2px;text-transform:uppercase;border-bottom:2px solid #1F5AC9
+      }
+      body { padding-top: 36px; }
+    `;
+    document.head.appendChild(style);
+    const banner = document.createElement('div');
+    banner.id = 'test-mode-banner';
+    banner.textContent = 'Stripe Test Mode · No real charges · Test sales auto-delete on switch to live';
+    document.body.insertBefore(banner, document.body.firstChild);
+  } catch(e) {}
+})();
 </script>
 </body>
 </html>

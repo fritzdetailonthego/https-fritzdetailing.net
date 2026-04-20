@@ -868,15 +868,41 @@ document.querySelectorAll('.service-card,.pricing-col,.package-card,.payment-car
 
 // ===== STRIPE PAYMENT =====
 const STRIPE_PK = 'pk_live_51TCOBz1xKrhk2iIWpqK6J28lU8BxVrlEpC0mIbR4ZkLA3kaJDGcJHdH5UY1Aeqrnk8K5XtSVTtZZAaKPjp2Gxq6700yZHMpxcl';
-// Stripe LIVE key
-const BACKEND_URL = '/api'; // Same domain, Vercel serverless function
+const BACKEND_URL = '/api';
+const STRIPE_TEST_MODE = STRIPE_PK.startsWith('pk_test_');
+
+if (STRIPE_TEST_MODE) {
+  const style = document.createElement('style');
+  style.textContent = `
+    :root {
+      --purple: #2D7FF9;
+      --purple-light: #5FA3FF;
+      --purple-dark: #1F5AC9;
+      --purple-glow: rgba(45,127,249,0.3);
+      --border: rgba(45,127,249,0.3);
+    }
+    #test-mode-banner {
+      position:fixed;top:0;left:0;right:0;z-index:9999;
+      background:#2D7FF9;color:#fff;padding:8px 16px;text-align:center;
+      font-family:'Rajdhani',sans-serif;font-weight:700;font-size:13px;
+      letter-spacing:2px;text-transform:uppercase;border-bottom:2px solid #1F5AC9
+    }
+    body { padding-top: 36px; }
+    .header { top: 36px !important; }
+  `;
+  document.head.appendChild(style);
+  const banner = document.createElement('div');
+  banner.id = 'test-mode-banner';
+  banner.textContent = 'Stripe Test Mode · No real charges · Test sales auto-delete on switch to live';
+  document.body.insertBefore(banner, document.body.firstChild);
+}
 
 const stripe = Stripe(STRIPE_PK);
 const elements = stripe.elements({
   appearance: {
     theme: 'night',
     variables: {
-      colorPrimary: '#7B2FBE',
+      colorPrimary: STRIPE_TEST_MODE ? '#2D7FF9' : '#7B2FBE',
       colorBackground: '#121212',
       colorText: '#FFFFFF',
       colorDanger: '#E24B4A',

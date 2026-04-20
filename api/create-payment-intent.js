@@ -67,6 +67,7 @@ module.exports = async (req, res) => {
     res.json({
       clientSecret: paymentIntent.client_secret,
       paymentIntentId: paymentIntent.id,
+      testMode: !(process.env.STRIPE_SECRET_KEY || '').startsWith('sk_live_')
     });
 
   } catch (error) {
