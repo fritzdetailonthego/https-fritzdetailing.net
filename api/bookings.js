@@ -10,6 +10,7 @@ const MANAGER_TOKEN_TTL_SECONDS = 30 * 24 * 60 * 60;
 const EXPO_PUSH_ENDPOINT = 'https://exp.host/--/api/v2/push/send';
 const JSON_CONTENT_TYPE = 'application/json';
 const JSON_BLOB_MAX_ATTEMPTS = 3;
+const DEFAULT_BLOCKED_SLOT_DURATION_MINUTES = 30;
 
 function buildDefaultAvailability() {
   return {
@@ -119,39 +120,58 @@ function verifyManagerToken(token) {
 function normalizeAvailability(availability) {
   const defaults = buildDefaultAvailability();
   const weeklyHours = { ...defaults.weeklyHours, ...((availability && availability.weeklyHours) || {}) };
+  const slotDuration =
+    Number.isInteger(availability && availability.slotDuration) && availability.slotDuration > 0
+      ? availability.slotDuration
+      : defaults.slotDuration;
+  const customerBlockMinutes =
+    Number.isInteger(availability && availability.customerBlockMinutes) && availability.customerBlockMinutes > 0
+      ? availability.customerBlockMinutes
+      : defaults.customerBlockMinutes;
+  const privateBlockMinutes =
+    Number.isInteger(availability && availability.privateBlockMinutes) && availability.privateBlockMinutes > 0
+      ? availability.privateBlockMinutes
+      : defaults.privateBlockMinutes;
+  const travelBufferMinutes =
+    Number.isInteger(availability && availability.travelBufferMinutes) && availability.travelBufferMinutes > 0
+      ? availability.travelBufferMinutes
+      : defaults.travelBufferMinutes;
+  const maxAdvanceDays =
+    Number.isInteger(availability && availability.maxAdvanceDays) && availability.maxAdvanceDays >= 0
+      ? availability.maxAdvanceDays
+      : defaults.maxAdvanceDays;
 
-  return {
+  const normalizedAvailability = {
     ...defaults,
     ...(availability || {}),
     weeklyHours,
     blockedDates: normalizeBlockedDates(availability && availability.blockedDates),
-    blockedSlots: Array.isArray(availability && availability.blockedSlots) ? availability.blockedSlots : [],
-    slotDuration:
-      Number.isInteger(availability && availability.slotDuration) && availability.slotDuration > 0
-        ? availability.slotDuration
-        : defaults.slotDuration,
-    customerBlockMinutes:
-      Number.isInteger(availability && availability.customerBlockMinutes) && availability.customerBlockMinutes > 0
-        ? availability.customerBlockMinutes
-        : defaults.customerBlockMinutes,
-    privateBlockMinutes:
-      Number.isInteger(availability && availability.privateBlockMinutes) && availability.privateBlockMinutes > 0
-        ? availability.privateBlockMinutes
-        : defaults.privateBlockMinutes,
-    travelBufferMinutes:
-      Number.isInteger(availability && availability.travelBufferMinutes) && availability.travelBufferMinutes > 0
-        ? availability.travelBufferMinutes
-        : defaults.travelBufferMinutes,
-    maxAdvanceDays:
-      Number.isInteger(availability && availability.maxAdvanceDays) && availability.maxAdvanceDays >= 0
-        ? availability.maxAdvanceDays
-        : defaults.maxAdvanceDays,
+    slotDuration,
+    customerBlockMinutes,
+    privateBlockMinutes,
+    travelBufferMinutes,
+    maxAdvanceDays,
     updatedAt: typeof (availability && availability.updatedAt) === 'string' ? availability.updatedAt : null
   };
+
+  normalizedAvailability.blockedSlots = normalizeBlockedSlots(
+    availability && availability.blockedSlots,
+    normalizedAvailability
+  );
+
+  return normalizedAvailability;
 }
 
 function normalizeBookingType(value) {
   return value === 'private' || value === 'travel' ? value : 'customer';
+}
+
+function normalizeBookingStatus(value) {
+  if (typeof value !== 'string' || !value.trim()) {
+    return 'confirmed';
+  }
+
+  return value.trim().toLowerCase();
 }
 
 function normalizeBlockedDateEntry(entry) {
@@ -222,6 +242,34 @@ function removeBlockedDate(blockedDates, date) {
   return normalizeBlockedDates(blockedDates).filter((entry) => entry.date !== date);
 }
 
+function upsertBlockedSlot(blockedSlots, nextEntry, availability) {
+  const normalizedEntry = normalizeBlockedSlotEntry(nextEntry, availability);
+  if (!normalizedEntry) {
+    return normalizeBlockedSlots(blockedSlots, availability);
+  }
+
+  const nextBlockedSlots = normalizeBlockedSlots(blockedSlots, availability).filter((blockedSlot) => {
+    if (normalizedEntry.id && blockedSlot.id === normalizedEntry.id) {
+      return false;
+    }
+
+    return !(blockedSlot.date === normalizedEntry.date && blockedSlot.time === normalizedEntry.time);
+  });
+
+  nextBlockedSlots.push(normalizedEntry);
+  return normalizeBlockedSlots(nextBlockedSlots, availability);
+}
+
+function removeBlockedSlot(blockedSlots, { blockId, date, time }, availability) {
+  return normalizeBlockedSlots(blockedSlots, availability).filter((blockedSlot) => {
+    if (blockId && blockedSlot.id === blockId) {
+      return false;
+    }
+
+    return !(blockedSlot.date === date && blockedSlot.time === time);
+  });
+}
+
 function getDefaultDurationMinutes(bookingType, availability) {
   const normalizedType = normalizeBookingType(bookingType);
 
@@ -250,7 +298,7 @@ function normalizeBooking(booking) {
       Number.isInteger(booking.durationMinutes) && booking.durationMinutes > 0
         ? booking.durationMinutes
         : undefined,
-    status: booking.status || 'confirmed',
+    status: normalizeBookingStatus(booking.status),
     updatedAt: typeof booking.updatedAt === 'string' ? booking.updatedAt : fallbackUpdatedAt
   };
 }
@@ -308,7 +356,16 @@ function formatBookingPushBody(booking) {
   if (booking.service) details.push(booking.service);
   if (booking.vehicle) details.push(booking.vehicle);
   if (booking.phone) details.push(booking.phone);
-  return details.join(' · ');
+  return details.join(' | ');
+}
+
+function minutesToTimeValue(totalMinutes) {
+  const minutesInDay = 24 * 60;
+  const normalized = ((Math.floor(totalMinutes) % minutesInDay) + minutesInDay) % minutesInDay;
+  const hours = Math.floor(normalized / 60);
+  const minutes = normalized % 60;
+
+  return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
 }
 
 function parseDateValue(dateStr) {
@@ -349,6 +406,88 @@ function parseTimeValue(timeStr) {
   };
 }
 
+function getBlockedSlotDurationMinutes(blockedSlot, availability) {
+  if (Number.isInteger(blockedSlot && blockedSlot.durationMinutes) && blockedSlot.durationMinutes > 0) {
+    return blockedSlot.durationMinutes;
+  }
+
+  const startTime = parseTimeValue(blockedSlot && blockedSlot.time);
+  const endTime = parseTimeValue(blockedSlot && blockedSlot.endTime);
+
+  if (startTime && endTime) {
+    let durationMinutes = endTime.totalMinutes - startTime.totalMinutes;
+
+    if (durationMinutes <= 0) {
+      durationMinutes += 24 * 60;
+    }
+
+    if (durationMinutes > 0) {
+      return durationMinutes;
+    }
+  }
+
+  if (Number.isInteger(availability && availability.slotDuration) && availability.slotDuration > 0) {
+    return availability.slotDuration;
+  }
+
+  return DEFAULT_BLOCKED_SLOT_DURATION_MINUTES;
+}
+
+function normalizeBlockedSlotEntry(entry, availability) {
+  if (!entry || typeof entry !== 'object' || typeof entry.date !== 'string') {
+    return null;
+  }
+
+  const parsedTime = parseTimeValue(entry.time);
+  if (!parsedTime) {
+    return null;
+  }
+
+  const durationMinutes = getBlockedSlotDurationMinutes(entry, availability);
+
+  return {
+    id:
+      typeof entry.id === 'string' && entry.id.trim()
+        ? entry.id.trim()
+        : `${entry.date}-${parsedTime.normalized}`,
+    date: entry.date,
+    time: parsedTime.normalized,
+    endTime: minutesToTimeValue(parsedTime.totalMinutes + durationMinutes),
+    durationMinutes,
+    ...(typeof entry.reason === 'string' && entry.reason.trim() ? { reason: entry.reason.trim() } : {}),
+    ...(typeof entry.updatedAt === 'string' ? { updatedAt: entry.updatedAt } : {})
+  };
+}
+
+function normalizeBlockedSlots(blockedSlots, availability) {
+  if (!Array.isArray(blockedSlots)) {
+    return [];
+  }
+
+  return blockedSlots
+    .map((entry) => normalizeBlockedSlotEntry(entry, availability))
+    .filter(Boolean)
+    .sort((left, right) => {
+      if (left.date !== right.date) {
+        return left.date.localeCompare(right.date);
+      }
+
+      return left.time.localeCompare(right.time);
+    });
+}
+
+function getBlockedSlotRange(blockedSlot, availability) {
+  const parsedTime = parseTimeValue(blockedSlot && blockedSlot.time);
+  if (!parsedTime) {
+    return null;
+  }
+
+  return {
+    startMinutes: parsedTime.totalMinutes,
+    endMinutes: parsedTime.totalMinutes + getBlockedSlotDurationMinutes(blockedSlot, availability)
+  };
+}
+
 function getRequestedDurationMinutes(durationMinutes, bookingType, availability) {
   if (Number.isInteger(durationMinutes) && durationMinutes > 0) {
     return durationMinutes;
@@ -373,11 +512,37 @@ function getBookingTimeRange(booking, availability) {
   };
 }
 
-function hasBookingConflict({ dateStr, startMinutes, durationMinutes, bookings, availability }) {
+function hasBlockedSlotConflict({ dateStr, startMinutes, durationMinutes, availability }) {
+  const endMinutes = startMinutes + durationMinutes;
+
+  return normalizeBlockedSlots(availability && availability.blockedSlots, availability).some((blockedSlot) => {
+    if (blockedSlot.date !== dateStr) {
+      return false;
+    }
+
+    const blockedRange = getBlockedSlotRange(blockedSlot, availability);
+    if (!blockedRange) return false;
+
+    return startMinutes < blockedRange.endMinutes && endMinutes > blockedRange.startMinutes;
+  });
+}
+
+function hasBookingConflict({
+  dateStr,
+  startMinutes,
+  durationMinutes,
+  bookings,
+  availability,
+  excludeBookingId
+}) {
   const endMinutes = startMinutes + durationMinutes;
 
   return bookings.some((booking) => {
-    if (booking.date !== dateStr || booking.status === 'cancelled') {
+    if (
+      booking.date !== dateStr ||
+      booking.status === 'cancelled' ||
+      (excludeBookingId && booking.id === excludeBookingId)
+    ) {
       return false;
     }
 
@@ -462,13 +627,19 @@ function getAvailableSlots(dateStr, availability, bookings, options = {}) {
     const hours = Math.floor(totalMinutes / 60);
     const minutes = totalMinutes % 60;
     const time = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
-    const blocked = (availability.blockedSlots || []).some((slot) => slot.date === dateStr && slot.time === time);
+    const blocked = hasBlockedSlotConflict({
+      dateStr,
+      startMinutes: totalMinutes,
+      durationMinutes,
+      availability
+    });
     const booked = hasBookingConflict({
       dateStr,
       startMinutes: totalMinutes,
       durationMinutes,
       bookings,
-      availability
+      availability,
+      excludeBookingId: options.excludeBookingId
     });
 
     if (!blocked && !booked) {
@@ -497,10 +668,17 @@ function validateBookingRequest(dateStr, timeStr, availability, bookings, option
   if (time.totalMinutes < rules.startMinutes || time.totalMinutes + durationMinutes > rules.endMinutes) {
     return { ok: false, status: 400, error: 'That time is outside business hours.' };
   }
-  if ((time.totalMinutes - rules.startMinutes) % rules.slotDuration !== 0) {
+  if (options.requireSlotAlignment !== false && (time.totalMinutes - rules.startMinutes) % rules.slotDuration !== 0) {
     return { ok: false, status: 400, error: 'That time is not a valid booking slot.' };
   }
-  if ((availability.blockedSlots || []).some((slot) => slot.date === dateStr && slot.time === time.normalized)) {
+  if (
+    hasBlockedSlotConflict({
+      dateStr,
+      startMinutes: time.totalMinutes,
+      durationMinutes,
+      availability
+    })
+  ) {
     return { ok: false, status: 409, error: 'That slot is blocked. Please pick another.' };
   }
   if (
@@ -509,7 +687,8 @@ function validateBookingRequest(dateStr, timeStr, availability, bookings, option
       startMinutes: time.totalMinutes,
       durationMinutes,
       bookings,
-      availability
+      availability,
+      excludeBookingId: options.excludeBookingId
     })
   ) {
     return { ok: false, status: 409, error: 'That slot was just booked. Please pick another.' };
@@ -749,13 +928,14 @@ module.exports = async (req, res) => {
 
   try {
     if (action === 'get-slots') {
-      const { date, bookingType, durationMinutes } = req.body;
+      const { date, bookingType, durationMinutes, excludeBookingId } = req.body;
       if (!date) return res.status(400).json({ error: 'Date required' });
 
       const [{ data: availability }, { data: bookings }] = await Promise.all([readAvailability(), readBookings()]);
       const result = getAvailableSlots(date, availability, bookings, {
         bookingType,
-        durationMinutes
+        durationMinutes,
+        excludeBookingId
       });
       if (!result.ok) {
         return res.json({
@@ -1034,7 +1214,8 @@ module.exports = async (req, res) => {
         const { data: bookings, etag } = await readBookings();
         const validation = validateBookingRequest(date, time, availability, bookings, {
           bookingType,
-          durationMinutes
+          durationMinutes,
+          requireSlotAlignment: false
         });
         if (!validation.ok) {
           return res.status(validation.status).json({ error: validation.error });
@@ -1075,6 +1256,117 @@ module.exports = async (req, res) => {
       }
 
       return res.status(409).json({ error: 'That time block is no longer available. Please pick another.' });
+    }
+
+    if (action === 'manager-update-booking') {
+      const {
+        bookingId,
+        date,
+        time,
+        bookingType: rawBookingType,
+        durationMinutes,
+        name,
+        phone,
+        vehicle,
+        service,
+        notes,
+        status
+      } = req.body || {};
+
+      if (!bookingId || typeof bookingId !== 'string') {
+        return res.status(400).json({ error: 'A booking id is required.' });
+      }
+
+      const bookingType = normalizeBookingType(rawBookingType);
+      const nextStatus = normalizeBookingStatus(status);
+
+      if (nextStatus !== 'cancelled') {
+        if (!date || !time) {
+          return res.status(400).json({ error: 'Date and time are required.' });
+        }
+
+        if (bookingType === 'customer' && (!name || !phone)) {
+          return res.status(400).json({ error: 'Customer bookings require a name and phone number.' });
+        }
+      }
+
+      const { data: availability } = await readAvailability();
+
+      for (let attempt = 0; attempt < 3; attempt++) {
+        const { data: bookings, etag } = await readBookings();
+        const bookingIndex = bookings.findIndex((entry) => entry.id === bookingId);
+
+        if (bookingIndex < 0) {
+          return res.status(404).json({ error: 'Booking not found.' });
+        }
+
+        const existingBooking = normalizeBooking(bookings[bookingIndex]);
+        const nowIso = new Date().toISOString();
+        let nextBooking;
+
+        if (nextStatus === 'cancelled') {
+          nextBooking = {
+            ...existingBooking,
+            status: 'cancelled',
+            updatedAt: nowIso,
+            cancelledAt: nowIso
+          };
+        } else {
+          const validation = validateBookingRequest(date, time, availability, bookings, {
+            bookingType,
+            durationMinutes,
+            excludeBookingId: bookingId,
+            requireSlotAlignment: false
+          });
+
+          if (!validation.ok) {
+            return res.status(validation.status).json({ error: validation.error });
+          }
+
+          const defaultName =
+            bookingType === 'travel' ? 'Travel Buffer' : bookingType === 'private' ? 'Private Hold' : '';
+          const defaultService =
+            bookingType === 'travel' ? 'Travel Interval' : bookingType === 'private' ? 'Private Block' : '';
+
+          nextBooking = {
+            ...existingBooking,
+            date,
+            time: validation.time,
+            name: (typeof name === 'string' && name.trim()) || defaultName,
+            phone: typeof phone === 'string' ? phone : '',
+            vehicle: vehicle || '',
+            service: service || defaultService,
+            notes: notes || '',
+            status: nextStatus,
+            bookingType,
+            durationMinutes: validation.durationMinutes,
+            source: existingBooking.source || 'manager',
+            updatedAt: nowIso
+          };
+
+          if (nextStatus !== 'cancelled' && nextBooking.cancelledAt) {
+            delete nextBooking.cancelledAt;
+          }
+        }
+
+        bookings[bookingIndex] = nextBooking;
+
+        try {
+          await writeBookings(bookings, etag);
+          return res.json({
+            success: true,
+            booking: normalizeBooking(nextBooking)
+          });
+        } catch (error) {
+          if (error instanceof BlobPreconditionFailedError) {
+            continue;
+          }
+
+          throw error;
+        }
+      }
+
+      return res.status(409).json({ error: 'That time block changed before it could be saved. Please try again.' });
     }
 
     if (action === 'list-bookings') {
@@ -1124,15 +1416,26 @@ module.exports = async (req, res) => {
     }
 
     if (action === 'block') {
-      const { date, time, reason } = req.body;
+      const { date, time, endTime, durationMinutes, reason, blockId } = req.body;
       await updateSingletonJsonBlob({
         read: readAvailability,
         write: writeAvailability,
         errorMessage: 'Could not block that date. Please try again.',
         mutate: async (availability) => {
           if (time) {
-            availability.blockedSlots = availability.blockedSlots || [];
-            availability.blockedSlots.push({ date, time, reason: reason || 'Blocked' });
+            availability.blockedSlots = upsertBlockedSlot(
+              availability.blockedSlots,
+              {
+                id: blockId,
+                date,
+                time,
+                endTime,
+                durationMinutes,
+                reason: reason || 'Blocked',
+                updatedAt: new Date().toISOString()
+              },
+              availability
+            );
           } else {
             availability.blockedDates = upsertBlockedDate(availability.blockedDates, date, reason);
           }
@@ -1145,14 +1448,18 @@ module.exports = async (req, res) => {
     }
 
     if (action === 'unblock') {
-      const { date, time } = req.body;
+      const { date, time, blockId } = req.body;
       await updateSingletonJsonBlob({
         read: readAvailability,
         write: writeAvailability,
         errorMessage: 'Could not unblock that date. Please try again.',
         mutate: async (availability) => {
           if (time) {
-            availability.blockedSlots = (availability.blockedSlots || []).filter((slot) => !(slot.date === date && slot.time === time));
+            availability.blockedSlots = removeBlockedSlot(
+              availability.blockedSlots,
+              { blockId, date, time },
+              availability
+            );
           } else {
             availability.blockedDates = removeBlockedDate(availability.blockedDates, date);
           }
