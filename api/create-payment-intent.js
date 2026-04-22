@@ -1,28 +1,6 @@
 const path = require('path');
 const fs = require('fs');
-
-function getValidPrices() {
-  try {
-    const filePath = path.join(__dirname, '..', 'public', 'pricing.json');
-    const data = JSON.parse(fs.readFileSync(filePath, 'utf8'));
-    const prices = new Set();
-    for (const tier of Object.values(data)) {
-      for (const section of ['exterior', 'interior', 'packages']) {
-        if (tier[section]) {
-          for (const price of Object.values(tier[section])) {
-            prices.add(price * 100); // cents
-          }
-        }
-      }
-    }
-    return prices;
-  } catch (e) {
-    return new Set([
-      2500,4000,5000,6000,7500,9000,10000,12500,14000,15000,
-      17500,18000,20000,27500,32500,35000,100000,125000,150000
-    ]);
-  }
-}
+const { getValidPricesInCents } = require('./_pricing');
 
 function readConfig() {
   try {
@@ -52,7 +30,7 @@ module.exports = async (req, res) => {
     }
 
     // Only accept prices from the menu. No custom amounts.
-    const validPrices = getValidPrices();
+    const validPrices = getValidPricesInCents();
     if (!validPrices.has(amount)) {
       return res.status(400).json({ error: 'Invalid price. Please select a service from the menu.' });
     }

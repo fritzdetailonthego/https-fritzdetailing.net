@@ -1,6 +1,15 @@
 // Stores and retrieves pricing revision history in Vercel Blob
 const { put, list } = require('@vercel/blob');
 
+function createRevisionId() {
+  return `rev-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function parseRevisionIndex(value) {
+  const parsed = Number(value);
+  return Number.isInteger(parsed) ? parsed : null;
+}
+
 module.exports = async (req, res) => {
   if (req.method === 'OPTIONS') {
     res.setHeader('Access-Control-Allow-Origin', '*');
@@ -41,7 +50,7 @@ module.exports = async (req, res) => {
   try {
     if (action === 'save') {
       const revisions = await readRevisions();
-      revisions.push({ timestamp: new Date().toISOString(), pricing });
+      revisions.push({ id: createRevisionId(), timestamp: new Date().toISOString(), pricing });
       // Keep last 50 revisions
       if (revisions.length > 50) revisions.splice(0, revisions.length - 50);
       await writeRevisions(revisions);
@@ -50,19 +59,29 @@ module.exports = async (req, res) => {
 
     if (action === 'list') {
       const revisions = await readRevisions();
-      const list = revisions.map((r, i) => ({
-        index: i,
-        timestamp: r.timestamp
+      const ordered = revisions.map((revision, index) => ({
+        id: revision.id || `legacy-${index}`,
+        index,
+        timestamp: revision.timestamp
       })).reverse();
-      return res.json({ revisions: list });
+      return res.json({ revisions: ordered });
     }
 
     if (action === 'restore') {
-      const { revisionIndex } = req.body;
+      const { revisionId } = req.body;
       const revisions = await readRevisions();
-      const idx = revisionIndex !== undefined ? revisionIndex : (req.body.revisionUrl ? -1 : -1);
-      if (idx >= 0 && idx < revisions.length) {
-        return res.json({ success: true, pricing: revisions[idx].pricing });
+      const revisionIndex = parseRevisionIndex(req.body.revisionIndex);
+
+      const revision =
+        (typeof revisionId === 'string' && revisionId
+          ? revisions.find((entry, index) => (entry.id || `legacy-${index}`) === revisionId)
+          : null) ||
+        (revisionIndex !== null && revisionIndex >= 0 && revisionIndex < revisions.length
+          ? revisions[revisionIndex]
+          : null);
+
+      if (revision) {
+        return res.json({ success: true, pricing: revision.pricing });
       }
       // Fallback: try last revision
       if (revisions.length > 0) {
