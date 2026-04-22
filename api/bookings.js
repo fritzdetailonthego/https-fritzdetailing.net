@@ -1,5 +1,5 @@
 const crypto = require('crypto');
-const { put, list, head, BlobPreconditionFailedError } = require('@vercel/blob');
+const { put, head, BlobPreconditionFailedError } = require('@vercel/blob');
 const packageJson = require('../package.json');
 
 const BOOKINGS_PATH = 'bookings-data.json';
@@ -8,6 +8,8 @@ const MANAGER_DEVICES_PATH = 'manager-devices.json';
 const DAY_MS = 24 * 60 * 60 * 1000;
 const MANAGER_TOKEN_TTL_SECONDS = 30 * 24 * 60 * 60;
 const EXPO_PUSH_ENDPOINT = 'https://exp.host/--/api/v2/push/send';
+const JSON_CONTENT_TYPE = 'application/json';
+const JSON_BLOB_MAX_ATTEMPTS = 3;
 
 function buildDefaultAvailability() {
   return {
@@ -25,6 +27,23 @@ function buildDefaultAvailability() {
     blockedSlots: [],
     maxAdvanceDays: 30
   };
+}
+
+function cloneJson(value) {
+  if (value === null || value === undefined) return value;
+  return JSON.parse(JSON.stringify(value));
+}
+
+function isBlobNotFoundError(error) {
+  if (!error || typeof error !== 'object') return false;
+
+  return (
+    error.name === 'BlobNotFoundError' ||
+    error.code === 'BlobNotFoundError' ||
+    error.status === 404 ||
+    error.statusCode === 404 ||
+    (typeof error.message === 'string' && error.message.includes('does not exist'))
+  );
 }
 
 function base64UrlEncode(value) {
@@ -329,6 +348,73 @@ function validateBookingRequest(dateStr, timeStr, availability, bookings) {
   return { ok: true, time: time.normalized };
 }
 
+async function readJsonBlob(path, fallbackValue, token) {
+  try {
+    const metadata = await head(path, { token });
+    const response = await fetch(metadata.url, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: JSON_CONTENT_TYPE
+      },
+      cache: 'no-store'
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to read ${path}`);
+    }
+
+    return {
+      data: await response.json(),
+      etag: metadata.etag
+    };
+  } catch (error) {
+    if (isBlobNotFoundError(error)) {
+      return {
+        data: cloneJson(fallbackValue),
+        etag: null
+      };
+    }
+
+    throw error;
+  }
+}
+
+async function writeJsonBlob(path, data, etag, token) {
+  const options = {
+    access: 'public',
+    contentType: JSON_CONTENT_TYPE,
+    addRandomSuffix: false,
+    allowOverwrite: true,
+    token
+  };
+
+  if (etag) {
+    options.ifMatch = etag;
+  }
+
+  await put(path, JSON.stringify(data), options);
+}
+
+async function updateSingletonJsonBlob({ read, write, mutate, errorMessage }) {
+  for (let attempt = 0; attempt < JSON_BLOB_MAX_ATTEMPTS; attempt += 1) {
+    const { data, etag } = await read();
+    const nextData = await mutate(cloneJson(data));
+
+    try {
+      await write(nextData, etag);
+      return nextData;
+    } catch (error) {
+      if (error instanceof BlobPreconditionFailedError) {
+        continue;
+      }
+
+      throw error;
+    }
+  }
+
+  throw new Error(errorMessage);
+}
+
 module.exports = async (req, res) => {
   if (req.method === 'OPTIONS') {
     res.setHeader('Access-Control-Allow-Origin', '*');
@@ -348,98 +434,41 @@ module.exports = async (req, res) => {
   const authed = !!managerSession;
 
   async function readBookings() {
-    const { blobs } = await list({ prefix: 'bookings-data', token });
-    if (blobs.length === 0) return { bookings: [], etag: null };
-
-    const metadata = await head(BOOKINGS_PATH, { token });
-    const response = await fetch(blobs[0].url, {
-      headers: { Authorization: `Bearer ${token}` },
-      cache: 'no-store'
-    });
-    if (!response.ok) throw new Error('Failed to read bookings data');
-
-    return { bookings: await response.json(), etag: metadata.etag };
+    const { data, etag } = await readJsonBlob(BOOKINGS_PATH, [], token);
+    return {
+      data: Array.isArray(data) ? data : [],
+      etag
+    };
   }
 
   async function writeBookings(bookings, etag) {
-    const options = {
-      access: 'public',
-      contentType: 'application/json',
-      addRandomSuffix: false,
-      token
-    };
-
-    if (etag) {
-      options.allowOverwrite = true;
-      options.ifMatch = etag;
-    }
-
-    await put(BOOKINGS_PATH, JSON.stringify(bookings), options);
+    await writeJsonBlob(BOOKINGS_PATH, bookings, etag, token);
   }
 
   async function readAvailability() {
-    const { blobs } = await list({ prefix: 'availability-config', token });
-    if (blobs.length === 0) return { availability: normalizeAvailability(buildDefaultAvailability()), etag: null };
-
-    const metadata = await head(AVAILABILITY_PATH, { token });
-    const response = await fetch(blobs[0].url, {
-      headers: { Authorization: `Bearer ${token}` },
-      cache: 'no-store'
-    });
-    if (!response.ok) throw new Error('Failed to read availability data');
-
-    return { availability: normalizeAvailability(await response.json()), etag: metadata.etag };
+    const { data, etag } = await readJsonBlob(AVAILABILITY_PATH, buildDefaultAvailability(), token);
+    return {
+      data: normalizeAvailability(data),
+      etag
+    };
   }
 
   async function writeAvailability(availability, etag) {
-    const options = {
-      access: 'public',
-      contentType: 'application/json',
-      addRandomSuffix: false,
-      token
-    };
-
-    if (etag) {
-      options.allowOverwrite = true;
-      options.ifMatch = etag;
-    }
-
-    await put(AVAILABILITY_PATH, JSON.stringify(availability), options);
+    await writeJsonBlob(AVAILABILITY_PATH, availability, etag, token);
   }
 
   async function readManagerDevices() {
-    const { blobs } = await list({ prefix: 'manager-devices', token });
-    if (blobs.length === 0) return { devices: [], etag: null };
-
-    const metadata = await head(MANAGER_DEVICES_PATH, { token });
-    const response = await fetch(blobs[0].url, {
-      headers: { Authorization: `Bearer ${token}` },
-      cache: 'no-store'
-    });
-    if (!response.ok) throw new Error('Failed to read manager device data');
-
-    const payload = await response.json();
+    const { data, etag } = await readJsonBlob(MANAGER_DEVICES_PATH, [], token);
+    const payload = Array.isArray(data) ? data : [];
     const devices = Array.isArray(payload)
       ? payload.map(normalizeManagerDevice).filter((device) => device.pushToken)
       : [];
 
-    return { devices, etag: metadata.etag };
+    return { data: devices, etag };
   }
 
   async function writeManagerDevices(devices, etag) {
-    const options = {
-      access: 'public',
-      contentType: 'application/json',
-      addRandomSuffix: false,
-      token
-    };
-
-    if (etag) {
-      options.allowOverwrite = true;
-      options.ifMatch = etag;
-    }
-
-    await put(MANAGER_DEVICES_PATH, JSON.stringify(devices), options);
+    await writeJsonBlob(MANAGER_DEVICES_PATH, devices, etag, token);
   }
 
   async function sendExpoPushNotifications(devices, messageFactory) {
@@ -508,7 +537,7 @@ module.exports = async (req, res) => {
 
     const tokenSet = new Set(pushTokensToRemove);
     for (let attempt = 0; attempt < 3; attempt++) {
-      const { devices, etag } = await readManagerDevices();
+      const { data: devices, etag } = await readManagerDevices();
       const filteredDevices = devices.filter((device) => !tokenSet.has(device.pushToken));
       if (filteredDevices.length === devices.length) return 0;
 
@@ -525,7 +554,7 @@ module.exports = async (req, res) => {
   }
 
   async function notifyManagersAboutBooking(booking) {
-    const { devices } = await readManagerDevices();
+    const { data: devices } = await readManagerDevices();
     const result = await sendExpoPushNotifications(devices, () => ({
       title: 'New Booking',
       body: formatBookingPushBody(booking) || `${booking.name} booked ${booking.date} at ${booking.time}`,
@@ -553,7 +582,7 @@ module.exports = async (req, res) => {
       const { date } = req.body;
       if (!date) return res.status(400).json({ error: 'Date required' });
 
-      const [{ availability }, { bookings }] = await Promise.all([readAvailability(), readBookings()]);
+      const [{ data: availability }, { data: bookings }] = await Promise.all([readAvailability(), readBookings()]);
       const result = getAvailableSlots(date, availability, bookings);
       if (!result.ok) {
         return res.json({
@@ -568,7 +597,7 @@ module.exports = async (req, res) => {
     }
 
     if (action === 'get-config') {
-      const { availability } = await readAvailability();
+      const { data: availability } = await readAvailability();
       return res.json({
         maxAdvanceDays:
           Number.isInteger(availability.maxAdvanceDays) && availability.maxAdvanceDays >= 0
@@ -580,7 +609,7 @@ module.exports = async (req, res) => {
     if (action === 'manager-bootstrap') {
       if (!authed) return res.status(401).json({ error: 'Unauthorized' });
 
-      const [{ bookings }, { availability }] = await Promise.all([readBookings(), readAvailability()]);
+      const [{ data: bookings }, { data: availability }] = await Promise.all([readBookings(), readAvailability()]);
       const normalizedBookings = sortBookings(bookings.map(normalizeBooking));
       return res.json({
         bookings: normalizedBookings,
@@ -595,7 +624,7 @@ module.exports = async (req, res) => {
       if (!authed) return res.status(401).json({ error: 'Unauthorized' });
 
       const sinceTimestamp = parseSyncTimestamp(req.body && req.body.since);
-      const [{ bookings }, { availability }] = await Promise.all([readBookings(), readAvailability()]);
+      const [{ data: bookings }, { data: availability }] = await Promise.all([readBookings(), readAvailability()]);
       const normalizedBookings = sortBookings(bookings.map(normalizeBooking));
       const changedBookings =
         sinceTimestamp === null
@@ -623,10 +652,10 @@ module.exports = async (req, res) => {
       }
 
       const normalizedDeviceId = typeof deviceId === 'string' ? deviceId.trim() : '';
-      const nowIso = new Date().toISOString();
+        const nowIso = new Date().toISOString();
 
       for (let attempt = 0; attempt < 3; attempt++) {
-        const { devices, etag } = await readManagerDevices();
+        const { data: devices, etag } = await readManagerDevices();
         const existingIndex = devices.findIndex((device) =>
           device.pushToken === pushToken || (normalizedDeviceId && device.deviceId === normalizedDeviceId)
         );
@@ -672,7 +701,7 @@ module.exports = async (req, res) => {
       }
 
       for (let attempt = 0; attempt < 3; attempt++) {
-        const { devices, etag } = await readManagerDevices();
+        const { data: devices, etag } = await readManagerDevices();
         const filteredDevices = devices.filter((device) =>
           device.pushToken !== pushToken && (!normalizedDeviceId || device.deviceId !== normalizedDeviceId)
         );
@@ -708,7 +737,7 @@ module.exports = async (req, res) => {
         devices = [normalizeManagerDevice({ pushToken, platform: 'unknown' })];
       } else {
         const managerDevices = await readManagerDevices();
-        devices = managerDevices.devices;
+        devices = managerDevices.data;
         shouldPrune = true;
       }
 
@@ -745,10 +774,10 @@ module.exports = async (req, res) => {
         return res.status(400).json({ error: 'Date, time, name, and phone are required' });
       }
 
-      const { availability } = await readAvailability();
+      const { data: availability } = await readAvailability();
 
       for (let attempt = 0; attempt < 3; attempt++) {
-        const { bookings, etag } = await readBookings();
+        const { data: bookings, etag } = await readBookings();
         const validation = validateBookingRequest(date, time, availability, bookings);
         if (!validation.ok) {
           return res.status(validation.status).json({ error: validation.error });
@@ -796,68 +825,90 @@ module.exports = async (req, res) => {
     if (!authed) return res.status(401).json({ error: 'Unauthorized' });
 
     if (action === 'list-bookings') {
-      const { bookings } = await readBookings();
+      const { data: bookings } = await readBookings();
       return res.json({ bookings: sortBookings(bookings.map(normalizeBooking)) });
     }
 
     if (action === 'cancel-booking') {
       const { bookingId } = req.body;
-      const { bookings, etag } = await readBookings();
-      const booking = bookings.find((entry) => entry.id === bookingId);
-      if (booking) {
-        booking.status = 'cancelled';
-        booking.updatedAt = new Date().toISOString();
-        booking.cancelledAt = booking.updatedAt;
-      }
-      await writeBookings(bookings, etag);
+      await updateSingletonJsonBlob({
+        read: readBookings,
+        write: writeBookings,
+        errorMessage: 'Could not update the booking. Please try again.',
+        mutate: async (bookings) => {
+          const booking = bookings.find((entry) => entry.id === bookingId);
+
+          if (booking && booking.status !== 'cancelled') {
+            booking.status = 'cancelled';
+            booking.updatedAt = new Date().toISOString();
+            booking.cancelledAt = booking.updatedAt;
+          }
+
+          return bookings;
+        }
+      });
       return res.json({ success: true });
     }
 
     if (action === 'get-availability') {
-      const { availability } = await readAvailability();
+      const { data: availability } = await readAvailability();
       return res.json(availability);
     }
 
     if (action === 'save-availability') {
       const { availability } = req.body;
-      const current = await readAvailability();
-      const nextAvailability = normalizeAvailability(availability);
-      nextAvailability.updatedAt = new Date().toISOString();
-      await writeAvailability(nextAvailability, current.etag);
+      await updateSingletonJsonBlob({
+        read: readAvailability,
+        write: writeAvailability,
+        errorMessage: 'Could not update availability. Please try again.',
+        mutate: async () => {
+          const nextAvailability = normalizeAvailability(availability);
+          nextAvailability.updatedAt = new Date().toISOString();
+          return nextAvailability;
+        }
+      });
       return res.json({ success: true });
     }
 
     if (action === 'block') {
       const { date, time, reason } = req.body;
-      const current = await readAvailability();
-      const availability = current.availability;
+      await updateSingletonJsonBlob({
+        read: readAvailability,
+        write: writeAvailability,
+        errorMessage: 'Could not block that date. Please try again.',
+        mutate: async (availability) => {
+          if (time) {
+            availability.blockedSlots = availability.blockedSlots || [];
+            availability.blockedSlots.push({ date, time, reason: reason || 'Blocked' });
+          } else {
+            availability.blockedDates = availability.blockedDates || [];
+            if (!availability.blockedDates.includes(date)) availability.blockedDates.push(date);
+          }
 
-      if (time) {
-        availability.blockedSlots = availability.blockedSlots || [];
-        availability.blockedSlots.push({ date, time, reason: reason || 'Blocked' });
-      } else {
-        availability.blockedDates = availability.blockedDates || [];
-        if (!availability.blockedDates.includes(date)) availability.blockedDates.push(date);
-      }
-
-      availability.updatedAt = new Date().toISOString();
-      await writeAvailability(availability, current.etag);
+          availability.updatedAt = new Date().toISOString();
+          return availability;
+        }
+      });
       return res.json({ success: true });
     }
 
     if (action === 'unblock') {
       const { date, time } = req.body;
-      const current = await readAvailability();
-      const availability = current.availability;
+      await updateSingletonJsonBlob({
+        read: readAvailability,
+        write: writeAvailability,
+        errorMessage: 'Could not unblock that date. Please try again.',
+        mutate: async (availability) => {
+          if (time) {
+            availability.blockedSlots = (availability.blockedSlots || []).filter((slot) => !(slot.date === date && slot.time === time));
+          } else {
+            availability.blockedDates = (availability.blockedDates || []).filter((blockedDate) => blockedDate !== date);
+          }
 
-      if (time) {
-        availability.blockedSlots = (availability.blockedSlots || []).filter((slot) => !(slot.date === date && slot.time === time));
-      } else {
-        availability.blockedDates = (availability.blockedDates || []).filter((blockedDate) => blockedDate !== date);
-      }
-
-      availability.updatedAt = new Date().toISOString();
-      await writeAvailability(availability, current.etag);
+          availability.updatedAt = new Date().toISOString();
+          return availability;
+        }
+      });
       return res.json({ success: true });
     }
 
