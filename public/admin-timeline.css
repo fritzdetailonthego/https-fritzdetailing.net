@@ -1,0 +1,477 @@
+.schedule-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.schedule-tab {
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  color: var(--gray-light);
+  cursor: pointer;
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 1.3px;
+  padding: 10px 16px;
+  text-transform: uppercase;
+  transition: all .2s;
+}
+
+.schedule-tab:hover,
+.schedule-tab.is-active {
+  background: rgba(123,47,190,0.12);
+  border-color: rgba(155,79,222,0.5);
+  color: var(--purple-light);
+}
+
+.schedule-tab-panel {
+  display: none;
+}
+
+.schedule-tab-panel.is-active {
+  display: block;
+}
+
+.tk-shell {
+  display: grid;
+  gap: 18px;
+}
+
+.tk-surface {
+  background: linear-gradient(160deg, rgba(18,18,18,0.98) 0%, rgba(10,10,10,0.98) 100%);
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  padding: 18px;
+}
+
+.tk-header {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.tk-kicker {
+  color: var(--purple-light);
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+.tk-title {
+  color: var(--white);
+  font-family: 'Oswald', sans-serif;
+  font-size: 30px;
+  line-height: 1;
+  margin-top: 6px;
+  text-transform: uppercase;
+}
+
+.tk-copy {
+  color: var(--gray);
+  font-size: 14px;
+  line-height: 1.6;
+  margin-top: 8px;
+  max-width: 760px;
+}
+
+.tk-toolbar,
+.tk-stat-row,
+.tk-day-controls,
+.tk-compose-grid,
+.tk-slot-row,
+.tk-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.tk-toolbar button,
+.tk-day-controls button,
+.tk-slot-chip,
+.tk-mini-btn {
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  color: var(--gray-light);
+  cursor: pointer;
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  padding: 8px 12px;
+  text-transform: uppercase;
+  transition: all .2s;
+}
+
+.tk-toolbar button:hover,
+.tk-day-controls button:hover,
+.tk-slot-chip:hover,
+.tk-mini-btn:hover,
+.tk-slot-chip.is-active {
+  border-color: rgba(155,79,222,0.5);
+  color: var(--purple-light);
+}
+
+.tk-toolbar .is-primary,
+.tk-mini-btn.is-primary {
+  background: var(--purple);
+  border-color: transparent;
+  color: #fff;
+}
+
+.tk-toolbar .is-primary:hover,
+.tk-mini-btn.is-primary:hover {
+  background: var(--purple-light);
+  color: #fff;
+}
+
+.tk-toolbar .is-danger,
+.tk-mini-btn.is-danger {
+  border-color: rgba(226,75,74,0.35);
+  color: var(--red);
+}
+
+.tk-stat {
+  background: rgba(255,255,255,0.02);
+  border: 1px solid rgba(255,255,255,0.04);
+  border-radius: 2px;
+  min-width: 120px;
+  padding: 12px 14px;
+}
+
+.tk-stat-label {
+  color: var(--gray);
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1.3px;
+  text-transform: uppercase;
+}
+
+.tk-stat-value {
+  color: var(--white);
+  font-family: 'Oswald', sans-serif;
+  font-size: 28px;
+  line-height: 1;
+  margin-top: 6px;
+  text-transform: uppercase;
+}
+
+.tk-month-bar {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.tk-month-title {
+  color: var(--gray-light);
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.tk-calendar-labels,
+.tk-calendar-grid {
+  display: grid;
+  gap: 6px;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+}
+
+.tk-calendar-label {
+  color: rgba(255,255,255,0.35);
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.tk-calendar-cell {
+  align-items: center;
+  aspect-ratio: 1;
+  background: rgba(123,47,190,0.04);
+  border: 1px solid transparent;
+  border-radius: 2px;
+  color: var(--gray-light);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  justify-content: center;
+  min-height: 56px;
+  padding: 6px;
+  transition: all .15s;
+}
+
+.tk-calendar-cell:hover {
+  border-color: rgba(155,79,222,0.28);
+}
+
+.tk-calendar-cell.is-selected {
+  background: rgba(123,47,190,0.16);
+  border-color: rgba(155,79,222,0.55);
+  color: var(--purple-light);
+}
+
+.tk-calendar-cell.is-today {
+  border-color: rgba(155,79,222,0.35);
+}
+
+.tk-calendar-dots {
+  display: flex;
+  gap: 3px;
+}
+
+.tk-calendar-dot {
+  border-radius: 999px;
+  height: 5px;
+  width: 5px;
+}
+
+.tk-day-board {
+  display: grid;
+  gap: 18px;
+  grid-template-columns: minmax(0, 1.4fr) minmax(320px, .9fr);
+}
+
+.tk-board-card {
+  background: rgba(0,0,0,0.18);
+  border: 1px solid rgba(255,255,255,0.05);
+  border-radius: 2px;
+  padding: 14px;
+}
+
+.tk-day-label {
+  color: var(--white);
+  font-family: 'Oswald', sans-serif;
+  font-size: 22px;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.tk-day-meta {
+  color: var(--gray);
+  font-size: 13px;
+  margin-top: 4px;
+}
+
+.tk-scroll {
+  height: 960px;
+  overflow: auto;
+  position: relative;
+}
+
+.tk-canvas {
+  min-height: 1536px;
+  position: relative;
+}
+
+.tk-hour-row {
+  border-bottom: 1px solid rgba(255,255,255,0.03);
+  cursor: pointer;
+  left: 0;
+  position: absolute;
+  right: 0;
+}
+
+.tk-hour-label {
+  color: rgba(255,255,255,0.22);
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  left: 10px;
+  letter-spacing: 1px;
+  position: absolute;
+  text-transform: uppercase;
+  top: 4px;
+}
+
+.tk-now-line {
+  background: rgba(226,75,74,0.9);
+  height: 2px;
+  left: 72px;
+  position: absolute;
+  right: 12px;
+  z-index: 25;
+}
+
+.tk-now-dot {
+  background: var(--red);
+  border-radius: 999px;
+  height: 10px;
+  left: -5px;
+  position: absolute;
+  top: -4px;
+  width: 10px;
+}
+
+.tk-entry {
+  border: 1px solid rgba(255,255,255,0.08);
+  border-left-width: 3px;
+  border-radius: 2px;
+  cursor: pointer;
+  left: 72px;
+  padding: 8px 10px;
+  position: absolute;
+  right: 12px;
+  z-index: 12;
+}
+
+.tk-entry__title {
+  color: var(--white);
+  font-family: 'Oswald', sans-serif;
+  font-size: 18px;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.tk-entry__meta,
+.tk-entry__sub {
+  color: rgba(255,255,255,0.7);
+  font-size: 12px;
+  line-height: 1.5;
+  margin-top: 4px;
+}
+
+.tk-entry__chip,
+.tk-legend-chip {
+  border-radius: 2px;
+  display: inline-flex;
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  padding: 3px 6px;
+  text-transform: uppercase;
+}
+
+.tk-entry--customer { background: rgba(155,79,222,0.16); border-color: rgba(155,79,222,0.38); border-left-color: var(--purple-light); }
+.tk-entry--private { background: rgba(245,158,11,0.14); border-color: rgba(245,158,11,0.32); border-left-color: #F59E0B; }
+.tk-entry--travel { background: rgba(29,158,117,0.14); border-color: rgba(29,158,117,0.32); border-left-color: var(--green); }
+.tk-entry--blocked { background: rgba(226,75,74,0.14); border-color: rgba(226,75,74,0.32); border-left-color: var(--red); }
+
+.tk-field {
+  display: grid;
+  gap: 6px;
+}
+
+.tk-field label {
+  color: var(--gray);
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1.3px;
+  text-transform: uppercase;
+}
+
+.tk-field input,
+.tk-field textarea {
+  background: var(--dark);
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  color: #fff;
+  font-family: 'Open Sans', sans-serif;
+  font-size: 14px;
+  outline: none;
+  padding: 10px 12px;
+  width: 100%;
+}
+
+.tk-field textarea {
+  min-height: 88px;
+  resize: vertical;
+}
+
+.tk-type-grid {
+  display: grid;
+  gap: 10px;
+}
+
+.tk-type-card {
+  background: rgba(255,255,255,0.02);
+  border: 1px solid rgba(255,255,255,0.05);
+  border-radius: 2px;
+  cursor: pointer;
+  padding: 12px 14px;
+  transition: all .2s;
+}
+
+.tk-type-card:hover,
+.tk-type-card.is-active {
+  background: rgba(123,47,190,0.12);
+  border-color: rgba(155,79,222,0.5);
+}
+
+.tk-type-title {
+  color: var(--white);
+  font-family: 'Oswald', sans-serif;
+  font-size: 18px;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.tk-type-copy {
+  color: var(--gray);
+  font-size: 12px;
+  line-height: 1.5;
+  margin-top: 4px;
+}
+
+.tk-status-card {
+  background: rgba(123,47,190,0.08);
+  border: 1px solid rgba(123,47,190,0.22);
+  border-radius: 2px;
+  color: var(--gray-light);
+  font-size: 13px;
+  line-height: 1.6;
+  padding: 12px 14px;
+}
+
+.tk-status-card.is-warn {
+  background: rgba(226,75,74,0.08);
+  border-color: rgba(226,75,74,0.25);
+  color: #ffb4b3;
+}
+
+.tk-empty {
+  color: var(--gray);
+  font-size: 13px;
+  line-height: 1.6;
+  padding: 24px 0;
+  text-align: center;
+}
+
+@media (max-width: 980px) {
+  .tk-day-board {
+    grid-template-columns: 1fr;
+  }
+
+  .tk-scroll {
+    height: 720px;
+  }
+}
+
+@media (max-width: 680px) {
+  .tk-title {
+    font-size: 24px;
+  }
+
+  .tk-calendar-cell {
+    min-height: 44px;
+  }
+
+  .tk-scroll {
+    height: 640px;
+  }
+}

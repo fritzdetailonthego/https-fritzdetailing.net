@@ -343,6 +343,52 @@ function isExpoPushToken(value) {
   return typeof value === 'string' && /^(ExponentPushToken|ExpoPushToken)\[[^\]]+\]$/.test(value);
 }
 
+function sortManagerDevices(devices) {
+  return [...devices].sort((left, right) => {
+    const leftKey = left.lastSeenAt || left.updatedAt || left.createdAt || '';
+    const rightKey = right.lastSeenAt || right.updatedAt || right.createdAt || '';
+    return rightKey.localeCompare(leftKey);
+  });
+}
+
+function upsertManagerDevice(devices, nextDevice) {
+  const normalizedDevice = normalizeManagerDevice(nextDevice);
+  const existingIndex = devices.findIndex((device) =>
+    (normalizedDevice.pushToken && device.pushToken === normalizedDevice.pushToken) ||
+    (normalizedDevice.deviceId && device.deviceId === normalizedDevice.deviceId)
+  );
+
+  if (existingIndex >= 0) {
+    const existingDevice = devices[existingIndex];
+    devices[existingIndex] = normalizeManagerDevice({
+      ...existingDevice,
+      ...normalizedDevice,
+      createdAt: existingDevice.createdAt || normalizedDevice.createdAt
+    });
+    return devices[existingIndex];
+  }
+
+  devices.push(normalizedDevice);
+  return normalizedDevice;
+}
+
+function serializeManagerDevice(device) {
+  const normalizedDevice = normalizeManagerDevice(device);
+  return {
+    deviceId: normalizedDevice.deviceId || null,
+    platform: normalizedDevice.platform,
+    deviceName: normalizedDevice.deviceName || null,
+    appVersion: normalizedDevice.appVersion || null,
+    createdAt: normalizedDevice.createdAt,
+    updatedAt: normalizedDevice.updatedAt,
+    lastSeenAt: normalizedDevice.lastSeenAt,
+    pushReady: isExpoPushToken(normalizedDevice.pushToken),
+    pushTokenPreview: isExpoPushToken(normalizedDevice.pushToken)
+      ? normalizedDevice.pushToken.slice(0, 20) + '...'
+      : null
+  };
+}
+
 function chunkArray(items, chunkSize) {
   const chunks = [];
   for (let index = 0; index < items.length; index += chunkSize) {
@@ -810,7 +856,7 @@ module.exports = async (req, res) => {
     const { data, etag } = await readJsonBlob(MANAGER_DEVICES_PATH, [], token);
     const payload = Array.isArray(data) ? data : [];
     const devices = Array.isArray(payload)
-      ? payload.map(normalizeManagerDevice).filter((device) => device.pushToken)
+      ? sortManagerDevices(payload.map(normalizeManagerDevice))
       : [];
 
     return { data: devices, etag };
@@ -887,12 +933,26 @@ module.exports = async (req, res) => {
     const tokenSet = new Set(pushTokensToRemove);
     for (let attempt = 0; attempt < 3; attempt++) {
       const { data: devices, etag } = await readManagerDevices();
-      const filteredDevices = devices.filter((device) => !tokenSet.has(device.pushToken));
-      if (filteredDevices.length === devices.length) return 0;
+      const nowIso = new Date().toISOString();
+      let changed = 0;
+      const nextDevices = devices.map((device) => {
+        if (!tokenSet.has(device.pushToken)) {
+          return device;
+        }
+
+        changed += 1;
+        return {
+          ...device,
+          pushToken: '',
+          updatedAt: nowIso
+        };
+      });
+
+      if (changed === 0) return 0;
 
       try {
-        await writeManagerDevices(filteredDevices, etag);
-        return devices.length - filteredDevices.length;
+        await writeManagerDevices(sortManagerDevices(nextDevices), etag);
+        return changed;
       } catch (error) {
         if (error instanceof BlobPreconditionFailedError) continue;
         throw error;
@@ -1000,6 +1060,40 @@ module.exports = async (req, res) => {
       });
     }
 
+    if (action === 'register-manager-device') {
+      if (!authed) return res.status(401).json({ error: 'Unauthorized' });
+
+      const { deviceId, platform, deviceName, appVersion } = req.body || {};
+      const normalizedDeviceId = typeof deviceId === 'string' ? deviceId.trim() : '';
+      if (!normalizedDeviceId) {
+        return res.status(400).json({ error: 'A device id is required.' });
+      }
+
+      const nowIso = new Date().toISOString();
+      const devices = await updateSingletonJsonBlob({
+        read: readManagerDevices,
+        write: async (nextDevices, etag) => {
+          await writeManagerDevices(sortManagerDevices(nextDevices), etag);
+        },
+        errorMessage: 'Could not register the manager device. Please try again.',
+        mutate: async (existingDevices) => {
+          upsertManagerDevice(existingDevices, {
+            deviceId: normalizedDeviceId,
+            platform: typeof platform === 'string' ? platform : 'unknown',
+            deviceName: typeof deviceName === 'string' ? deviceName : '',
+            appVersion: typeof appVersion === 'string' ? appVersion : '',
+            updatedAt: nowIso,
+            lastSeenAt: nowIso
+          });
+
+          return existingDevices;
+        }
+      });
+
+      const device = devices.find((entry) => entry.deviceId === normalizedDeviceId);
+      return res.json({ success: true, device: serializeManagerDevice(device || { deviceId: normalizedDeviceId }) });
+    }
+
     if (action === 'register-push-token') {
       if (!authed) return res.status(401).json({ error: 'Unauthorized' });
 
@@ -1009,36 +1103,24 @@ module.exports = async (req, res) => {
       }
 
       const normalizedDeviceId = typeof deviceId === 'string' ? deviceId.trim() : '';
-        const nowIso = new Date().toISOString();
+      const nowIso = new Date().toISOString();
 
       for (let attempt = 0; attempt < 3; attempt++) {
         const { data: devices, etag } = await readManagerDevices();
-        const existingIndex = devices.findIndex((device) =>
-          device.pushToken === pushToken || (normalizedDeviceId && device.deviceId === normalizedDeviceId)
-        );
-
-        const existingDevice = existingIndex >= 0 ? devices[existingIndex] : null;
-        const nextDevice = normalizeManagerDevice({
-          ...existingDevice,
+        const nextDevice = upsertManagerDevice(devices, {
           pushToken,
           deviceId: normalizedDeviceId,
-          platform: typeof platform === 'string' ? platform : existingDevice && existingDevice.platform,
-          deviceName: typeof deviceName === 'string' ? deviceName : existingDevice && existingDevice.deviceName,
-          appVersion: typeof appVersion === 'string' ? appVersion : existingDevice && existingDevice.appVersion,
-          createdAt: existingDevice && existingDevice.createdAt ? existingDevice.createdAt : nowIso,
+          platform: typeof platform === 'string' ? platform : 'unknown',
+          deviceName: typeof deviceName === 'string' ? deviceName : '',
+          appVersion: typeof appVersion === 'string' ? appVersion : '',
+          createdAt: nowIso,
           updatedAt: nowIso,
           lastSeenAt: nowIso
         });
 
-        if (existingIndex >= 0) {
-          devices[existingIndex] = nextDevice;
-        } else {
-          devices.push(nextDevice);
-        }
-
         try {
-          await writeManagerDevices(devices, etag);
-          return res.json({ success: true, device: nextDevice });
+          await writeManagerDevices(sortManagerDevices(devices), etag);
+          return res.json({ success: true, device: serializeManagerDevice(nextDevice) });
         } catch (error) {
           if (error instanceof BlobPreconditionFailedError) continue;
           throw error;
@@ -1069,7 +1151,7 @@ module.exports = async (req, res) => {
         }
 
         try {
-          await writeManagerDevices(filteredDevices, etag);
+          await writeManagerDevices(sortManagerDevices(filteredDevices), etag);
           return res.json({ success: true, removed });
         } catch (error) {
           if (error instanceof BlobPreconditionFailedError) continue;
@@ -1080,22 +1162,38 @@ module.exports = async (req, res) => {
       return res.status(409).json({ error: 'Could not unregister push token. Please try again.' });
     }
 
+    if (action === 'list-manager-devices') {
+      if (!authed) return res.status(401).json({ error: 'Unauthorized' });
+
+      const { data: devices } = await readManagerDevices();
+      const pushCapable = devices.filter((device) => isExpoPushToken(device.pushToken)).length;
+
+      return res.json({
+        devices: devices.map(serializeManagerDevice),
+        registered: devices.length,
+        pushCapable
+      });
+    }
+
     if (action === 'send-test-notification') {
       if (!authed) return res.status(401).json({ error: 'Unauthorized' });
 
       const { pushToken } = req.body || {};
       let devices;
       let shouldPrune = false;
+      let registeredDevices = 0;
 
       if (pushToken) {
         if (!isExpoPushToken(pushToken)) {
           return res.status(400).json({ error: 'A valid Expo push token is required.' });
         }
         devices = [normalizeManagerDevice({ pushToken, platform: 'unknown' })];
+        registeredDevices = devices.length;
       } else {
         const managerDevices = await readManagerDevices();
         devices = managerDevices.data;
         shouldPrune = true;
+        registeredDevices = devices.length;
       }
 
       const result = await sendExpoPushNotifications(devices, () => ({
@@ -1111,7 +1209,12 @@ module.exports = async (req, res) => {
         await pruneManagerDevices(result.invalidTokens);
       }
 
-      return res.json({ success: true, ...result });
+      return res.json({
+        success: true,
+        ...result,
+        registeredDevices,
+        pushCapable: devices.filter((device) => isExpoPushToken(device.pushToken)).length
+      });
     }
 
     if (action === 'get-version') {

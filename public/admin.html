@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Fritz's Detail | Admin Panel</title>
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Rajdhani:wght@400;500;600;700&family=Open+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/admin-timeline.css">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{--purple:#7B2FBE;--purple-light:#9B4FDE;--black:#0A0A0A;--dark:#121212;--dark-card:#1A1A1A;--white:#FFF;--gray:#999;--gray-light:#CCC;--border:rgba(123,47,190,0.25);
@@ -77,7 +78,7 @@ body{font-family:"Open Sans",sans-serif;background:#0A0A0A;color:var(--white);mi
   <a href="index.html" style="display:flex;align-items:center;gap:10px"><img src="/logo.jpg" alt="Fritz's Detail" style="height:36px;width:auto;border-radius:2px">&larr; Back to Site</a>
   <h1>Admin <span>Panel</span></h1>
   <div class="header-meta">
-    <span class="version-chip" id="admin-version">v1.0.4</span>
+    <span class="version-chip" id="admin-version">v1.0.6</span>
   </div>
 </div>
 
@@ -267,37 +268,49 @@ body{font-family:"Open Sans",sans-serif;background:#0A0A0A;color:var(--white);mi
   <!-- BOOKING MANAGEMENT -->
   <div style="margin-top:48px;padding-top:32px;border-top:1px solid var(--border)">
     <div class="section-label">Bookings & Schedule</div>
-    <p style="color:var(--gray);font-size:14px;margin-bottom:16px">Customers book at <a href="/book.html" target="_blank" style="color:var(--purple-light)">/book.html</a>. Manage availability and view upcoming bookings below.</p>
+    <p style="color:var(--gray);font-size:14px;margin-bottom:16px">Customers book at <a href="/book.html" target="_blank" style="color:var(--purple-light)">/book.html</a>. Use the Time Keeper board for same-day planning, then switch tabs for the raw booking list or availability settings.</p>
 
-    <!-- Upcoming bookings -->
-    <div style="font-family:'Rajdhani',sans-serif;font-size:13px;text-transform:uppercase;letter-spacing:1.5px;color:var(--purple-light);font-weight:600;margin-bottom:8px">Upcoming Bookings</div>
-    <div id="bookings-list" style="margin-bottom:24px"><p style="color:var(--gray);font-size:14px">Loading...</p></div>
-
-    <!-- Quick block -->
-    <div style="font-family:'Rajdhani',sans-serif;font-size:13px;text-transform:uppercase;letter-spacing:1.5px;color:var(--purple-light);font-weight:600;margin:16px 0 8px">Block a Date</div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px">
-      <input type="date" class="input" id="block-date" style="width:auto;margin:0;flex:1;min-width:150px">
-      <input class="input" id="block-reason" placeholder="Reason (optional)" style="width:auto;margin:0;flex:1;min-width:150px">
-      <button class="btn btn-outline" style="width:auto;padding:10px 16px;font-size:13px" onclick="blockDate()">Block Full Day</button>
+    <div class="schedule-tabs" style="margin-bottom:16px">
+      <button class="schedule-tab is-active" id="schedule-tab-trigger-timeline" onclick="setScheduleTab('timeline')">Timekeeper</button>
+      <button class="schedule-tab" id="schedule-tab-trigger-upcoming" onclick="setScheduleTab('upcoming')">Upcoming</button>
+      <button class="schedule-tab" id="schedule-tab-trigger-availability" onclick="setScheduleTab('availability')">Availability</button>
     </div>
-    <div id="blocked-dates-list" style="margin-bottom:16px"></div>
 
-    <!-- Weekly hours -->
-    <details style="margin-top:16px">
-      <summary style="cursor:pointer;font-family:'Rajdhani',sans-serif;font-size:13px;text-transform:uppercase;letter-spacing:1.5px;color:var(--purple-light);font-weight:600;margin-bottom:8px">Edit Weekly Hours, Block Sizes & Travel Intervals</summary>
-      <div id="availability-editor" style="margin-top:12px"></div>
-      <button class="btn btn-green" style="margin-top:12px" onclick="saveAvailability()">Save Availability</button>
-    </details>
+    <div class="schedule-tab-panel is-active" id="schedule-tab-panel-timeline">
+      <div id="timeline-root"></div>
+    </div>
+
+    <div class="schedule-tab-panel" id="schedule-tab-panel-upcoming">
+      <div style="font-family:'Rajdhani',sans-serif;font-size:13px;text-transform:uppercase;letter-spacing:1.5px;color:var(--purple-light);font-weight:600;margin-bottom:8px">Upcoming Bookings</div>
+      <div id="bookings-list" style="margin-bottom:24px"><p style="color:var(--gray);font-size:14px">Loading...</p></div>
+    </div>
+
+    <div class="schedule-tab-panel" id="schedule-tab-panel-availability">
+      <div style="font-family:'Rajdhani',sans-serif;font-size:13px;text-transform:uppercase;letter-spacing:1.5px;color:var(--purple-light);font-weight:600;margin:0 0 8px">Block a Date</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px">
+        <input type="date" class="input" id="block-date" style="width:auto;margin:0;flex:1;min-width:150px">
+        <input class="input" id="block-reason" placeholder="Reason (optional)" style="width:auto;margin:0;flex:1;min-width:150px">
+        <button class="btn btn-outline" style="width:auto;padding:10px 16px;font-size:13px" onclick="blockDate()">Block Full Day</button>
+      </div>
+      <div id="blocked-dates-list" style="margin-bottom:16px"></div>
+
+      <details style="margin-top:16px" open>
+        <summary style="cursor:pointer;font-family:'Rajdhani',sans-serif;font-size:13px;text-transform:uppercase;letter-spacing:1.5px;color:var(--purple-light);font-weight:600;margin-bottom:8px">Edit Weekly Hours, Block Sizes & Travel Intervals</summary>
+        <div id="availability-editor" style="margin-top:12px"></div>
+        <button class="btn btn-green" style="margin-top:12px" onclick="saveAvailability()">Save Availability</button>
+      </details>
+    </div>
   </div>
 
   <!-- MANAGER APP -->
   <div style="margin-top:48px;padding-top:32px;border-top:1px solid var(--border)">
     <div class="section-label">Manager App</div>
-    <p style="color:var(--gray);font-size:14px;margin-bottom:16px">Send a test push notification to every registered manager device. The mobile app must register its Expo push token first.</p>
+    <p style="color:var(--gray);font-size:14px;margin-bottom:16px">Send a test push notification to every registered manager device. The app also reports non-push devices like BlueStacks so you can see whether the manager board is actually opening and syncing.</p>
     <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
       <button class="btn btn-outline" id="send-test-push-btn" onclick="sendTestPushNotification()">Send Test Push</button>
     </div>
     <div id="push-status" class="status-bar" style="margin-top:12px"></div>
+    <div id="manager-devices-list" style="margin-top:14px"></div>
   </div>
 
   <!-- CUSTOM FEES -->
@@ -426,6 +439,20 @@ function customConfirm(message) {
 <script>
 let pricingData = null;
 let adminPassword = '';
+let activeScheduleTab = 'timeline';
+
+function setScheduleTab(tab) {
+  activeScheduleTab = tab;
+  ['timeline', 'upcoming', 'availability'].forEach((key) => {
+    const trigger = document.getElementById('schedule-tab-trigger-' + key);
+    const panel = document.getElementById('schedule-tab-panel-' + key);
+    if (trigger) trigger.classList.toggle('is-active', key === tab);
+    if (panel) panel.classList.toggle('is-active', key === tab);
+  });
+}
+
+window.getAdminPassword = () => adminPassword;
+window.getActiveScheduleTab = () => activeScheduleTab;
 
 async function doLogin() {
   const pw = document.getElementById('pw-input').value;
@@ -452,6 +479,7 @@ async function doLogin() {
     document.getElementById('login-screen').style.display = 'none';
     document.getElementById('admin-screen').style.display = 'block';
     renderEditor();
+    window.dispatchEvent(new CustomEvent('admin-auth-ready'));
   } catch(e) {
     document.getElementById('login-error').textContent = e.message || 'Could not load pricing data.';
   }
@@ -1034,6 +1062,49 @@ async function saveAvailability() {
   }
 }
 
+async function loadManagerDevices() {
+  const el = document.getElementById('manager-devices-list');
+  if (!el || !adminPassword) return;
+
+  el.innerHTML = '<p style="color:var(--gray);font-size:13px">Loading manager devices...</p>';
+
+  try {
+    const res = await fetch('/api/bookings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'list-manager-devices', password: adminPassword })
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || 'Failed to load manager devices');
+
+    const devices = Array.isArray(data.devices) ? data.devices : [];
+    if (devices.length === 0) {
+      el.innerHTML = '<p style="color:var(--gray);font-size:13px">No manager devices have checked in yet.</p>';
+      return;
+    }
+
+    el.innerHTML =
+      '<div style="display:grid;gap:8px">' +
+      devices.map((device) =>
+        '<div style="background:var(--dark);border:1px solid var(--border);border-radius:2px;padding:12px 14px;display:flex;justify-content:space-between;gap:12px;align-items:flex-start">' +
+          '<div>' +
+            '<div style="color:var(--white);font-weight:600;font-size:14px">' + (device.deviceName || device.platform || 'Manager Device') + '</div>' +
+            '<div style="color:var(--gray);font-size:12px;margin-top:4px">' +
+              [device.platform, device.appVersion ? ('v' + device.appVersion) : null, device.deviceId || null].filter(Boolean).join(' • ') +
+            '</div>' +
+            '<div style="color:var(--gray-light);font-size:12px;margin-top:6px">Last seen: ' + (device.lastSeenAt ? new Date(device.lastSeenAt).toLocaleString() : 'Unknown') + '</div>' +
+          '</div>' +
+          '<div style="font-family:Rajdhani,sans-serif;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:4px 8px;border-radius:2px;border:1px solid ' + (device.pushReady ? 'rgba(29,158,117,0.35);color:var(--green);background:rgba(29,158,117,0.12)' : 'rgba(123,47,190,0.25);color:var(--purple-light);background:rgba(123,47,190,0.12)') + '">' +
+            (device.pushReady ? 'Push Ready' : 'Sync Only') +
+          '</div>' +
+        '</div>'
+      ).join('') +
+      '</div>';
+  } catch (e) {
+    el.innerHTML = '<p style="color:var(--red);font-size:13px">' + (e.message || 'Failed to load manager devices') + '</p>';
+  }
+}
+
 async function sendTestPushNotification() {
   const statusEl = document.getElementById('push-status');
   const button = document.getElementById('send-test-push-btn');
@@ -1058,10 +1129,13 @@ async function sendTestPushNotification() {
 
     const attempted = Number.isInteger(data.attempted) ? data.attempted : 0;
     const sent = Number.isInteger(data.sent) ? data.sent : 0;
+    const registeredDevices = Number.isInteger(data.registeredDevices) ? data.registeredDevices : 0;
     if (attempted === 0) {
       statusEl.className = 'status-bar error';
-      statusEl.textContent = 'No registered manager devices found. Open the app once and allow notifications first.';
-      showToast('No registered manager devices');
+      statusEl.textContent = registeredDevices > 0
+        ? 'Manager devices are checking in, but none are push-capable. BlueStacks and other emulators do not support Expo push tokens. Use a real device for push tests.'
+        : 'No registered manager devices found. Open the app once and allow notifications first.';
+      showToast(registeredDevices > 0 ? 'No push-capable device' : 'No registered manager devices');
       return;
     }
 
@@ -1073,6 +1147,7 @@ async function sendTestPushNotification() {
     statusEl.textContent = e.message || 'Test push failed';
     showToast('Test push failed');
   } finally {
+    loadManagerDevices();
     button.disabled = false;
   }
 }
@@ -1247,6 +1322,7 @@ doLogin = async function() {
     loadBookings();
     loadAvailability();
     loadFees();
+    loadManagerDevices();
   }
 };
 
@@ -1478,5 +1554,6 @@ async function loadAdminVersion() {
 
 loadAdminVersion();
 </script>
+<script src="/admin-timeline.js"></script>
 </body>
 </html>
