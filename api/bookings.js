@@ -4,8 +4,10 @@ const packageJson = require('../package.json');
 
 const BOOKINGS_PATH = 'bookings-data.json';
 const AVAILABILITY_PATH = 'availability-config.json';
+const MANAGER_DEVICES_PATH = 'manager-devices.json';
 const DAY_MS = 24 * 60 * 60 * 1000;
 const MANAGER_TOKEN_TTL_SECONDS = 30 * 24 * 60 * 60;
+const EXPO_PUSH_ENDPOINT = 'https://exp.host/--/api/v2/push/send';
 
 function buildDefaultAvailability() {
   return {
@@ -149,6 +151,39 @@ function parseSyncTimestamp(value) {
   if (typeof value !== 'string' || !value.trim()) return null;
   const timestamp = Date.parse(value);
   return Number.isNaN(timestamp) ? null : timestamp;
+}
+
+function normalizeManagerDevice(device) {
+  return {
+    pushToken: typeof device.pushToken === 'string' ? device.pushToken : '',
+    deviceId: typeof device.deviceId === 'string' ? device.deviceId : '',
+    platform: typeof device.platform === 'string' ? device.platform : 'unknown',
+    deviceName: typeof device.deviceName === 'string' ? device.deviceName : '',
+    appVersion: typeof device.appVersion === 'string' ? device.appVersion : '',
+    createdAt: typeof device.createdAt === 'string' ? device.createdAt : new Date().toISOString(),
+    updatedAt: typeof device.updatedAt === 'string' ? device.updatedAt : new Date().toISOString(),
+    lastSeenAt: typeof device.lastSeenAt === 'string' ? device.lastSeenAt : null
+  };
+}
+
+function isExpoPushToken(value) {
+  return typeof value === 'string' && /^(ExponentPushToken|ExpoPushToken)\[[^\]]+\]$/.test(value);
+}
+
+function chunkArray(items, chunkSize) {
+  const chunks = [];
+  for (let index = 0; index < items.length; index += chunkSize) {
+    chunks.push(items.slice(index, index + chunkSize));
+  }
+  return chunks;
+}
+
+function formatBookingPushBody(booking) {
+  const details = [];
+  if (booking.service) details.push(booking.service);
+  if (booking.vehicle) details.push(booking.vehicle);
+  if (booking.phone) details.push(booking.phone);
+  return details.join(' · ');
 }
 
 function parseDateValue(dateStr) {
@@ -372,6 +407,147 @@ module.exports = async (req, res) => {
     await put(AVAILABILITY_PATH, JSON.stringify(availability), options);
   }
 
+  async function readManagerDevices() {
+    const { blobs } = await list({ prefix: 'manager-devices', token });
+    if (blobs.length === 0) return { devices: [], etag: null };
+
+    const metadata = await head(MANAGER_DEVICES_PATH, { token });
+    const response = await fetch(blobs[0].url, {
+      headers: { Authorization: `Bearer ${token}` },
+      cache: 'no-store'
+    });
+    if (!response.ok) throw new Error('Failed to read manager device data');
+
+    const payload = await response.json();
+    const devices = Array.isArray(payload)
+      ? payload.map(normalizeManagerDevice).filter((device) => device.pushToken)
+      : [];
+
+    return { devices, etag: metadata.etag };
+  }
+
+  async function writeManagerDevices(devices, etag) {
+    const options = {
+      access: 'public',
+      contentType: 'application/json',
+      addRandomSuffix: false,
+      token
+    };
+
+    if (etag) {
+      options.allowOverwrite = true;
+      options.ifMatch = etag;
+    }
+
+    await put(MANAGER_DEVICES_PATH, JSON.stringify(devices), options);
+  }
+
+  async function sendExpoPushNotifications(devices, messageFactory) {
+    const eligibleDevices = devices.filter((device) => isExpoPushToken(device.pushToken));
+    if (eligibleDevices.length === 0) {
+      return { attempted: 0, sent: 0, invalidTokens: [] };
+    }
+
+    const headers = {
+      Accept: 'application/json',
+      'Accept-Encoding': 'gzip, deflate',
+      'Content-Type': 'application/json'
+    };
+    if (process.env.EXPO_ACCESS_TOKEN) {
+      headers.Authorization = `Bearer ${process.env.EXPO_ACCESS_TOKEN}`;
+    }
+
+    const messages = eligibleDevices.map((device) => ({
+      to: device.pushToken,
+      sound: 'default',
+      priority: 'high',
+      channelId: 'default',
+      ...messageFactory(device)
+    }));
+
+    const invalidTokens = [];
+    let sent = 0;
+
+    for (const chunk of chunkArray(messages, 100)) {
+      const response = await fetch(EXPO_PUSH_ENDPOINT, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(chunk)
+      });
+
+      if (!response.ok) {
+        throw new Error(`Expo push send failed (${response.status})`);
+      }
+
+      const payload = await response.json();
+      const tickets = Array.isArray(payload.data) ? payload.data : [];
+
+      tickets.forEach((ticket, index) => {
+        if (ticket && ticket.status === 'ok') {
+          sent += 1;
+          return;
+        }
+
+        const message = chunk[index];
+        const details = ticket && ticket.details;
+        if (details && details.error === 'DeviceNotRegistered' && message && message.to) {
+          invalidTokens.push(message.to);
+        }
+      });
+    }
+
+    return {
+      attempted: messages.length,
+      sent,
+      invalidTokens
+    };
+  }
+
+  async function pruneManagerDevices(pushTokensToRemove) {
+    if (!Array.isArray(pushTokensToRemove) || pushTokensToRemove.length === 0) return 0;
+
+    const tokenSet = new Set(pushTokensToRemove);
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const { devices, etag } = await readManagerDevices();
+      const filteredDevices = devices.filter((device) => !tokenSet.has(device.pushToken));
+      if (filteredDevices.length === devices.length) return 0;
+
+      try {
+        await writeManagerDevices(filteredDevices, etag);
+        return devices.length - filteredDevices.length;
+      } catch (error) {
+        if (error instanceof BlobPreconditionFailedError) continue;
+        throw error;
+      }
+    }
+
+    return 0;
+  }
+
+  async function notifyManagersAboutBooking(booking) {
+    const { devices } = await readManagerDevices();
+    const result = await sendExpoPushNotifications(devices, () => ({
+      title: 'New Booking',
+      body: formatBookingPushBody(booking) || `${booking.name} booked ${booking.date} at ${booking.time}`,
+      data: {
+        type: 'booking-created',
+        bookingId: booking.id,
+        date: booking.date,
+        time: booking.time,
+        customerName: booking.name,
+        phone: booking.phone,
+        service: booking.service || '',
+        vehicle: booking.vehicle || ''
+      }
+    }));
+
+    if (result.invalidTokens.length > 0) {
+      await pruneManagerDevices(result.invalidTokens);
+    }
+
+    return result;
+  }
+
   try {
     if (action === 'get-slots') {
       const { date } = req.body;
@@ -438,6 +614,120 @@ module.exports = async (req, res) => {
       });
     }
 
+    if (action === 'register-push-token') {
+      if (!authed) return res.status(401).json({ error: 'Unauthorized' });
+
+      const { pushToken, deviceId, platform, deviceName, appVersion } = req.body || {};
+      if (!isExpoPushToken(pushToken)) {
+        return res.status(400).json({ error: 'A valid Expo push token is required.' });
+      }
+
+      const normalizedDeviceId = typeof deviceId === 'string' ? deviceId.trim() : '';
+      const nowIso = new Date().toISOString();
+
+      for (let attempt = 0; attempt < 3; attempt++) {
+        const { devices, etag } = await readManagerDevices();
+        const existingIndex = devices.findIndex((device) =>
+          device.pushToken === pushToken || (normalizedDeviceId && device.deviceId === normalizedDeviceId)
+        );
+
+        const existingDevice = existingIndex >= 0 ? devices[existingIndex] : null;
+        const nextDevice = normalizeManagerDevice({
+          ...existingDevice,
+          pushToken,
+          deviceId: normalizedDeviceId,
+          platform: typeof platform === 'string' ? platform : existingDevice && existingDevice.platform,
+          deviceName: typeof deviceName === 'string' ? deviceName : existingDevice && existingDevice.deviceName,
+          appVersion: typeof appVersion === 'string' ? appVersion : existingDevice && existingDevice.appVersion,
+          createdAt: existingDevice && existingDevice.createdAt ? existingDevice.createdAt : nowIso,
+          updatedAt: nowIso,
+          lastSeenAt: nowIso
+        });
+
+        if (existingIndex >= 0) {
+          devices[existingIndex] = nextDevice;
+        } else {
+          devices.push(nextDevice);
+        }
+
+        try {
+          await writeManagerDevices(devices, etag);
+          return res.json({ success: true, device: nextDevice });
+        } catch (error) {
+          if (error instanceof BlobPreconditionFailedError) continue;
+          throw error;
+        }
+      }
+
+      return res.status(409).json({ error: 'Could not register push token. Please try again.' });
+    }
+
+    if (action === 'unregister-push-token') {
+      if (!authed) return res.status(401).json({ error: 'Unauthorized' });
+
+      const { pushToken, deviceId } = req.body || {};
+      const normalizedDeviceId = typeof deviceId === 'string' ? deviceId.trim() : '';
+      if (!pushToken && !normalizedDeviceId) {
+        return res.status(400).json({ error: 'A push token or device id is required.' });
+      }
+
+      for (let attempt = 0; attempt < 3; attempt++) {
+        const { devices, etag } = await readManagerDevices();
+        const filteredDevices = devices.filter((device) =>
+          device.pushToken !== pushToken && (!normalizedDeviceId || device.deviceId !== normalizedDeviceId)
+        );
+        const removed = devices.length - filteredDevices.length;
+
+        if (removed === 0) {
+          return res.json({ success: true, removed: 0 });
+        }
+
+        try {
+          await writeManagerDevices(filteredDevices, etag);
+          return res.json({ success: true, removed });
+        } catch (error) {
+          if (error instanceof BlobPreconditionFailedError) continue;
+          throw error;
+        }
+      }
+
+      return res.status(409).json({ error: 'Could not unregister push token. Please try again.' });
+    }
+
+    if (action === 'send-test-notification') {
+      if (!authed) return res.status(401).json({ error: 'Unauthorized' });
+
+      const { pushToken } = req.body || {};
+      let devices;
+      let shouldPrune = false;
+
+      if (pushToken) {
+        if (!isExpoPushToken(pushToken)) {
+          return res.status(400).json({ error: 'A valid Expo push token is required.' });
+        }
+        devices = [normalizeManagerDevice({ pushToken, platform: 'unknown' })];
+      } else {
+        const managerDevices = await readManagerDevices();
+        devices = managerDevices.devices;
+        shouldPrune = true;
+      }
+
+      const result = await sendExpoPushNotifications(devices, () => ({
+        title: 'Test Notification',
+        body: 'Fritz management push notifications are working.',
+        data: {
+          type: 'test-notification',
+          sentAt: new Date().toISOString()
+        }
+      }));
+
+      if (shouldPrune && result.invalidTokens.length > 0) {
+        await pruneManagerDevices(result.invalidTokens);
+      }
+
+      return res.json({ success: true, ...result });
+    }
+
     if (action === 'get-version') {
       const commitSha = typeof process.env.VERCEL_GIT_COMMIT_SHA === 'string'
         ? process.env.VERCEL_GIT_COMMIT_SHA
@@ -483,7 +773,15 @@ module.exports = async (req, res) => {
 
         try {
           await writeBookings(bookings, etag);
-          return res.json({ success: true, booking });
+
+          let notificationResult = { attempted: 0, sent: 0, invalidTokens: [] };
+          try {
+            notificationResult = await notifyManagersAboutBooking(booking);
+          } catch (notificationError) {
+            console.error('Push notification error:', notificationError.message);
+          }
+
+          return res.json({ success: true, booking, notifications: notificationResult });
         } catch (error) {
           if (error instanceof BlobPreconditionFailedError) {
             continue;
