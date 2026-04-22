@@ -1,9 +1,11 @@
+const crypto = require('crypto');
 const { put, list, head, BlobPreconditionFailedError } = require('@vercel/blob');
 const packageJson = require('../package.json');
 
 const BOOKINGS_PATH = 'bookings-data.json';
 const AVAILABILITY_PATH = 'availability-config.json';
 const DAY_MS = 24 * 60 * 60 * 1000;
+const MANAGER_TOKEN_TTL_SECONDS = 30 * 24 * 60 * 60;
 
 function buildDefaultAvailability() {
   return {
@@ -21,6 +23,132 @@ function buildDefaultAvailability() {
     blockedSlots: [],
     maxAdvanceDays: 30
   };
+}
+
+function base64UrlEncode(value) {
+  return Buffer.from(value)
+    .toString('base64')
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/g, '');
+}
+
+function base64UrlDecode(value) {
+  const normalized = String(value || '')
+    .replace(/-/g, '+')
+    .replace(/_/g, '/');
+  const padding = normalized.length % 4 === 0 ? '' : '='.repeat(4 - (normalized.length % 4));
+  return Buffer.from(normalized + padding, 'base64').toString('utf8');
+}
+
+function getManagerSessionSecret() {
+  return process.env.MANAGER_SESSION_SECRET || process.env.ADMIN_PASSWORD || '';
+}
+
+function timingSafeEqualString(left, right) {
+  const leftBuffer = Buffer.from(String(left || ''));
+  const rightBuffer = Buffer.from(String(right || ''));
+  return leftBuffer.length === rightBuffer.length && crypto.timingSafeEqual(leftBuffer, rightBuffer);
+}
+
+function getManagerTokenFromRequest(req, body) {
+  const authHeader = req.headers.authorization || req.headers.Authorization || '';
+  if (typeof authHeader === 'string' && authHeader.startsWith('Bearer ')) {
+    return authHeader.slice('Bearer '.length).trim();
+  }
+
+  if (body && typeof body.managerToken === 'string') return body.managerToken;
+  if (body && typeof body.token === 'string') return body.token;
+  return '';
+}
+
+function verifyManagerToken(token) {
+  if (!token) return null;
+
+  const [encodedPayload, signature] = String(token).split('.');
+  if (!encodedPayload || !signature) return null;
+
+  const expectedSignature = base64UrlEncode(
+    crypto
+      .createHmac('sha256', getManagerSessionSecret())
+      .update(encodedPayload)
+      .digest()
+  );
+
+  if (!timingSafeEqualString(signature, expectedSignature)) {
+    return null;
+  }
+
+  try {
+    const payload = JSON.parse(base64UrlDecode(encodedPayload));
+    const nowSeconds = Math.floor(Date.now() / 1000);
+    if (payload.role !== 'manager') return null;
+    if (!Number.isInteger(payload.exp) || payload.exp <= nowSeconds) return null;
+    if (!Number.isInteger(payload.iat) || payload.iat > nowSeconds + 60) return null;
+    if (payload.exp - payload.iat > MANAGER_TOKEN_TTL_SECONDS + 60) return null;
+    return payload;
+  } catch (error) {
+    return null;
+  }
+}
+
+function normalizeAvailability(availability) {
+  const defaults = buildDefaultAvailability();
+  const weeklyHours = { ...defaults.weeklyHours, ...((availability && availability.weeklyHours) || {}) };
+
+  return {
+    ...defaults,
+    ...(availability || {}),
+    weeklyHours,
+    blockedDates: Array.isArray(availability && availability.blockedDates) ? availability.blockedDates : [],
+    blockedSlots: Array.isArray(availability && availability.blockedSlots) ? availability.blockedSlots : [],
+    slotDuration:
+      Number.isInteger(availability && availability.slotDuration) && availability.slotDuration > 0
+        ? availability.slotDuration
+        : defaults.slotDuration,
+    maxAdvanceDays:
+      Number.isInteger(availability && availability.maxAdvanceDays) && availability.maxAdvanceDays >= 0
+        ? availability.maxAdvanceDays
+        : defaults.maxAdvanceDays,
+    updatedAt: typeof (availability && availability.updatedAt) === 'string' ? availability.updatedAt : null
+  };
+}
+
+function normalizeBooking(booking) {
+  const parsedFallbackDate = Date.parse(`${booking.date || '1970-01-01'}T${booking.time || '00:00'}:00.000Z`);
+  const fallbackUpdatedAt =
+    typeof booking.createdAt === 'string'
+      ? booking.createdAt
+      : new Date(Number.isNaN(parsedFallbackDate) ? 0 : parsedFallbackDate).toISOString();
+
+  return {
+    ...booking,
+    status: booking.status || 'confirmed',
+    updatedAt: typeof booking.updatedAt === 'string' ? booking.updatedAt : fallbackUpdatedAt
+  };
+}
+
+function sortBookings(bookings) {
+  bookings.sort((left, right) => (left.date + left.time).localeCompare(right.date + right.time));
+  return bookings;
+}
+
+function getLatestSyncAt(bookings, availability) {
+  const candidates = [];
+
+  for (const booking of bookings) {
+    if (typeof booking.updatedAt === 'string') candidates.push(booking.updatedAt);
+  }
+  if (availability && typeof availability.updatedAt === 'string') candidates.push(availability.updatedAt);
+
+  candidates.push(new Date().toISOString());
+  return candidates.sort().slice(-1)[0];
+}
+
+function parseSyncTimestamp(value) {
+  if (typeof value !== 'string' || !value.trim()) return null;
+  const timestamp = Date.parse(value);
+  return Number.isNaN(timestamp) ? null : timestamp;
 }
 
 function parseDateValue(dateStr) {
@@ -170,7 +298,7 @@ module.exports = async (req, res) => {
   if (req.method === 'OPTIONS') {
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
     return res.status(200).end();
   }
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -178,7 +306,11 @@ module.exports = async (req, res) => {
 
   const token = process.env.BLOB_READ_WRITE_TOKEN;
   const { action, password } = req.body || {};
-  const authed = password && password === process.env.ADMIN_PASSWORD;
+  const managerSession = (
+    (password && password === process.env.ADMIN_PASSWORD && { role: 'manager', auth: 'password' }) ||
+    verifyManagerToken(getManagerTokenFromRequest(req, req.body || {}))
+  );
+  const authed = !!managerSession;
 
   async function readBookings() {
     const { blobs } = await list({ prefix: 'bookings-data', token });
@@ -212,7 +344,7 @@ module.exports = async (req, res) => {
 
   async function readAvailability() {
     const { blobs } = await list({ prefix: 'availability-config', token });
-    if (blobs.length === 0) return { availability: buildDefaultAvailability(), etag: null };
+    if (blobs.length === 0) return { availability: normalizeAvailability(buildDefaultAvailability()), etag: null };
 
     const metadata = await head(AVAILABILITY_PATH, { token });
     const response = await fetch(blobs[0].url, {
@@ -221,7 +353,7 @@ module.exports = async (req, res) => {
     });
     if (!response.ok) throw new Error('Failed to read availability data');
 
-    return { availability: await response.json(), etag: metadata.etag };
+    return { availability: normalizeAvailability(await response.json()), etag: metadata.etag };
   }
 
   async function writeAvailability(availability, etag) {
@@ -269,6 +401,43 @@ module.exports = async (req, res) => {
       });
     }
 
+    if (action === 'manager-bootstrap') {
+      if (!authed) return res.status(401).json({ error: 'Unauthorized' });
+
+      const [{ bookings }, { availability }] = await Promise.all([readBookings(), readAvailability()]);
+      const normalizedBookings = sortBookings(bookings.map(normalizeBooking));
+      return res.json({
+        bookings: normalizedBookings,
+        availability,
+        serverTime: new Date().toISOString(),
+        latestSyncAt: getLatestSyncAt(normalizedBookings, availability),
+        version: typeof packageJson.version === 'string' ? packageJson.version : '0.0.0'
+      });
+    }
+
+    if (action === 'manager-sync') {
+      if (!authed) return res.status(401).json({ error: 'Unauthorized' });
+
+      const sinceTimestamp = parseSyncTimestamp(req.body && req.body.since);
+      const [{ bookings }, { availability }] = await Promise.all([readBookings(), readAvailability()]);
+      const normalizedBookings = sortBookings(bookings.map(normalizeBooking));
+      const changedBookings =
+        sinceTimestamp === null
+          ? normalizedBookings
+          : normalizedBookings.filter((booking) => Date.parse(booking.updatedAt) > sinceTimestamp);
+      const availabilityChanged =
+        sinceTimestamp === null ||
+        (availability.updatedAt && Date.parse(availability.updatedAt) > sinceTimestamp);
+
+      return res.json({
+        bookings: changedBookings,
+        availability: availabilityChanged ? availability : null,
+        serverTime: new Date().toISOString(),
+        latestSyncAt: getLatestSyncAt(normalizedBookings, availability),
+        version: typeof packageJson.version === 'string' ? packageJson.version : '0.0.0'
+      });
+    }
+
     if (action === 'get-version') {
       const commitSha = typeof process.env.VERCEL_GIT_COMMIT_SHA === 'string'
         ? process.env.VERCEL_GIT_COMMIT_SHA
@@ -295,6 +464,7 @@ module.exports = async (req, res) => {
           return res.status(validation.status).json({ error: validation.error });
         }
 
+        const nowIso = new Date().toISOString();
         const booking = {
           id: 'BK-' + Date.now() + '-' + Math.random().toString(36).substr(2, 4),
           date,
@@ -305,7 +475,8 @@ module.exports = async (req, res) => {
           service: service || '',
           notes: notes || '',
           status: 'confirmed',
-          createdAt: new Date().toISOString()
+          createdAt: nowIso,
+          updatedAt: nowIso
         };
 
         bookings.push(booking);
@@ -328,15 +499,18 @@ module.exports = async (req, res) => {
 
     if (action === 'list-bookings') {
       const { bookings } = await readBookings();
-      bookings.sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
-      return res.json({ bookings });
+      return res.json({ bookings: sortBookings(bookings.map(normalizeBooking)) });
     }
 
     if (action === 'cancel-booking') {
       const { bookingId } = req.body;
       const { bookings, etag } = await readBookings();
       const booking = bookings.find((entry) => entry.id === bookingId);
-      if (booking) booking.status = 'cancelled';
+      if (booking) {
+        booking.status = 'cancelled';
+        booking.updatedAt = new Date().toISOString();
+        booking.cancelledAt = booking.updatedAt;
+      }
       await writeBookings(bookings, etag);
       return res.json({ success: true });
     }
@@ -349,7 +523,9 @@ module.exports = async (req, res) => {
     if (action === 'save-availability') {
       const { availability } = req.body;
       const current = await readAvailability();
-      await writeAvailability(availability, current.etag);
+      const nextAvailability = normalizeAvailability(availability);
+      nextAvailability.updatedAt = new Date().toISOString();
+      await writeAvailability(nextAvailability, current.etag);
       return res.json({ success: true });
     }
 
@@ -366,6 +542,7 @@ module.exports = async (req, res) => {
         if (!availability.blockedDates.includes(date)) availability.blockedDates.push(date);
       }
 
+      availability.updatedAt = new Date().toISOString();
       await writeAvailability(availability, current.etag);
       return res.json({ success: true });
     }
@@ -381,6 +558,7 @@ module.exports = async (req, res) => {
         availability.blockedDates = (availability.blockedDates || []).filter((blockedDate) => blockedDate !== date);
       }
 
+      availability.updatedAt = new Date().toISOString();
       await writeAvailability(availability, current.etag);
       return res.json({ success: true });
     }
