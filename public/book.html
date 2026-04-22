@@ -115,13 +115,6 @@ h1 em{color:var(--purple-light);font-style:normal}
     <input class="input" id="bk-vehicle" placeholder="Vehicle (e.g. 2020 Honda Civic)">
     <select class="input" id="bk-service" style="cursor:pointer">
       <option value="">What service do you need?</option>
-      <option>Premium Wash</option>
-      <option>Interior Clean</option>
-      <option>Paint Correction</option>
-      <option>Ceramic Coating</option>
-      <option>The Shiny Package</option>
-      <option>Maintenance Package</option>
-      <option>Wash Clay Seal</option>
       <option>Other (describe in notes)</option>
     </select>
     <textarea class="input" id="bk-notes" placeholder="Notes (optional)" rows="2" style="resize:vertical"></textarea>
@@ -148,6 +141,103 @@ let currentYear = new Date().getFullYear();
 let selectedDate = null;
 let selectedTime = null;
 let selectedTimeLabel = null;
+let bookingConfig = { maxAdvanceDays: 30 };
+
+function getMaxAdvanceDays() {
+  return Number.isInteger(bookingConfig.maxAdvanceDays) && bookingConfig.maxAdvanceDays >= 0
+    ? bookingConfig.maxAdvanceDays
+    : 30;
+}
+
+function collectServiceNames(pricing) {
+  const names = [];
+  const seen = new Set();
+
+  for (const tier of Object.values(pricing || {})) {
+    for (const section of ['exterior', 'interior', 'packages']) {
+      for (const name of Object.keys((tier && tier[section]) || {})) {
+        if (!seen.has(name)) {
+          seen.add(name);
+          names.push(name);
+        }
+      }
+    }
+  }
+
+  return names;
+}
+
+function setBookingServices(services) {
+  const select = document.getElementById('bk-service');
+  if (!select || !Array.isArray(services) || services.length === 0) return;
+
+  const currentValue = select.value;
+  select.innerHTML = '';
+
+  const placeholder = document.createElement('option');
+  placeholder.value = '';
+  placeholder.textContent = 'What service do you need?';
+  select.appendChild(placeholder);
+
+  for (const service of services) {
+    const option = document.createElement('option');
+    option.value = service;
+    option.textContent = service;
+    select.appendChild(option);
+  }
+
+  const other = document.createElement('option');
+  other.value = 'Other (describe in notes)';
+  other.textContent = 'Other (describe in notes)';
+  select.appendChild(other);
+
+  if (currentValue && Array.from(select.options).some((option) => option.value === currentValue)) {
+    select.value = currentValue;
+  }
+}
+
+async function loadBookingConfig() {
+  try {
+    const res = await fetch('/api/bookings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'get-config' })
+    });
+    if (!res.ok) return;
+
+    const data = await res.json();
+    if (Number.isInteger(data.maxAdvanceDays) && data.maxAdvanceDays >= 0) {
+      bookingConfig.maxAdvanceDays = data.maxAdvanceDays;
+      renderCalendar();
+    }
+  } catch(e) {}
+}
+
+async function loadBookingServices() {
+  try {
+    const res = await fetch('/pricing.json?t=' + Date.now());
+    if (!res.ok) return;
+
+    const pricing = await res.json();
+    setBookingServices(collectServiceNames(pricing));
+  } catch(e) {}
+}
+
+function appendConfirmDetail(container, labelText, valueText) {
+  const row = document.createElement('div');
+  row.className = 'confirm-detail';
+
+  const label = document.createElement('span');
+  label.className = 'label';
+  label.textContent = labelText;
+
+  const value = document.createElement('span');
+  value.textContent = valueText;
+
+  row.appendChild(label);
+  row.appendChild(value);
+  container.appendChild(row);
+}
 
 function goStep(n) {
   document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
@@ -162,7 +252,7 @@ function renderCalendar() {
   const today = new Date();
   today.setHours(0,0,0,0);
   const maxDate = new Date(today);
-  maxDate.setDate(maxDate.getDate() + 30);
+  maxDate.setDate(maxDate.getDate() + getMaxAdvanceDays());
 
   const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
   document.getElementById('cal-month').textContent = monthNames[currentMonth] + ' ' + currentYear;
@@ -279,13 +369,14 @@ async function submitBooking() {
     if (!res.ok) throw new Error(data.error);
 
     const d = new Date(selectedDate + 'T12:00:00');
-    document.getElementById('confirm-details').innerHTML =
-      '<div class="confirm-detail"><span class="label">Date</span><span>' + d.toLocaleDateString('en-US', { weekday:'long', month:'long', day:'numeric' }) + '</span></div>' +
-      '<div class="confirm-detail"><span class="label">Time</span><span>' + selectedTimeLabel + '</span></div>' +
-      '<div class="confirm-detail"><span class="label">Name</span><span>' + name + '</span></div>' +
-      '<div class="confirm-detail"><span class="label">Phone</span><span>' + phone + '</span></div>' +
-      (vehicle ? '<div class="confirm-detail"><span class="label">Vehicle</span><span>' + vehicle + '</span></div>' : '') +
-      (service ? '<div class="confirm-detail"><span class="label">Service</span><span>' + service + '</span></div>' : '');
+    const confirmDetails = document.getElementById('confirm-details');
+    confirmDetails.innerHTML = '';
+    appendConfirmDetail(confirmDetails, 'Date', d.toLocaleDateString('en-US', { weekday:'long', month:'long', day:'numeric' }));
+    appendConfirmDetail(confirmDetails, 'Time', selectedTimeLabel);
+    appendConfirmDetail(confirmDetails, 'Name', name);
+    appendConfirmDetail(confirmDetails, 'Phone', phone);
+    if (vehicle) appendConfirmDetail(confirmDetails, 'Vehicle', vehicle);
+    if (service) appendConfirmDetail(confirmDetails, 'Service', service);
 
     document.querySelectorAll('.progress-dot').forEach(d => d.className = 'progress-dot done');
     document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
@@ -299,5 +390,7 @@ async function submitBooking() {
 }
 
 renderCalendar();
+loadBookingConfig();
+loadBookingServices();
 </script>
 </body></html>

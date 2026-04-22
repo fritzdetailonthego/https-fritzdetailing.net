@@ -12,10 +12,12 @@
 --lavender-light:#C9A9E8;
 --lavender-dark:#8E5BC4;--green:#1D9E75;--red:#E24B4A}
 body{font-family:"Open Sans",sans-serif;background:#0A0A0A;color:var(--white);min-height:100vh}
-.header{background:rgba(10,10,10,0.95);border-bottom:1px solid var(--border);padding:16px 24px;display:flex;align-items:center;justify-content:space-between}
+.header{background:rgba(10,10,10,0.95);border-bottom:1px solid var(--border);padding:16px 24px;display:flex;align-items:center;justify-content:space-between;gap:16px}
 .header a{color:var(--purple-light);text-decoration:none;font-family:'Rajdhani',sans-serif;font-weight:600;font-size:14px;text-transform:uppercase;letter-spacing:1px}
 .header h1{font-family:'Oswald',sans-serif;font-size:18px;font-weight:600;letter-spacing:1px;text-transform:uppercase}
 .header h1 span{color:var(--purple-light)}
+.header-meta{display:flex;align-items:center;justify-content:flex-end;min-width:120px}
+.version-chip{display:inline-flex;align-items:center;justify-content:center;padding:6px 10px;border:1px solid var(--border);border-radius:2px;background:rgba(123,47,190,0.08);color:var(--gray-light);font-family:'Rajdhani',sans-serif;font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase;white-space:nowrap}
 .container{max-width:1000px;margin:0 auto;padding:32px 24px}
 
 /* LOGIN */
@@ -74,7 +76,9 @@ body{font-family:"Open Sans",sans-serif;background:#0A0A0A;color:var(--white);mi
 <div class="header">
   <a href="index.html" style="display:flex;align-items:center;gap:10px"><img src="/logo.jpg" alt="Fritz's Detail" style="height:36px;width:auto;border-radius:2px">&larr; Back to Site</a>
   <h1>Admin <span>Panel</span></h1>
-  <span></span>
+  <div class="header-meta">
+    <span class="version-chip" id="admin-version">v1.0.1</span>
+  </div>
 </div>
 
 <div class="container">
@@ -789,6 +793,65 @@ async function saveGallery() {
 // ===== BOOKINGS =====
 let availabilityConfig = null;
 
+function formatBookingTime(time) {
+  const parts = typeof time === 'string' ? time.split(':') : [];
+  const hour = parseInt(parts[0], 10);
+  const minute = parts[1] || '00';
+  const displayHour = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
+  return displayHour + ':' + minute + (hour >= 12 ? ' PM' : ' AM');
+}
+
+function createUpcomingBookingRow(booking) {
+  const row = document.createElement('div');
+  row.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:var(--dark);border:1px solid var(--border);border-radius:2px;margin-bottom:6px;font-size:13px';
+
+  const info = document.createElement('div');
+
+  const identityLine = document.createElement('div');
+  const name = document.createElement('strong');
+  name.style.color = 'var(--white)';
+  name.textContent = booking.name || '';
+  identityLine.appendChild(name);
+
+  const phone = document.createElement('span');
+  phone.style.color = 'var(--gray)';
+  phone.textContent = ' (' + (booking.phone || '') + ')';
+  identityLine.appendChild(phone);
+  info.appendChild(identityLine);
+
+  const metaLine = document.createElement('div');
+  const date = new Date(booking.date + 'T12:00:00');
+  const schedule = document.createElement('span');
+  schedule.style.color = 'var(--purple-light)';
+  schedule.textContent = date.toLocaleDateString('en-US', { weekday:'short', month:'short', day:'numeric' }) + ' at ' + formatBookingTime(booking.time);
+  metaLine.appendChild(schedule);
+
+  if (booking.service) {
+    const service = document.createElement('span');
+    service.style.color = 'var(--gray)';
+    service.textContent = ' - ' + booking.service;
+    metaLine.appendChild(service);
+  }
+
+  if (booking.vehicle) {
+    const vehicle = document.createElement('span');
+    vehicle.style.color = 'var(--gray)';
+    vehicle.textContent = ' - ' + booking.vehicle;
+    metaLine.appendChild(vehicle);
+  }
+
+  info.appendChild(metaLine);
+  row.appendChild(info);
+
+  const button = document.createElement('button');
+  button.style.cssText = 'background:none;border:1px solid rgba(226,75,74,0.3);color:var(--red);padding:4px 10px;border-radius:2px;cursor:pointer;font-size:11px;font-family:Rajdhani,sans-serif;font-weight:600;text-transform:uppercase';
+  button.textContent = 'Cancel';
+  button.addEventListener('click', () => cancelBooking(booking.id));
+  row.appendChild(button);
+
+  return row;
+}
+
 async function loadBookings() {
   try {
     const res = await fetch('/api/bookings', {
@@ -807,18 +870,10 @@ async function loadBookings() {
       return;
     }
 
-    el.innerHTML = upcoming.map(b => {
-      const d = new Date(b.date + 'T12:00:00');
-      const dateStr = d.toLocaleDateString('en-US', { weekday:'short', month:'short', day:'numeric' });
-      const h = parseInt(b.time.split(':')[0]); const m = b.time.split(':')[1];
-      const timeStr = (h > 12 ? h-12 : h) + ':' + m + (h >= 12 ? ' PM' : ' AM');
-      return '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:var(--dark);border:1px solid var(--border);border-radius:2px;margin-bottom:6px;font-size:13px">' +
-        '<div><strong style="color:var(--white)">' + b.name + '</strong> <span style="color:var(--gray)">(' + b.phone + ')</span><br>' +
-        '<span style="color:var(--purple-light)">' + dateStr + ' at ' + timeStr + '</span>' +
-        (b.service ? ' <span style="color:var(--gray)">- ' + b.service + '</span>' : '') +
-        (b.vehicle ? ' <span style="color:var(--gray)">- ' + b.vehicle + '</span>' : '') + '</div>' +
-        '<button onclick="cancelBooking(\'' + b.id + '\')" style="background:none;border:1px solid rgba(226,75,74,0.3);color:var(--red);padding:4px 10px;border-radius:2px;cursor:pointer;font-size:11px;font-family:Rajdhani,sans-serif;font-weight:600;text-transform:uppercase">Cancel</button></div>';
-    }).join('');
+    el.innerHTML = '';
+    upcoming.forEach((booking) => {
+      el.appendChild(createUpcomingBookingRow(booking));
+    });
   } catch(e) {
     document.getElementById('bookings-list').innerHTML = '<p style="color:var(--red);font-size:14px">' + (e.message || 'Failed to load bookings') + '</p>';
   }
@@ -1287,6 +1342,21 @@ loadSales = async function() {
     document.body.insertBefore(banner, document.body.firstChild);
   } catch(e) {}
 })();
+
+async function loadAdminVersion() {
+  const versionEl = document.getElementById('admin-version');
+  if (!versionEl) return;
+
+  try {
+    const res = await fetch('/api/version');
+    if (!res.ok) return;
+    const data = await res.json();
+    const version = data && data.version ? 'v' + data.version : versionEl.textContent;
+    versionEl.textContent = data && data.commit ? version + ' · ' + data.commit : version;
+  } catch (e) {}
+}
+
+loadAdminVersion();
 </script>
 </body>
 </html>

@@ -258,6 +258,16 @@ module.exports = async (req, res) => {
       return res.json({ slots: result.slots, date });
     }
 
+    if (action === 'get-config') {
+      const { availability } = await readAvailability();
+      return res.json({
+        maxAdvanceDays:
+          Number.isInteger(availability.maxAdvanceDays) && availability.maxAdvanceDays >= 0
+            ? availability.maxAdvanceDays
+            : 30
+      });
+    }
+
     if (action === 'book') {
       const { date, time, name, phone, vehicle, service, notes } = req.body;
       if (!date || !time || !name || !phone) {

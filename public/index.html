@@ -1252,8 +1252,7 @@ function generateInvoice() {
 // Init invoice services on load
 window.customFees = [];
 fetch('/api/fees', {
-  method: 'POST', headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({ action: 'public-list' })
+  method: 'GET'
 }).then(r => r.json()).then(d => {
   window.customFees = d.fees || [];
   if (typeof invUpdateServices === 'function') invUpdateServices();
