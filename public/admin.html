@@ -290,6 +290,16 @@ body{font-family:"Open Sans",sans-serif;background:#0A0A0A;color:var(--white);mi
     </details>
   </div>
 
+  <!-- MANAGER APP -->
+  <div style="margin-top:48px;padding-top:32px;border-top:1px solid var(--border)">
+    <div class="section-label">Manager App</div>
+    <p style="color:var(--gray);font-size:14px;margin-bottom:16px">Send a test push notification to every registered manager device. The mobile app must register its Expo push token first.</p>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+      <button class="btn btn-outline" id="send-test-push-btn" onclick="sendTestPushNotification()">Send Test Push</button>
+    </div>
+    <div id="push-status" class="status-bar" style="margin-top:12px"></div>
+  </div>
+
   <!-- CUSTOM FEES -->
   <div style="margin-top:48px;padding-top:32px;border-top:1px solid var(--border)">
     <div class="section-label">Custom Fees & Add-Ons</div>
@@ -959,6 +969,49 @@ async function saveAvailability() {
     body: JSON.stringify({ action: 'save-availability', password: adminPassword, availability: availabilityConfig })
   });
   showToast('Availability saved');
+}
+
+async function sendTestPushNotification() {
+  const statusEl = document.getElementById('push-status');
+  const button = document.getElementById('send-test-push-btn');
+  if (!statusEl || !button) return;
+
+  button.disabled = true;
+  statusEl.className = 'status-bar';
+  statusEl.style.display = 'block';
+  statusEl.style.background = 'rgba(123,47,190,0.15)';
+  statusEl.style.borderColor = 'rgba(123,47,190,0.3)';
+  statusEl.style.color = 'var(--purple-light)';
+  statusEl.textContent = 'Sending test push...';
+
+  try {
+    const res = await fetch('/api/bookings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'send-test-notification', password: adminPassword })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Test push failed');
+
+    const attempted = Number.isInteger(data.attempted) ? data.attempted : 0;
+    const sent = Number.isInteger(data.sent) ? data.sent : 0;
+    if (attempted === 0) {
+      statusEl.className = 'status-bar error';
+      statusEl.textContent = 'No registered manager devices found. Open the app once and allow notifications first.';
+      showToast('No registered manager devices');
+      return;
+    }
+
+    statusEl.className = 'status-bar success';
+    statusEl.textContent = 'Test push sent to ' + sent + ' of ' + attempted + ' registered device' + (attempted === 1 ? '' : 's') + '.';
+    showToast('Test push sent');
+  } catch (e) {
+    statusEl.className = 'status-bar error';
+    statusEl.textContent = e.message || 'Test push failed';
+    showToast('Test push failed');
+  } finally {
+    button.disabled = false;
+  }
 }
 
 // ===== FEES MANAGEMENT =====
