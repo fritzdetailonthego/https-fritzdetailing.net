@@ -1,4 +1,5 @@
 const { put, list, head, BlobPreconditionFailedError } = require('@vercel/blob');
+const packageJson = require('../package.json');
 
 const BOOKINGS_PATH = 'bookings-data.json';
 const AVAILABILITY_PATH = 'availability-config.json';
@@ -265,6 +266,17 @@ module.exports = async (req, res) => {
           Number.isInteger(availability.maxAdvanceDays) && availability.maxAdvanceDays >= 0
             ? availability.maxAdvanceDays
             : 30
+      });
+    }
+
+    if (action === 'get-version') {
+      const commitSha = typeof process.env.VERCEL_GIT_COMMIT_SHA === 'string'
+        ? process.env.VERCEL_GIT_COMMIT_SHA
+        : '';
+
+      return res.json({
+        version: typeof packageJson.version === 'string' ? packageJson.version : '0.0.0',
+        commit: commitSha ? commitSha.slice(0, 7) : null
       });
     }
 

@@ -1348,7 +1348,11 @@ async function loadAdminVersion() {
   if (!versionEl) return;
 
   try {
-    const res = await fetch('/api/version');
+    const res = await fetch('/api/bookings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'get-version' })
+    });
     if (!res.ok) return;
     const data = await res.json();
     const version = data && data.version ? 'v' + data.version : versionEl.textContent;
