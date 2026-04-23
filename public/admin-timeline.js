@@ -36,8 +36,33 @@
       dot: '#E24B4A',
       defaultName: 'Unavailable',
       defaultService: 'Availability Block'
+    },
+    recurring: {
+      label: 'Recurring',
+      copy: 'Repeating unavailable hold',
+      className: 'tk-entry--blocked',
+      dot: '#E24B4A',
+      defaultName: 'Recurring Hold',
+      defaultService: 'Recurring Hold'
     }
   };
+  const RECURRENCE_OPTIONS = [
+    { value: 'none', label: 'One Time' },
+    { value: 'daily', label: 'Daily' },
+    { value: 'weekdays', label: 'Weekdays' },
+    { value: 'weekends', label: 'Weekends' },
+    { value: 'weekly', label: 'Weekly' },
+    { value: 'custom', label: 'Custom' }
+  ];
+  const CUSTOM_DAY_OPTIONS = [
+    { value: 0, label: 'S' },
+    { value: 1, label: 'M' },
+    { value: 2, label: 'T' },
+    { value: 3, label: 'W' },
+    { value: 4, label: 'T' },
+    { value: 5, label: 'F' },
+    { value: 6, label: 'S' }
+  ];
 
   const state = {
     initialized: false,
@@ -54,9 +79,14 @@
     activeType: 'customer',
     editingBookingId: null,
     editingBlockedId: null,
+    editingRecurringId: null,
     startTime: '',
     endTime: '',
     durationInput: '2:00',
+    recurrence: 'none',
+    customDays: [],
+    recurrenceStartDate: dateKey(new Date()),
+    recurrenceEndDate: '',
     name: '',
     phone: '',
     vehicle: '',
@@ -176,6 +206,71 @@
     return null;
   }
 
+  function normalizeRecurringPattern(value) {
+    if (value === 'daily' || value === 'weekdays' || value === 'weekends' || value === 'custom') {
+      return value;
+    }
+
+    if (value === 'weekly') {
+      return value;
+    }
+
+    return 'weekly';
+  }
+
+  function normalizeCustomDays(days, fallbackDate) {
+    const nextDays = Array.isArray(days)
+      ? [...new Set(days.map((value) => Number(value)).filter((value) => Number.isInteger(value) && value >= 0 && value <= 6))].sort((left, right) => left - right)
+      : [];
+
+    if (nextDays.length > 0) {
+      return nextDays;
+    }
+
+    return [parseLocalDate(fallbackDate || dateKey(new Date())).getDay()];
+  }
+
+  function formatRecurringPatternLabel(value) {
+    switch (normalizeRecurringPattern(value)) {
+      case 'daily':
+        return 'Every day';
+      case 'weekdays':
+        return 'Weekdays';
+      case 'weekends':
+        return 'Weekends';
+      case 'custom':
+        return 'Custom days';
+      case 'weekly':
+      default:
+        return 'Weekly';
+    }
+  }
+
+  function doesRecurringBlockOccurOnDate(block, targetDateValue) {
+    const targetDate = parseLocalDate(targetDateValue);
+    const startDate = parseLocalDate(block.date);
+    targetDate.setHours(0, 0, 0, 0);
+    startDate.setHours(0, 0, 0, 0);
+
+    if (targetDate < startDate) return false;
+    if (block.endDate && dateKey(targetDate) > block.endDate) return false;
+
+    const dayOfWeek = targetDate.getDay();
+    switch (normalizeRecurringPattern(block.recurrence)) {
+      case 'daily':
+        return true;
+      case 'weekdays':
+        return dayOfWeek >= 1 && dayOfWeek <= 5;
+      case 'weekends':
+        return dayOfWeek === 0 || dayOfWeek === 6;
+      case 'custom':
+        return normalizeCustomDays(block.customDays, block.date).includes(dayOfWeek);
+      case 'weekly':
+      default:
+        return dayOfWeek === startDate.getDay();
+    }
+  }
+
   function getMonthGrid(year, month) {
     const first = new Date(year, month, 1);
     const last = new Date(year, month + 1, 0);
@@ -206,7 +301,8 @@
       privateBlockMinutes: 120,
       travelBufferMinutes: 30,
       blockedDates: [],
-      blockedSlots: []
+      blockedSlots: [],
+      recurringBlocks: []
     };
   }
 
@@ -392,8 +488,38 @@
     }).filter((slot) => slot.date && slot.time);
   }
 
+  function normalizeRecurringBlocks() {
+    const slotDuration = Number(getAvailability().slotDuration) || 60;
+    const rawBlocks = Array.isArray(getAvailability().recurringBlocks) ? getAvailability().recurringBlocks : [];
+    return rawBlocks.map((block) => {
+      const startMinutes = timeValueToMinutes(block.time);
+      const durationMinutes = Number(block.durationMinutes) > 0
+        ? Math.min(Number(block.durationMinutes), 24 * 60)
+        : (timeValueToMinutes(block.endTime) != null && startMinutes != null
+          ? Math.max(15, timeValueToMinutes(block.endTime) - startMinutes || slotDuration)
+          : slotDuration);
+
+      return {
+        id: block.id || `RB-${block.date}-${block.time}`,
+        label: block.label || 'Recurring Hold',
+        date: block.date,
+        time: block.time,
+        durationMinutes,
+        endTime: block.endTime || (startMinutes != null ? minutesToTimeValue(startMinutes + durationMinutes) : ''),
+        recurrence: normalizeRecurringPattern(block.recurrence),
+        customDays: normalizeCustomDays(block.customDays, block.date),
+        endDate: block.endDate || '',
+        notes: block.notes || '',
+        updatedAt: block.updatedAt || ''
+      };
+    }).filter((block) => block.date && block.time);
+  }
+
   function getTimelineEntriesForDate(date) {
     const selectedKey = typeof date === 'string' ? date : dateKey(date);
+    const previousKeyDate = parseLocalDate(selectedKey);
+    previousKeyDate.setDate(previousKeyDate.getDate() - 1);
+    const previousKey = dateKey(previousKeyDate);
     const dayStart = parseLocalDate(selectedKey);
     const nextDay = new Date(dayStart);
     nextDay.setDate(nextDay.getDate() + 1);
@@ -420,33 +546,106 @@
           startMinutes: Math.max(0, Math.round((visibleStart.getTime() - dayStart.getTime()) / 60000)),
           endMinutes: Math.min(24 * 60, Math.round((visibleEnd.getTime() - dayStart.getTime()) / 60000)),
           durationMinutes,
-          meta: booking
+          meta: booking,
+          continuesFromPreviousDay: startsAt < dayStart,
+          continuesToNextDay: endsAt > nextDay
         };
       })
       .filter(Boolean);
 
     const blockedEntries = normalizeBlockedSlots()
-      .filter((slot) => slot.date === selectedKey)
-      .map((slot) => {
+      .flatMap((slot) => {
         const startMinutes = timeValueToMinutes(slot.time);
-        if (startMinutes == null) return null;
-        return {
-          kind: 'blocked',
-          id: slot.id,
-          blockedId: slot.id,
-          title: slot.reason || TYPE_META.blocked.label,
-          subtitle: slot.reason || 'Availability block',
-          note: slot.reason || '',
-          phone: '',
-          startMinutes,
-          endMinutes: Math.min(24 * 60, startMinutes + slot.durationMinutes),
-          durationMinutes: slot.durationMinutes,
-          meta: slot
-        };
+        if (startMinutes == null) return [];
+
+        const entries = [];
+        if (slot.date === selectedKey) {
+          entries.push({
+            kind: 'blocked',
+            id: slot.id,
+            blockedId: slot.id,
+            title: slot.reason || TYPE_META.blocked.label,
+            subtitle: slot.reason || 'Availability block',
+            note: slot.reason || '',
+            phone: '',
+            startMinutes,
+            endMinutes: Math.min(24 * 60, startMinutes + slot.durationMinutes),
+            durationMinutes: slot.durationMinutes,
+            meta: slot,
+            continuesFromPreviousDay: false,
+            continuesToNextDay: startMinutes + slot.durationMinutes > 24 * 60
+          });
+        }
+
+        if (slot.date === previousKey && startMinutes + slot.durationMinutes > 24 * 60) {
+          entries.push({
+            kind: 'blocked',
+            id: `${slot.id}-carry`,
+            blockedId: slot.id,
+            title: slot.reason || TYPE_META.blocked.label,
+            subtitle: slot.reason || 'Availability block',
+            note: slot.reason || '',
+            phone: '',
+            startMinutes: 0,
+            endMinutes: Math.min(24 * 60, startMinutes + slot.durationMinutes - 24 * 60),
+            durationMinutes: slot.durationMinutes,
+            meta: slot,
+            continuesFromPreviousDay: true,
+            continuesToNextDay: false
+          });
+        }
+
+        return entries;
       })
       .filter(Boolean);
 
-    return [...bookingEntries, ...blockedEntries].sort((left, right) =>
+    const recurringEntries = normalizeRecurringBlocks()
+      .flatMap((block) => {
+        const startMinutes = timeValueToMinutes(block.time);
+        if (startMinutes == null) return [];
+
+        const entries = [];
+        if (doesRecurringBlockOccurOnDate(block, selectedKey)) {
+          entries.push({
+            kind: 'recurring',
+            id: block.id,
+            recurringId: block.id,
+            title: block.label || TYPE_META.recurring.label,
+            subtitle: block.notes || formatRecurringPatternLabel(block.recurrence),
+            note: block.notes || '',
+            phone: '',
+            startMinutes,
+            endMinutes: Math.min(24 * 60, startMinutes + block.durationMinutes),
+            durationMinutes: block.durationMinutes,
+            meta: block,
+            continuesFromPreviousDay: false,
+            continuesToNextDay: startMinutes + block.durationMinutes > 24 * 60
+          });
+        }
+
+        if (doesRecurringBlockOccurOnDate(block, previousKey) && startMinutes + block.durationMinutes > 24 * 60) {
+          entries.push({
+            kind: 'recurring',
+            id: `${block.id}-carry`,
+            recurringId: block.id,
+            title: block.label || TYPE_META.recurring.label,
+            subtitle: block.notes || formatRecurringPatternLabel(block.recurrence),
+            note: block.notes || '',
+            phone: '',
+            startMinutes: 0,
+            endMinutes: Math.min(24 * 60, startMinutes + block.durationMinutes - 24 * 60),
+            durationMinutes: block.durationMinutes,
+            meta: block,
+            continuesFromPreviousDay: true,
+            continuesToNextDay: false
+          });
+        }
+
+        return entries;
+      })
+      .filter(Boolean);
+
+    return [...bookingEntries, ...blockedEntries, ...recurringEntries].sort((left, right) =>
       left.startMinutes - right.startMinutes || left.endMinutes - right.endMinutes
     );
   }
@@ -474,6 +673,7 @@
     return getSelectedEntries().filter((entry) => {
       if (state.editingBookingId && entry.bookingId === state.editingBookingId) return false;
       if (state.editingBlockedId && entry.blockedId === state.editingBlockedId) return false;
+      if (state.editingRecurringId && entry.recurringId === state.editingRecurringId) return false;
       return startMinutes < entry.endMinutes && endMinutes > entry.startMinutes;
     });
   }
@@ -511,6 +711,11 @@
     state.notes = '';
     state.editingBookingId = null;
     state.editingBlockedId = null;
+    state.editingRecurringId = null;
+    state.recurrence = 'none';
+    state.customDays = [];
+    state.recurrenceStartDate = dateKey(state.selectedDate);
+    state.recurrenceEndDate = '';
   }
 
   function clearComposer(nextType) {
@@ -538,15 +743,33 @@
   }
 
   function beginEditEntry(entry) {
-    state.activeType = entry.kind;
+    state.activeType = entry.kind === 'recurring' ? 'blocked' : entry.kind;
     state.startTime = minutesToTimeValue(entry.startMinutes);
     state.durationInput = durationToInput(entry.durationMinutes);
     state.endTime = minutesToTimeValue(entry.endMinutes);
     state.lastError = '';
 
-    if (entry.kind === 'blocked') {
+    if (entry.kind === 'recurring') {
+      state.editingRecurringId = entry.recurringId;
+      state.editingBlockedId = null;
+      state.editingBookingId = null;
+      state.recurrence = normalizeRecurringPattern(entry.meta.recurrence);
+      state.customDays = normalizeCustomDays(entry.meta.customDays, entry.meta.date);
+      state.recurrenceStartDate = entry.meta.date || dateKey(state.selectedDate);
+      state.recurrenceEndDate = entry.meta.endDate || '';
+      state.name = entry.meta.label || TYPE_META.recurring.defaultName;
+      state.phone = '';
+      state.vehicle = '';
+      state.service = formatRecurringPatternLabel(entry.meta.recurrence);
+      state.notes = entry.meta.notes || '';
+    } else if (entry.kind === 'blocked') {
       state.editingBlockedId = entry.blockedId;
       state.editingBookingId = null;
+      state.editingRecurringId = null;
+      state.recurrence = 'none';
+      state.customDays = [];
+      state.recurrenceStartDate = entry.meta.date || dateKey(state.selectedDate);
+      state.recurrenceEndDate = '';
       state.name = TYPE_META.blocked.defaultName;
       state.phone = '';
       state.vehicle = '';
@@ -555,6 +778,11 @@
     } else {
       state.editingBlockedId = null;
       state.editingBookingId = entry.bookingId;
+      state.editingRecurringId = null;
+      state.recurrence = 'none';
+      state.customDays = [];
+      state.recurrenceStartDate = entry.meta.date || dateKey(state.selectedDate);
+      state.recurrenceEndDate = '';
       state.name = entry.meta.name || '';
       state.phone = entry.meta.phone || '';
       state.vehicle = entry.meta.vehicle || '';
@@ -690,9 +918,10 @@
   function changeSelectedDate(nextDate) {
     state.selectedDate = startOfDay(nextDate);
     syncViewToSelectedDate();
-    if (!state.editingBookingId && !state.editingBlockedId) {
+    if (!state.editingBookingId && !state.editingBlockedId && !state.editingRecurringId) {
       state.startTime = '';
       state.endTime = '';
+      state.recurrenceStartDate = dateKey(state.selectedDate);
     }
     render();
     void refreshSlots();
@@ -705,7 +934,7 @@
     const colors = [];
     if (blockedDay) colors.push(TYPE_META.blocked.dot);
     entries.forEach((entry) => {
-      const color = TYPE_META[entry.kind] ? TYPE_META[entry.kind].dot : TYPE_META.customer.dot;
+      const color = TYPE_META[entry.kind] ? TYPE_META[entry.kind].dot : TYPE_META.blocked.dot;
       if (!colors.includes(color)) colors.push(color);
     });
     return colors.slice(0, 4);
@@ -742,6 +971,16 @@
       });
     }
 
+    if (state.activeType === 'blocked' && state.recurrence !== 'none') {
+      messages.push({
+        className: 'tk-status-card',
+        text:
+          `Repeats ${formatRecurringPatternLabel(state.recurrence)} starting ${state.recurrenceStartDate || dateKey(state.selectedDate)}` +
+          (state.recurrenceEndDate ? ` until ${state.recurrenceEndDate}` : '') +
+          '.'
+      });
+    }
+
     if (overlapWarnings.length > 0) {
       messages.push({
         className: 'tk-status-card is-warn',
@@ -768,6 +1007,7 @@
 
   async function saveComposer() {
     const durationMinutes = parseDurationInput(state.durationInput);
+    const shouldSaveRecurring = state.activeType === 'blocked' && (state.recurrence !== 'none' || state.editingRecurringId);
     if (!state.startTime) {
       state.lastError = 'Choose a start time first.';
       render();
@@ -789,7 +1029,37 @@
     render();
 
     try {
-      if (state.activeType === 'blocked') {
+      if (shouldSaveRecurring) {
+        if (state.recurrence === 'none') {
+          state.lastError = 'Choose a repeat pattern for this recurring hold.';
+          render();
+          return;
+        }
+
+        if (state.recurrence === 'custom' && state.customDays.length === 0) {
+          state.lastError = 'Choose at least one weekday for a custom recurring hold.';
+          render();
+          return;
+        }
+
+        await fetchJson({
+          action: 'save-recurring-block',
+          recurringBlock: {
+            id: state.editingRecurringId || undefined,
+            label: state.name.trim() || state.service.trim() || state.notes.trim() || 'Recurring Hold',
+            date: state.recurrenceStartDate || dateKey(state.selectedDate),
+            time: state.startTime,
+            durationMinutes,
+            recurrence: state.recurrence,
+            customDays: state.recurrence === 'custom' ? state.customDays : undefined,
+            endDate: state.recurrenceEndDate || undefined,
+            notes: state.notes.trim() || undefined
+          }
+        });
+        if (typeof window.showToast === 'function') {
+          window.showToast(state.editingRecurringId ? 'Recurring hold updated' : 'Recurring hold saved');
+        }
+      } else if (state.activeType === 'blocked') {
         await fetchJson({
           action: 'block',
           date: dateKey(state.selectedDate),
@@ -843,6 +1113,27 @@
   }
 
   async function removeCurrentEntry() {
+    if (state.editingRecurringId) {
+      const confirmed = typeof window.customConfirm === 'function'
+        ? await window.customConfirm('Remove this recurring hold?')
+        : window.confirm('Remove this recurring hold?');
+      if (!confirmed) return;
+
+      try {
+        await fetchJson({
+          action: 'delete-recurring-block',
+          recurringBlockId: state.editingRecurringId
+        });
+        if (typeof window.showToast === 'function') window.showToast('Recurring hold removed');
+        await bootstrap(true);
+        clearComposer('blocked');
+      } catch (error) {
+        state.lastError = error.message || 'Could not remove the recurring hold.';
+        render();
+      }
+      return;
+    }
+
     if (state.editingBlockedId) {
       const confirmed = typeof window.customConfirm === 'function'
         ? await window.customConfirm('Remove this blocked time?')
@@ -945,7 +1236,7 @@
           <div>
             <div class="tk-kicker">Integrated Timekeeper</div>
             <div class="tk-title">Daily Timeline</div>
-            <div class="tk-copy">This board pulls live bookings and availability from the backend, polls every 30 seconds, and lets you edit customer, private, travel, and hard-unavailable blocks in one place.</div>
+            <div class="tk-copy">This board pulls live bookings and availability from the backend, polls every 30 seconds, and lets you edit customer, private, travel, one-time unavailable blocks, and repeating holds in one place.</div>
           </div>
           <div class="tk-toolbar">
             <button type="button" data-action="refresh-board">${state.syncing ? 'Syncing...' : 'Refresh'}</button>
@@ -987,7 +1278,7 @@
             <div class="tk-day-meta">${getDayHours()}${blockedDay ? ' • Full-day block active' : ''}</div>
           </div>
           <div class="tk-legend" style="margin-top:14px">
-            ${Object.entries(TYPE_META).map(([key, value]) => `
+            ${Object.entries(TYPE_META).filter(([key]) => key !== 'recurring').map(([key, value]) => `
               <span class="tk-legend-chip" style="background:${value.dot}20;color:${value.dot};border:1px solid ${value.dot}44">${value.label}</span>
             `).join('')}
           </div>
@@ -1008,6 +1299,7 @@
                   <button type="button" class="tk-entry ${TYPE_META[entry.kind].className}" data-entry-kind="${entry.kind}" data-entry-id="${entry.id}" style="top:${((entry.displayStartMinutes - metrics.startMinutes) / metrics.stepMinutes) * metrics.rowHeight}px;height:${Math.max(((entry.displayEndMinutes - entry.displayStartMinutes) / metrics.stepMinutes) * metrics.rowHeight - 4, 28)}px">
                     <div class="tk-entry__title">${escapeHtml(entry.title)}</div>
                     <div class="tk-entry__sub">${escapeHtml(entry.subtitle)}</div>
+                    ${entry.kind === 'recurring' ? `<div class="tk-entry__sub">${escapeHtml(formatRecurringPatternLabel(entry.meta.recurrence))}</div>` : ''}
                     <div class="tk-entry__meta">${formatTimelineTime(entry.startMinutes)} - ${formatTimelineTime(entry.endMinutes)} • ${formatDuration(entry.durationMinutes)}</div>
                   </button>
                 `).join('')}
@@ -1019,12 +1311,12 @@
 
         <div class="tk-shell">
           <div class="tk-surface">
-            <div class="tk-kicker">${state.editingBookingId || state.editingBlockedId ? 'Editing Existing Item' : 'Compose on the Board'}</div>
+            <div class="tk-kicker">${state.editingBookingId || state.editingBlockedId || state.editingRecurringId ? 'Editing Existing Item' : 'Compose on the Board'}</div>
             <div class="tk-title" style="font-size:26px">${TYPE_META[state.activeType].label} Block</div>
             <div class="tk-copy">${TYPE_META[state.activeType].copy}</div>
 
             <div class="tk-type-grid" style="margin-top:16px">
-              ${Object.entries(TYPE_META).map(([key, value]) => `
+              ${Object.entries(TYPE_META).filter(([key]) => key !== 'recurring').map(([key, value]) => `
                 <button type="button" class="tk-type-card ${state.activeType === key ? 'is-active' : ''}" data-type="${key}">
                   <div class="tk-type-title">${value.label}</div>
                   <div class="tk-type-copy">${value.copy}</div>
@@ -1087,9 +1379,39 @@
               <textarea id="tk-notes" placeholder="${state.activeType === 'blocked' ? 'Why this time is unavailable' : 'Extra context'}">${escapeHtml(state.notes)}</textarea>
             </div>
 
+            ${state.activeType === 'blocked' ? `
+              <div style="margin-top:14px">
+                <div class="tk-kicker" style="font-size:11px">Repeat</div>
+                <div class="tk-slot-row" style="margin-top:8px">
+                  ${RECURRENCE_OPTIONS.map((option) => `
+                    <button type="button" class="tk-slot-chip ${state.recurrence === option.value ? 'is-active' : ''}" data-recurrence="${option.value}">${option.label}</button>
+                  `).join('')}
+                </div>
+                ${state.recurrence !== 'none' ? `
+                  <div class="tk-compose-grid" style="margin-top:12px">
+                    <div class="tk-field" style="flex:1;min-width:160px">
+                      <label>Starts on</label>
+                      <input type="date" id="tk-recurring-start" value="${escapeAttribute(state.recurrenceStartDate)}">
+                    </div>
+                    <div class="tk-field" style="flex:1;min-width:160px">
+                      <label>Ends on</label>
+                      <input type="date" id="tk-recurring-end" value="${escapeAttribute(state.recurrenceEndDate)}">
+                    </div>
+                  </div>
+                  ${state.recurrence === 'custom' ? `
+                    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">
+                      ${CUSTOM_DAY_OPTIONS.map((option) => `
+                        <button type="button" class="tk-slot-chip ${state.customDays.includes(option.value) ? 'is-active' : ''}" data-recurring-day="${option.value}" style="min-width:42px">${option.label}</button>
+                      `).join('')}
+                    </div>
+                  ` : ''}
+                ` : ''}
+              </div>
+            ` : ''}
+
             <div class="tk-toolbar" style="margin-top:16px">
-              <button type="button" class="is-primary" data-action="save-composer">${state.savePending ? 'Saving...' : (state.editingBookingId || state.editingBlockedId ? 'Update Block' : 'Save to Board')}</button>
-              ${(state.editingBookingId || state.editingBlockedId) ? '<button type="button" class="is-danger" data-action="remove-current">Remove</button>' : ''}
+              <button type="button" class="is-primary" data-action="save-composer">${state.savePending ? 'Saving...' : (state.editingBookingId || state.editingBlockedId || state.editingRecurringId ? 'Update Block' : 'Save to Board')}</button>
+              ${(state.editingBookingId || state.editingBlockedId || state.editingRecurringId) ? '<button type="button" class="is-danger" data-action="remove-current">Remove</button>' : ''}
               <button type="button" data-action="reset-composer">Reset</button>
             </div>
           </div>
@@ -1146,6 +1468,27 @@
       });
     });
 
+    root.querySelectorAll('[data-recurrence]').forEach((button) => {
+      button.addEventListener('click', () => {
+        state.recurrence = button.getAttribute('data-recurrence') || 'none';
+        if (state.recurrence !== 'custom') {
+          state.customDays = [];
+        }
+        render();
+      });
+    });
+
+    root.querySelectorAll('[data-recurring-day]').forEach((button) => {
+      button.addEventListener('click', () => {
+        const dayValue = Number(button.getAttribute('data-recurring-day'));
+        if (!Number.isInteger(dayValue)) return;
+        state.customDays = state.customDays.includes(dayValue)
+          ? state.customDays.filter((value) => value !== dayValue)
+          : [...state.customDays, dayValue].sort((left, right) => left - right);
+        render();
+      });
+    });
+
     root.querySelectorAll('.tk-hour-row').forEach((button) => {
       button.addEventListener('click', () => {
         state.startTime = button.getAttribute('data-time') || '';
@@ -1177,6 +1520,8 @@
     const vehicleInput = document.getElementById('tk-vehicle');
     const serviceInput = document.getElementById('tk-service');
     const notesInput = document.getElementById('tk-notes');
+    const recurringStartInput = document.getElementById('tk-recurring-start');
+    const recurringEndInput = document.getElementById('tk-recurring-end');
 
     if (startInput) {
       startInput.addEventListener('change', () => {
@@ -1211,6 +1556,8 @@
     if (vehicleInput) vehicleInput.addEventListener('input', () => { state.vehicle = vehicleInput.value; });
     if (serviceInput) serviceInput.addEventListener('input', () => { state.service = serviceInput.value; });
     if (notesInput) notesInput.addEventListener('input', () => { state.notes = notesInput.value; });
+    if (recurringStartInput) recurringStartInput.addEventListener('change', () => { state.recurrenceStartDate = recurringStartInput.value; });
+    if (recurringEndInput) recurringEndInput.addEventListener('change', () => { state.recurrenceEndDate = recurringEndInput.value; });
   }
 
   function handleAction(action) {

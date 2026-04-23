@@ -347,6 +347,10 @@ body{font-family:"Open Sans",sans-serif;background:#0A0A0A;color:var(--white);mi
       </div>
       <div id="blocked-dates-list" style="margin-bottom:16px"></div>
 
+      <div style="font-family:'Rajdhani',sans-serif;font-size:13px;text-transform:uppercase;letter-spacing:1.5px;color:var(--purple-light);font-weight:600;margin:0 0 8px">Recurring Holds</div>
+      <p style="color:var(--gray);font-size:13px;margin:0 0 10px">Create or edit repeating school, sleep, or other schedule holds from the Timekeeper tab. They sync here automatically.</p>
+      <div id="recurring-blocks-list" style="margin-bottom:16px"></div>
+
       <details style="margin-top:16px" open>
         <summary style="cursor:pointer;font-family:'Rajdhani',sans-serif;font-size:13px;text-transform:uppercase;letter-spacing:1.5px;color:var(--purple-light);font-weight:600;margin-bottom:8px">Edit Weekly Hours, Block Sizes & Travel Intervals</summary>
         <div id="availability-editor" style="margin-top:12px"></div>
@@ -1048,6 +1052,7 @@ async function loadAvailability() {
     availabilityConfig = await res.json();
     renderAvailabilityEditor();
     renderBlockedDates();
+    renderRecurringBlocks();
   } catch(e) {}
 }
 
@@ -1121,6 +1126,42 @@ function renderBlockedDates() {
         '<div style="font-size:12px;color:var(--gray-light);margin-top:4px">' + (entry.reason || 'No reason provided') + '</div>' +
       '</div>' +
       '<button onclick="unblockDate(\'' + entry.date + '\')" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:18px;line-height:1">&times;</button>' +
+    '</div>'
+  ).join('') + '</div>';
+}
+
+function formatRecurringPatternInline(value) {
+  switch ((value || '').toLowerCase()) {
+    case 'daily': return 'Every day';
+    case 'weekdays': return 'Weekdays';
+    case 'weekends': return 'Weekends';
+    case 'custom': return 'Custom days';
+    case 'weekly':
+    default:
+      return 'Weekly';
+  }
+}
+
+function renderRecurringBlocks() {
+  const el = document.getElementById('recurring-blocks-list');
+  if (!el || !availabilityConfig) return;
+
+  const recurringBlocks = Array.isArray(availabilityConfig.recurringBlocks) ? availabilityConfig.recurringBlocks : [];
+  if (recurringBlocks.length === 0) {
+    el.innerHTML = '<p style="color:var(--gray);font-size:13px">No recurring holds yet.</p>';
+    return;
+  }
+
+  const sorted = [...recurringBlocks].sort((left, right) =>
+    `${left.date || ''}${left.time || ''}`.localeCompare(`${right.date || ''}${right.time || ''}`)
+  );
+
+  el.innerHTML = '<div style="display:grid;gap:8px">' + sorted.map((block) =>
+    '<div style="background:rgba(226,75,74,0.08);border:1px solid rgba(226,75,74,0.22);border-radius:2px;padding:10px 12px;display:grid;gap:4px">' +
+      '<div style="font-family:Rajdhani,sans-serif;font-size:13px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--red)">' + (block.label || 'Recurring Hold') + '</div>' +
+      '<div style="font-size:12px;color:var(--gray-light)">' + formatRecurringPatternInline(block.recurrence) + ' · ' + (block.time || '--:--') + (block.endTime ? ' - ' + block.endTime : '') + '</div>' +
+      '<div style="font-size:12px;color:var(--gray-light)">Starts ' + (block.date || 'unknown') + (block.endDate ? ' · Ends ' + block.endDate : '') + '</div>' +
+      (block.notes ? '<div style="font-size:12px;color:var(--gray-light)">' + block.notes + '</div>' : '') +
     '</div>'
   ).join('') + '</div>';
 }

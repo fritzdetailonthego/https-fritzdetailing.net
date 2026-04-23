@@ -11,6 +11,8 @@ const EXPO_PUSH_ENDPOINT = 'https://exp.host/--/api/v2/push/send';
 const JSON_CONTENT_TYPE = 'application/json';
 const JSON_BLOB_MAX_ATTEMPTS = 3;
 const DEFAULT_BLOCKED_SLOT_DURATION_MINUTES = 30;
+const MAX_BLOCK_DURATION_MINUTES = 24 * 60;
+const RECURRING_PATTERNS = new Set(['daily', 'weekdays', 'weekends', 'weekly', 'custom']);
 
 function buildDefaultAvailability() {
   return {
@@ -29,6 +31,7 @@ function buildDefaultAvailability() {
     travelBufferMinutes: 30,
     blockedDates: [],
     blockedSlots: [],
+    recurringBlocks: [],
     maxAdvanceDays: 30
   };
 }
@@ -158,6 +161,10 @@ function normalizeAvailability(availability) {
     availability && availability.blockedSlots,
     normalizedAvailability
   );
+  normalizedAvailability.recurringBlocks = normalizeRecurringBlocks(
+    availability && availability.recurringBlocks,
+    normalizedAvailability
+  );
 
   return normalizedAvailability;
 }
@@ -268,6 +275,122 @@ function removeBlockedSlot(blockedSlots, { blockId, date, time }, availability) 
 
     return !(blockedSlot.date === date && blockedSlot.time === time);
   });
+}
+
+function normalizeRecurringPattern(value) {
+  if (typeof value !== 'string') {
+    return 'weekly';
+  }
+
+  const normalizedValue = value.trim().toLowerCase();
+  return RECURRING_PATTERNS.has(normalizedValue) ? normalizedValue : 'weekly';
+}
+
+function normalizeRecurringCustomDays(customDays, fallbackDate) {
+  const nextDays = Array.isArray(customDays)
+    ? customDays
+        .map((value) => Number(value))
+        .filter((value) => Number.isInteger(value) && value >= 0 && value <= 6)
+    : [];
+
+  const uniqueDays = [...new Set(nextDays)].sort((left, right) => left - right);
+  if (uniqueDays.length > 0) {
+    return uniqueDays;
+  }
+
+  const parsedFallbackDate = parseDateValue(fallbackDate);
+  return parsedFallbackDate ? [parsedFallbackDate.getUTCDay()] : [];
+}
+
+function normalizeRecurringBlockEntry(entry, availability) {
+  if (!entry || typeof entry !== 'object') {
+    return null;
+  }
+
+  const parsedDate = parseDateValue(entry.date);
+  const parsedTime = parseTimeValue(entry.time);
+  if (!parsedDate || !parsedTime) {
+    return null;
+  }
+
+  const recurrence = normalizeRecurringPattern(entry.recurrence);
+  const durationMinutes = Math.min(
+    MAX_BLOCK_DURATION_MINUTES,
+    getBlockedSlotDurationMinutes(entry, availability)
+  );
+  if (!durationMinutes || durationMinutes <= 0) {
+    return null;
+  }
+
+  const customDays = normalizeRecurringCustomDays(entry.customDays, entry.date);
+  const normalizedDate = formatDateValue(parsedDate);
+  const parsedEndDate = parseDateValue(entry.endDate);
+  const normalizedEndDate =
+    parsedEndDate && parsedEndDate.getTime() >= parsedDate.getTime()
+      ? formatDateValue(parsedEndDate)
+      : undefined;
+  const label =
+    (typeof entry.label === 'string' && entry.label.trim()) ||
+    (typeof entry.reason === 'string' && entry.reason.trim()) ||
+    'Recurring Hold';
+  const idSource = [normalizedDate, parsedTime.normalized, recurrence, customDays.join('')].join('-');
+
+  return {
+    id:
+      typeof entry.id === 'string' && entry.id.trim()
+        ? entry.id.trim()
+        : `RB-${idSource}`,
+    label,
+    date: normalizedDate,
+    time: parsedTime.normalized,
+    endTime: minutesToTimeValue(parsedTime.totalMinutes + durationMinutes),
+    durationMinutes,
+    recurrence,
+    customDays: recurrence === 'custom' ? customDays : [],
+    ...(normalizedEndDate ? { endDate: normalizedEndDate } : {}),
+    ...(typeof entry.notes === 'string' && entry.notes.trim() ? { notes: entry.notes.trim() } : {}),
+    ...(typeof entry.updatedAt === 'string' ? { updatedAt: entry.updatedAt } : {})
+  };
+}
+
+function normalizeRecurringBlocks(recurringBlocks, availability) {
+  if (!Array.isArray(recurringBlocks)) {
+    return [];
+  }
+
+  return recurringBlocks
+    .map((entry) => normalizeRecurringBlockEntry(entry, availability))
+    .filter(Boolean)
+    .sort((left, right) => {
+      if (left.date !== right.date) {
+        return left.date.localeCompare(right.date);
+      }
+
+      if (left.time !== right.time) {
+        return left.time.localeCompare(right.time);
+      }
+
+      return left.label.localeCompare(right.label);
+    });
+}
+
+function upsertRecurringBlock(recurringBlocks, nextEntry, availability) {
+  const normalizedEntry = normalizeRecurringBlockEntry(nextEntry, availability);
+  if (!normalizedEntry) {
+    return normalizeRecurringBlocks(recurringBlocks, availability);
+  }
+
+  const nextRecurringBlocks = normalizeRecurringBlocks(recurringBlocks, availability).filter(
+    (recurringBlock) => recurringBlock.id !== normalizedEntry.id
+  );
+  nextRecurringBlocks.push(normalizedEntry);
+  return normalizeRecurringBlocks(nextRecurringBlocks, availability);
+}
+
+function removeRecurringBlock(recurringBlocks, recurringBlockId, availability) {
+  return normalizeRecurringBlocks(recurringBlocks, availability).filter(
+    (recurringBlock) => recurringBlock.id !== recurringBlockId
+  );
 }
 
 function getDefaultDurationMinutes(bookingType, availability) {
@@ -414,6 +537,24 @@ function minutesToTimeValue(totalMinutes) {
   return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
 }
 
+function formatDateValue(date) {
+  return [
+    date.getUTCFullYear(),
+    String(date.getUTCMonth() + 1).padStart(2, '0'),
+    String(date.getUTCDate()).padStart(2, '0')
+  ].join('-');
+}
+
+function shiftDateValue(dateStr, days) {
+  const parsedDate = parseDateValue(dateStr);
+  if (!parsedDate) {
+    return null;
+  }
+
+  parsedDate.setUTCDate(parsedDate.getUTCDate() + days);
+  return formatDateValue(parsedDate);
+}
+
 function parseDateValue(dateStr) {
   if (typeof dateStr !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return null;
 
@@ -534,6 +675,108 @@ function getBlockedSlotRange(blockedSlot, availability) {
   };
 }
 
+function doesRecurringBlockOccurOnDate(recurringBlock, dateStr) {
+  const targetDate = parseDateValue(dateStr);
+  const startDate = parseDateValue(recurringBlock && recurringBlock.date);
+  if (!targetDate || !startDate) {
+    return false;
+  }
+
+  const targetKey = formatDateValue(targetDate);
+  if (targetKey < recurringBlock.date) {
+    return false;
+  }
+
+  if (recurringBlock.endDate && targetKey > recurringBlock.endDate) {
+    return false;
+  }
+
+  const dayOfWeek = targetDate.getUTCDay();
+
+  switch (normalizeRecurringPattern(recurringBlock.recurrence)) {
+    case 'daily':
+      return true;
+    case 'weekdays':
+      return dayOfWeek >= 1 && dayOfWeek <= 5;
+    case 'weekends':
+      return dayOfWeek === 0 || dayOfWeek === 6;
+    case 'custom':
+      return normalizeRecurringCustomDays(recurringBlock.customDays, recurringBlock.date).includes(dayOfWeek);
+    case 'weekly':
+    default:
+      return dayOfWeek === startDate.getUTCDay();
+  }
+}
+
+function getBlockedSlotRangesForDate(dateStr, availability) {
+  const previousDate = shiftDateValue(dateStr, -1);
+
+  return normalizeBlockedSlots(availability && availability.blockedSlots, availability).flatMap((blockedSlot) => {
+    const blockedRange = getBlockedSlotRange(blockedSlot, availability);
+    if (!blockedRange) {
+      return [];
+    }
+
+    const ranges = [];
+
+    if (blockedSlot.date === dateStr) {
+      ranges.push(blockedRange);
+    }
+
+    if (
+      previousDate &&
+      blockedSlot.date === previousDate &&
+      blockedRange.endMinutes > 24 * 60
+    ) {
+      ranges.push({
+        startMinutes: 0,
+        endMinutes: blockedRange.endMinutes - 24 * 60
+      });
+    }
+
+    return ranges;
+  });
+}
+
+function getRecurringBlockRangesForDate(dateStr, availability) {
+  const previousDate = shiftDateValue(dateStr, -1);
+
+  return normalizeRecurringBlocks(availability && availability.recurringBlocks, availability).flatMap(
+    (recurringBlock) => {
+      const parsedTime = parseTimeValue(recurringBlock.time);
+      if (!parsedTime) {
+        return [];
+      }
+
+      const durationMinutes = Math.min(
+        MAX_BLOCK_DURATION_MINUTES,
+        getBlockedSlotDurationMinutes(recurringBlock, availability)
+      );
+      const ranges = [];
+
+      if (doesRecurringBlockOccurOnDate(recurringBlock, dateStr)) {
+        ranges.push({
+          startMinutes: parsedTime.totalMinutes,
+          endMinutes: parsedTime.totalMinutes + durationMinutes
+        });
+      }
+
+      if (
+        previousDate &&
+        parsedTime.totalMinutes + durationMinutes > 24 * 60 &&
+        doesRecurringBlockOccurOnDate(recurringBlock, previousDate)
+      ) {
+        ranges.push({
+          startMinutes: 0,
+          endMinutes: parsedTime.totalMinutes + durationMinutes - 24 * 60
+        });
+      }
+
+      return ranges;
+    }
+  );
+}
+
 function getRequestedDurationMinutes(durationMinutes, bookingType, availability) {
   if (Number.isInteger(durationMinutes) && durationMinutes > 0) {
     return durationMinutes;
@@ -561,16 +804,13 @@ function getBookingTimeRange(booking, availability) {
 function hasBlockedSlotConflict({ dateStr, startMinutes, durationMinutes, availability }) {
   const endMinutes = startMinutes + durationMinutes;
 
-  return normalizeBlockedSlots(availability && availability.blockedSlots, availability).some((blockedSlot) => {
-    if (blockedSlot.date !== dateStr) {
-      return false;
-    }
-
-    const blockedRange = getBlockedSlotRange(blockedSlot, availability);
-    if (!blockedRange) return false;
-
-    return startMinutes < blockedRange.endMinutes && endMinutes > blockedRange.startMinutes;
-  });
+  return [
+    ...getBlockedSlotRangesForDate(dateStr, availability),
+    ...getRecurringBlockRangesForDate(dateStr, availability)
+  ].some(
+    (blockedRange) =>
+      startMinutes < blockedRange.endMinutes && endMinutes > blockedRange.startMinutes
+  );
 }
 
 function hasBookingConflict({
@@ -1518,6 +1758,74 @@ module.exports = async (req, res) => {
       return res.json({ success: true });
     }
 
+    if (action === 'save-recurring-block') {
+      const { recurringBlock } = req.body || {};
+      let savedRecurringBlock = null;
+
+      await updateSingletonJsonBlob({
+        read: readAvailability,
+        write: writeAvailability,
+        errorMessage: 'Could not update the recurring block. Please try again.',
+        mutate: async (availability) => {
+          const nextRecurringBlock = normalizeRecurringBlockEntry(
+            {
+              ...(recurringBlock && typeof recurringBlock === 'object' ? recurringBlock : {}),
+              updatedAt: new Date().toISOString()
+            },
+            availability
+          );
+
+          if (!nextRecurringBlock) {
+            const validationError = new Error('Recurring block is invalid.');
+            validationError.statusCode = 400;
+            throw validationError;
+          }
+
+          availability.recurringBlocks = upsertRecurringBlock(
+            availability.recurringBlocks,
+            nextRecurringBlock,
+            availability
+          );
+          availability.updatedAt = nextRecurringBlock.updatedAt;
+          savedRecurringBlock = nextRecurringBlock;
+          return availability;
+        }
+      });
+
+      return res.json({
+        success: true,
+        recurringBlock: savedRecurringBlock
+      });
+    }
+
+    if (action === 'delete-recurring-block') {
+      const recurringBlockId =
+        typeof (req.body && req.body.recurringBlockId) === 'string'
+          ? req.body.recurringBlockId.trim()
+          : '';
+
+      if (!recurringBlockId) {
+        return res.status(400).json({ error: 'A recurring block id is required.' });
+      }
+
+      await updateSingletonJsonBlob({
+        read: readAvailability,
+        write: writeAvailability,
+        errorMessage: 'Could not remove the recurring block. Please try again.',
+        mutate: async (availability) => {
+          availability.recurringBlocks = removeRecurringBlock(
+            availability.recurringBlocks,
+            recurringBlockId,
+            availability
+          );
+          availability.updatedAt = new Date().toISOString();
+          return availability;
+        }
+      });
+
+      return res.json({ success: true });
+    }
+
     if (action === 'block') {
       const { date, time, endTime, durationMinutes, reason, blockId } = req.body;
       await updateSingletonJsonBlob({
@@ -1577,6 +1885,10 @@ module.exports = async (req, res) => {
     res.status(400).json({ error: 'Invalid action' });
   } catch (error) {
     console.error('Booking error:', error.message);
-    res.status(500).json({ error: error.message || 'Booking system error' });
+    const statusCode =
+      Number.isInteger(error && error.statusCode) && error.statusCode >= 400
+        ? error.statusCode
+        : 500;
+    res.status(statusCode).json({ error: error.message || 'Booking system error' });
   }
 };
