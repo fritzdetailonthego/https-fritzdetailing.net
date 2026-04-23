@@ -1141,8 +1141,34 @@
     return now.getHours() * 60 + now.getMinutes();
   }
 
+  function isTimelineVisible() {
+    const adminTab = typeof window.getActiveAdminTab === 'function' ? window.getActiveAdminTab() : 'bookings';
+    const scheduleTab = typeof window.getActiveScheduleTab === 'function' ? window.getActiveScheduleTab() : 'timeline';
+    return adminTab === 'bookings' && scheduleTab === 'timeline';
+  }
+
+  function handleTimelineVisible() {
+    if (!isTimelineVisible()) return;
+    if (!state.initialized) {
+      void bootstrap(true);
+      return;
+    }
+    requestAnimationFrame(scrollTimelineToAnchor);
+    void syncNow();
+  }
+
   window.addEventListener('admin-auth-ready', () => {
     void bootstrap(true);
+  });
+
+  window.addEventListener('admin-bookings-opened', () => {
+    handleTimelineVisible();
+  });
+
+  window.addEventListener('admin-schedule-tab-changed', (event) => {
+    if ((event && event.detail) === 'timeline') {
+      handleTimelineVisible();
+    }
   });
 
   document.addEventListener('visibilitychange', () => {
