@@ -232,6 +232,118 @@
     return 24;
   }
 
+  function clamp(value, min, max) {
+    return Math.min(max, Math.max(min, value));
+  }
+
+  function getDayHoursEntry(date) {
+    const targetDate = date instanceof Date ? date : state.selectedDate;
+    const availability = getAvailability();
+    const keys = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
+    const entry = availability.weeklyHours && availability.weeklyHours[keys[targetDate.getDay()]];
+    if (!entry || entry.open === false || entry.closed) return null;
+    return entry;
+  }
+
+  function getTimelineWindow(entries) {
+    const stepMinutes = getTimelineStepMinutes();
+    const dayEntry = getDayHoursEntry(state.selectedDate);
+    const scheduledStart = timeValueToMinutes(dayEntry && (dayEntry.start || dayEntry.open));
+    const scheduledEnd = timeValueToMinutes(dayEntry && (dayEntry.end || dayEntry.close));
+    const activeEntries = Array.isArray(entries) ? entries : [];
+    const earliestEntry = activeEntries.length ? Math.min(...activeEntries.map((entry) => entry.startMinutes)) : null;
+    const latestEntry = activeEntries.length ? Math.max(...activeEntries.map((entry) => entry.endMinutes)) : null;
+
+    let startMinutes = scheduledStart;
+    let endMinutes = scheduledEnd;
+
+    if (earliestEntry != null) {
+      const bufferedStart = Math.max(0, earliestEntry - stepMinutes);
+      startMinutes = startMinutes == null ? bufferedStart : Math.min(startMinutes, bufferedStart);
+    }
+
+    if (latestEntry != null) {
+      const bufferedEnd = Math.min(24 * 60, latestEntry + stepMinutes);
+      endMinutes = endMinutes == null ? bufferedEnd : Math.max(endMinutes, bufferedEnd);
+    }
+
+    if (startMinutes == null) startMinutes = 8 * 60;
+    if (endMinutes == null) endMinutes = 18 * 60;
+
+    startMinutes = Math.floor(startMinutes / stepMinutes) * stepMinutes;
+    endMinutes = Math.ceil(endMinutes / stepMinutes) * stepMinutes;
+
+    if (endMinutes <= startMinutes) {
+      endMinutes = Math.min(24 * 60, startMinutes + Math.max(stepMinutes * 6, 6 * 60));
+    }
+
+    const minimumSpan = Math.max(stepMinutes * 6, 6 * 60);
+    if (endMinutes - startMinutes < minimumSpan) {
+      endMinutes = Math.min(24 * 60, startMinutes + minimumSpan);
+    }
+
+    if (endMinutes > 24 * 60) {
+      const overshoot = endMinutes - (24 * 60);
+      startMinutes = Math.max(0, startMinutes - overshoot);
+      endMinutes = 24 * 60;
+    }
+
+    return { startMinutes, endMinutes };
+  }
+
+  function getTimelineMetrics(entries) {
+    const stepMinutes = getTimelineStepMinutes();
+    const windowRange = getTimelineWindow(entries);
+    const slotCount = Math.max(1, Math.ceil((windowRange.endMinutes - windowRange.startMinutes) / stepMinutes));
+    const viewportHeight = typeof globalThis.window !== 'undefined' ? globalThis.window.innerHeight || 900 : 900;
+    const viewportWidth = typeof globalThis.window !== 'undefined' ? globalThis.window.innerWidth || 1280 : 1280;
+    const targetCanvasHeight = clamp(
+      viewportHeight - (viewportWidth <= 680 ? 300 : 320),
+      viewportWidth <= 680 ? 320 : 400,
+      viewportWidth <= 680 ? 520 : 640
+    );
+    const minRowHeight = stepMinutes >= 60 ? 34 : stepMinutes >= 30 ? 18 : 12;
+    const maxRowHeight = stepMinutes >= 60 ? 68 : stepMinutes >= 30 ? 36 : 24;
+    const idealRowHeight = Math.floor(targetCanvasHeight / slotCount);
+    const rowHeight = clamp(idealRowHeight, minRowHeight, maxRowHeight);
+    const canvasHeight = slotCount * rowHeight;
+    const scrollable = canvasHeight > targetCanvasHeight;
+    const containerHeight = scrollable ? targetCanvasHeight : canvasHeight;
+    const slots = Array.from({ length: slotCount }, (_, index) => windowRange.startMinutes + index * stepMinutes);
+
+    return {
+      ...windowRange,
+      stepMinutes,
+      slotCount,
+      rowHeight,
+      canvasHeight,
+      containerHeight,
+      scrollable,
+      slots
+    };
+  }
+
+  function getDisplayEntries(entries, metrics) {
+    return entries
+      .map((entry) => {
+        const displayStartMinutes = Math.max(metrics.startMinutes, entry.startMinutes);
+        const displayEndMinutes = Math.min(metrics.endMinutes, entry.endMinutes);
+        if (displayEndMinutes <= displayStartMinutes) return null;
+
+        return {
+          ...entry,
+          displayStartMinutes,
+          displayEndMinutes
+        };
+      })
+      .filter(Boolean);
+  }
+
+  function shouldShowSlotLabel(minutes, stepMinutes) {
+    if (stepMinutes >= 60) return true;
+    return minutes % 60 === 0;
+  }
+
   function getDurationForBooking(booking) {
     if (Number.isInteger(booking.durationMinutes) && booking.durationMinutes > 0) {
       return booking.durationMinutes;
@@ -340,9 +452,7 @@
   }
 
   function getDayHours() {
-    const availability = getAvailability();
-    const keys = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
-    const entry = availability.weeklyHours && availability.weeklyHours[keys[state.selectedDate.getDay()]];
+    const entry = getDayHoursEntry(state.selectedDate);
     if (!entry || entry.open === false || entry.closed) return 'Closed';
     return `${entry.start || entry.open || '--:--'} - ${entry.end || entry.close || '--:--'}`;
   }
@@ -601,12 +711,12 @@
     return colors.slice(0, 4);
   }
 
-  function getSelectedDaySummary(entries) {
+  function getSelectedDaySummary(entries, totalRangeMinutes) {
     const occupied = entries.reduce((total, entry) => total + Math.max(0, entry.endMinutes - entry.startMinutes), 0);
     return {
       count: entries.length,
       occupied,
-      free: Math.max(0, 24 * 60 - occupied)
+      free: Math.max(0, totalRangeMinutes - occupied)
     };
   }
 
@@ -820,12 +930,13 @@
 
   function renderBoard() {
     const timelineEntries = getSelectedEntries();
-    const selectedSummary = getSelectedDaySummary(timelineEntries);
-    const stepMinutes = getTimelineStepMinutes();
-    const rowHeight = getTimelineRowHeight();
+    const metrics = getTimelineMetrics(timelineEntries);
+    const selectedSummary = getSelectedDaySummary(timelineEntries, metrics.endMinutes - metrics.startMinutes);
+    const displayEntries = getDisplayEntries(timelineEntries, metrics);
     const blockedDay = getSelectedBlockedDate();
     const now = new Date();
-    const nowTop = ((now.getHours() * 60 + now.getMinutes()) / stepMinutes) * rowHeight;
+    const currentMinutes = now.getHours() * 60 + now.getMinutes();
+    const nowTop = ((currentMinutes - metrics.startMinutes) / metrics.stepMinutes) * metrics.rowHeight;
     const messages = getTimelineMessages();
 
     return `
@@ -881,26 +992,26 @@
             `).join('')}
           </div>
           <div class="tk-board-card" style="margin-top:14px">
-            <div class="tk-scroll" id="timeline-scroll">
-              <div class="tk-canvas" style="height:${24 * rowHeight}px">
-                ${HOURS.map((hour) => `
-                  <button type="button" class="tk-hour-row" data-time="${minutesToTimeValue(hour * 60)}" style="top:${hour * rowHeight}px;height:${rowHeight}px">
-                    <span class="tk-hour-label">${formatTimelineTime(hour * 60)}</span>
+            <div class="tk-scroll${metrics.scrollable ? ' is-scrollable' : ' is-fitted'}" id="timeline-scroll" style="height:${metrics.containerHeight}px">
+              <div class="tk-canvas" style="height:${metrics.canvasHeight}px">
+                ${metrics.slots.map((slotMinutes) => `
+                  <button type="button" class="tk-hour-row" data-time="${minutesToTimeValue(slotMinutes)}" style="top:${((slotMinutes - metrics.startMinutes) / metrics.stepMinutes) * metrics.rowHeight}px;height:${metrics.rowHeight}px">
+                    ${shouldShowSlotLabel(slotMinutes, metrics.stepMinutes) ? `<span class="tk-hour-label">${formatTimelineTime(slotMinutes)}</span>` : ''}
                   </button>
                 `).join('')}
-                ${dateKey(state.selectedDate) === dateKey(new Date()) ? `
+                ${dateKey(state.selectedDate) === dateKey(new Date()) && currentMinutes >= metrics.startMinutes && currentMinutes <= metrics.endMinutes ? `
                   <div class="tk-now-line" style="top:${nowTop}px">
                     <span class="tk-now-dot"></span>
                   </div>
                 ` : ''}
-                ${timelineEntries.map((entry) => `
-                  <button type="button" class="tk-entry ${TYPE_META[entry.kind].className}" data-entry-kind="${entry.kind}" data-entry-id="${entry.id}" style="top:${(entry.startMinutes / stepMinutes) * rowHeight}px;height:${Math.max(((entry.endMinutes - entry.startMinutes) / stepMinutes) * rowHeight - 4, 42)}px">
+                ${displayEntries.map((entry) => `
+                  <button type="button" class="tk-entry ${TYPE_META[entry.kind].className}" data-entry-kind="${entry.kind}" data-entry-id="${entry.id}" style="top:${((entry.displayStartMinutes - metrics.startMinutes) / metrics.stepMinutes) * metrics.rowHeight}px;height:${Math.max(((entry.displayEndMinutes - entry.displayStartMinutes) / metrics.stepMinutes) * metrics.rowHeight - 4, 28)}px">
                     <div class="tk-entry__title">${escapeHtml(entry.title)}</div>
                     <div class="tk-entry__sub">${escapeHtml(entry.subtitle)}</div>
                     <div class="tk-entry__meta">${formatTimelineTime(entry.startMinutes)} - ${formatTimelineTime(entry.endMinutes)} • ${formatDuration(entry.durationMinutes)}</div>
                   </button>
                 `).join('')}
-                ${timelineEntries.length === 0 ? `<div class="tk-empty" style="padding-top:240px">Nothing is on the board for this date yet. Tap any hour lane to start a block.</div>` : ''}
+                ${timelineEntries.length === 0 ? `<div class="tk-empty" style="padding-top:${Math.max(80, Math.round(metrics.canvasHeight * 0.42))}px">Nothing is on the board for this date yet. Tap any hour lane to start a block.</div>` : ''}
               </div>
             </div>
           </div>
@@ -1127,13 +1238,16 @@
   function scrollTimelineToAnchor() {
     const timelineScroll = document.getElementById('timeline-scroll');
     if (!timelineScroll) return;
-    const stepMinutes = getTimelineStepMinutes();
-    const rowHeight = getTimelineRowHeight();
     const entries = getSelectedEntries();
+    const metrics = getTimelineMetrics(entries);
+    if (!metrics.scrollable) {
+      timelineScroll.scrollTop = 0;
+      return;
+    }
     const anchorMinutes = dateKey(state.selectedDate) === dateKey(new Date())
-      ? Math.max(0, nowMinutes() - 120)
-      : Math.max(0, (entries[0] ? entries[0].startMinutes : 8 * 60) - 90);
-    timelineScroll.scrollTop = Math.round((anchorMinutes / stepMinutes) * rowHeight);
+      ? Math.max(metrics.startMinutes, nowMinutes() - 90)
+      : Math.max(metrics.startMinutes, (entries[0] ? entries[0].startMinutes : metrics.startMinutes) - metrics.stepMinutes);
+    timelineScroll.scrollTop = Math.round(((anchorMinutes - metrics.startMinutes) / metrics.stepMinutes) * metrics.rowHeight);
   }
 
   function nowMinutes() {

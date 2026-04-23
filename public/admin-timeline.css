@@ -246,9 +246,10 @@
 }
 
 .tk-board-card {
-  background: rgba(0,0,0,0.18);
+  background: #020202;
   border: 1px solid rgba(255,255,255,0.05);
   border-radius: 2px;
+  overflow: hidden;
   padding: 14px;
 }
 
@@ -267,22 +268,33 @@
 }
 
 .tk-scroll {
-  height: 960px;
-  overflow: auto;
+  background: #000;
+  overflow-x: hidden;
+  overflow-y: auto;
   position: relative;
 }
 
 .tk-canvas {
-  min-height: 1536px;
+  background: #000;
+  min-height: 320px;
   position: relative;
 }
 
 .tk-hour-row {
+  appearance: none;
+  -webkit-appearance: none;
+  background: linear-gradient(180deg, rgba(10,10,10,0.98) 0%, rgba(0,0,0,1) 100%);
+  border: none;
   border-bottom: 1px solid rgba(255,255,255,0.03);
   cursor: pointer;
   left: 0;
+  outline: none;
   position: absolute;
   right: 0;
+}
+
+.tk-hour-row:hover {
+  background: linear-gradient(180deg, rgba(20,20,20,0.98) 0%, rgba(6,6,6,1) 100%);
 }
 
 .tk-hour-label {
@@ -320,6 +332,7 @@
   border: 1px solid rgba(255,255,255,0.08);
   border-left-width: 3px;
   border-radius: 2px;
+  box-shadow: 0 10px 24px rgba(0,0,0,0.28);
   cursor: pointer;
   left: 72px;
   padding: 8px 10px;
@@ -452,13 +465,26 @@
   text-align: center;
 }
 
+.tk-scroll.is-fitted {
+  overflow-y: hidden;
+}
+
+.tk-scroll::-webkit-scrollbar {
+  width: 8px;
+}
+
+.tk-scroll::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.16);
+  border-radius: 999px;
+}
+
+.tk-scroll::-webkit-scrollbar-track {
+  background: rgba(255,255,255,0.04);
+}
+
 @media (max-width: 980px) {
   .tk-day-board {
     grid-template-columns: 1fr;
-  }
-
-  .tk-scroll {
-    height: 720px;
   }
 }
 
@@ -469,9 +495,5 @@
 
   .tk-calendar-cell {
     min-height: 44px;
-  }
-
-  .tk-scroll {
-    height: 640px;
   }
 }
