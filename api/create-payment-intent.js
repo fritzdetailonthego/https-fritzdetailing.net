@@ -1,6 +1,6 @@
 const path = require('path');
 const fs = require('fs');
-const { getValidPaymentAmountsInCents } = require('./_pricing');
+const { getValidPaymentAmountsInCents } = require('../lib/pricing');
 
 function readConfig() {
   try {

@@ -1,4 +1,4 @@
-const { getCommissionRate, readSales } = require('./_sales');
+const { getCommissionRate, readSales } = require('../lib/sales');
 
 module.exports = async (req, res) => {
   if (req.method === 'OPTIONS') {

@@ -1,7 +1,7 @@
 // NOWPayments crypto invoice endpoint
 // Set NOWPAYMENTS_API_KEY in Vercel environment variables
 
-const { getValidPaymentAmountsInDollars } = require('./_pricing');
+const { getValidPaymentAmountsInDollars } = require('../lib/pricing');
 
 module.exports = async (req, res) => {
   if (req.method === 'OPTIONS') {

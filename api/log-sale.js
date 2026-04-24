@@ -2,7 +2,7 @@
 // Also handles delete, clear-test, and GET ?action=mode for Stripe test/live detection.
 const fs = require('fs');
 const path = require('path');
-const { appendSale, readSales, saleInputFromPaymentIntent, writeSales } = require('./_sales');
+const { appendSale, readSales, saleInputFromPaymentIntent, writeSales } = require('../lib/sales');
 
 function readConfig() {
   try {
@@ -26,6 +26,58 @@ function getStripeSecretCandidates(preferTestMode) {
   if (!preferTestMode && testKey) candidates.push({ key: testKey, isTest: true });
 
   return candidates;
+}
+
+function getWebhookSecretCandidates() {
+  const candidates = [];
+  if (process.env.STRIPE_WEBHOOK_SECRET) {
+    candidates.push({ secret: process.env.STRIPE_WEBHOOK_SECRET, isTest: false });
+  }
+  if (process.env.STRIPE_WEBHOOK_SECRET_TEST) {
+    candidates.push({ secret: process.env.STRIPE_WEBHOOK_SECRET_TEST, isTest: true });
+  }
+  return candidates;
+}
+
+function readRawBody(req) {
+  if (Buffer.isBuffer(req.body)) return Promise.resolve(req.body);
+  if (typeof req.body === 'string') return Promise.resolve(Buffer.from(req.body));
+  if (req.body && typeof req.body === 'object') return Promise.resolve(Buffer.from(JSON.stringify(req.body)));
+
+  return new Promise((resolve, reject) => {
+    const chunks = [];
+    req.on('data', (chunk) => chunks.push(Buffer.from(chunk)));
+    req.on('end', () => resolve(Buffer.concat(chunks)));
+    req.on('error', reject);
+  });
+}
+
+function constructStripeEvent(rawBody, signature) {
+  if (!signature) throw createHttpError(400, 'Missing Stripe signature.');
+
+  const candidates = getWebhookSecretCandidates();
+  if (candidates.length === 0) {
+    throw createHttpError(500, 'Stripe webhook secret is not configured.');
+  }
+
+  let lastError = null;
+  for (const candidate of candidates) {
+    try {
+      const apiKey = candidate.isTest
+        ? (process.env.STRIPE_SECRET_KEY_TEST || process.env.STRIPE_SECRET_KEY || 'sk_test_placeholder')
+        : (process.env.STRIPE_SECRET_KEY || process.env.STRIPE_SECRET_KEY_TEST || 'sk_live_placeholder');
+      const stripe = require('stripe')(apiKey);
+      const event = stripe.webhooks.constructEvent(rawBody, signature, candidate.secret);
+      return {
+        event,
+        isTest: typeof event.livemode === 'boolean' ? !event.livemode : candidate.isTest
+      };
+    } catch (error) {
+      lastError = error;
+    }
+  }
+
+  throw createHttpError(400, lastError?.message || 'Stripe webhook verification failed.');
 }
 
 async function retrieveStripePaymentIntent(paymentIntentId, preferTestMode) {
@@ -75,11 +127,30 @@ async function verifyStripeSale(sale, preferTestMode) {
   };
 }
 
+async function handleStripeWebhook(req, res) {
+  const rawBody = await readRawBody(req);
+  const signature = req.headers['stripe-signature'];
+  const { event, isTest } = constructStripeEvent(rawBody, signature);
+
+  if (event.type !== 'payment_intent.succeeded') {
+    return res.json({ received: true, ignored: true });
+  }
+
+  const paymentIntent = event.data && event.data.object;
+  if (!paymentIntent || paymentIntent.object !== 'payment_intent') {
+    return res.status(400).json({ error: 'Invalid payment intent event.' });
+  }
+
+  const saleInput = saleInputFromPaymentIntent(paymentIntent, isTest);
+  const result = await appendSale(saleInput, { serverIsLive: !isTest });
+  return res.json({ received: true, saleId: result.sale.id, duplicate: result.duplicate });
+}
+
 module.exports = async (req, res) => {
   if (req.method === 'OPTIONS') {
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'POST, GET, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Stripe-Signature');
     return res.status(200).end();
   }
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -98,6 +169,15 @@ module.exports = async (req, res) => {
   }
 
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+
+  if (req.headers['stripe-signature']) {
+    try {
+      return await handleStripeWebhook(req, res);
+    } catch (error) {
+      console.error('Stripe webhook error:', error.message);
+      return res.status(error.statusCode || 500).json({ error: error.message || 'Webhook failed' });
+    }
+  }
 
   const { action, password, sale, saleId } = req.body;
   const isAdmin = password && password === process.env.ADMIN_PASSWORD;
