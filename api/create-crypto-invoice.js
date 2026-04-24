@@ -1,7 +1,7 @@
 // NOWPayments crypto invoice endpoint
 // Set NOWPAYMENTS_API_KEY in Vercel environment variables
 
-const { getValidPricesInDollars } = require('./_pricing');
+const { getValidPaymentAmountsInDollars } = require('./_pricing');
 
 module.exports = async (req, res) => {
   if (req.method === 'OPTIONS') {
@@ -25,9 +25,9 @@ module.exports = async (req, res) => {
   try {
     const { amount, currency, description } = req.body;
 
-    const validPrices = getValidPricesInDollars();
+    const validPrices = await getValidPaymentAmountsInDollars();
     if (typeof amount !== 'number' || !validPrices.has(amount)) {
-      return res.status(400).json({ error: 'Invalid price. Please select a service from the menu.' });
+      return res.status(400).json({ error: 'Invalid price. Please select a service and configured add-ons from the menu.' });
     }
 
     const payCurrency = currency === 'xmr' ? 'xmr' : 'btc';

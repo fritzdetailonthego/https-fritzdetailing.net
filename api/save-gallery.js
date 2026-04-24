@@ -19,6 +19,22 @@ module.exports = async (req, res) => {
     return res.status(400).json({ error: 'Invalid gallery data' });
   }
 
+  const images = Array.isArray(gallery.images) ? gallery.images : [];
+  for (const image of images) {
+    if (!image || typeof image !== 'object' || typeof image.url !== 'string') {
+      return res.status(400).json({ error: 'Each gallery image needs a URL.' });
+    }
+
+    try {
+      const parsedUrl = new URL(image.url);
+      if (parsedUrl.protocol !== 'https:' && parsedUrl.protocol !== 'http:') {
+        return res.status(400).json({ error: 'Gallery URLs must start with http or https.' });
+      }
+    } catch (error) {
+      return res.status(400).json({ error: 'Invalid gallery URL.' });
+    }
+  }
+
   const token = process.env.GITHUB_TOKEN;
   const repo = process.env.GITHUB_REPO;
 

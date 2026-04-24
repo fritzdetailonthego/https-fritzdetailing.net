@@ -1,12 +1,12 @@
 {
   "name": "fritz-detailing",
-  "version": "1.0.7",
+  "version": "1.0.8",
   "description": "Fritz's Detail on the Go — Website + Payments",
   "scripts": {
     "start": "node api/create-payment-intent.js"
   },
   "dependencies": {
-    "stripe": "^17.0.0",
-    "@vercel/blob": "^1.0.0"
+    "@vercel/blob": "^2.3.3",
+    "stripe": "^17.0.0"
   }
 }

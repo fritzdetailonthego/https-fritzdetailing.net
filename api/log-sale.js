@@ -1,13 +1,78 @@
 // Logs a sale to Vercel Blob Storage (persists across deploys).
 // Also handles delete, clear-test, and GET ?action=mode for Stripe test/live detection.
-const { put, list } = require('@vercel/blob');
 const fs = require('fs');
 const path = require('path');
+const { appendSale, readSales, saleInputFromPaymentIntent, writeSales } = require('./_sales');
 
 function readConfig() {
   try {
     return JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'public', 'site-config.json'), 'utf8'));
   } catch(e) { return {}; }
+}
+
+function createHttpError(statusCode, message) {
+  const error = new Error(message);
+  error.statusCode = statusCode;
+  return error;
+}
+
+function getStripeSecretCandidates(preferTestMode) {
+  const candidates = [];
+  const testKey = process.env.STRIPE_SECRET_KEY_TEST;
+  const liveKey = process.env.STRIPE_SECRET_KEY;
+
+  if (preferTestMode && testKey) candidates.push({ key: testKey, isTest: true });
+  if (liveKey) candidates.push({ key: liveKey, isTest: false });
+  if (!preferTestMode && testKey) candidates.push({ key: testKey, isTest: true });
+
+  return candidates;
+}
+
+async function retrieveStripePaymentIntent(paymentIntentId, preferTestMode) {
+  if (typeof paymentIntentId !== 'string' || !paymentIntentId.startsWith('pi_')) {
+    throw createHttpError(400, 'A valid Stripe payment id is required.');
+  }
+
+  const candidates = getStripeSecretCandidates(preferTestMode);
+  if (candidates.length === 0) {
+    throw createHttpError(500, 'Stripe secret key is not configured.');
+  }
+
+  let lastError = null;
+  for (const candidate of candidates) {
+    try {
+      const stripe = require('stripe')(candidate.key);
+      const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+      return { paymentIntent, isTest: candidate.isTest };
+    } catch (error) {
+      lastError = error;
+    }
+  }
+
+  throw createHttpError(400, lastError?.message || 'Could not verify Stripe payment.');
+}
+
+async function verifyStripeSale(sale, preferTestMode) {
+  const { paymentIntent, isTest } = await retrieveStripePaymentIntent(sale && sale.stripePaymentId, preferTestMode);
+
+  if (paymentIntent.status !== 'succeeded') {
+    throw createHttpError(409, 'Stripe payment has not succeeded.');
+  }
+
+  const expectedAmount = Math.round(Number(sale.amount) * 100);
+  const paidAmount = paymentIntent.amount_received || paymentIntent.amount;
+  if (!Number.isInteger(expectedAmount) || expectedAmount !== paidAmount) {
+    throw createHttpError(400, 'Sale amount does not match the Stripe payment.');
+  }
+
+  return {
+    ...saleInputFromPaymentIntent(paymentIntent, isTest, {
+      vehicle: sale.vehicle,
+      notes: sale.notes
+    }),
+    customer: paymentIntent.metadata?.customer_name || sale.customer || paymentIntent.receipt_email || 'Unknown',
+    service: paymentIntent.metadata?.service || sale.service || paymentIntent.description || 'Detailing Service'
+  };
 }
 
 module.exports = async (req, res) => {
@@ -34,32 +99,10 @@ module.exports = async (req, res) => {
 
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-  const token = process.env.BLOB_READ_WRITE_TOKEN;
   const { action, password, sale, saleId } = req.body;
   const isAdmin = password && password === process.env.ADMIN_PASSWORD;
   const cfg = readConfig();
   const serverIsLive = cfg.stripeTestMode !== true;
-
-  async function readSales() {
-    try {
-      const { blobs } = await list({ prefix: 'sales-data', token });
-      if (blobs.length > 0) {
-        const r = await fetch(blobs[0].url, { headers: { Authorization: `Bearer ${token}` } });
-        if (r.ok) return await r.json();
-      }
-    } catch(e) {}
-    return [];
-  }
-
-  async function writeSales(sales) {
-    await put('sales-data.json', JSON.stringify(sales), {
-      access: 'public',
-      contentType: 'application/json',
-      addRandomSuffix: false,
-      allowOverwrite: true,
-      token
-    });
-  }
 
   try {
     if (action === 'delete') {
@@ -82,48 +125,22 @@ module.exports = async (req, res) => {
     }
 
     // Default: log a new sale
-    if (!isAdmin && !sale?.source?.includes('stripe')) {
+    const isStripeSale = typeof sale?.source === 'string' && sale.source.includes('stripe');
+    if (!isAdmin && !isStripeSale) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
     if (!sale || !sale.amount) return res.status(400).json({ error: 'Invalid sale data' });
 
-    const commissionRate = parseFloat(process.env.COMMISSION_RATE || '0.10');
-    const commission = Math.round(sale.amount * commissionRate * 100) / 100;
+    const verifiedSale = isStripeSale ? await verifyStripeSale(sale, !serverIsLive) : null;
+    const saleInput = verifiedSale || sale;
 
-    // Stripe sales inherit test mode from the server key. Manual sales trust the client flag.
-    const isTest = sale.source?.includes('stripe') ? !serverIsLive : !!sale.isTest;
+    // Stripe sales inherit test mode from the verified key. Manual sales trust the admin flag.
+    saleInput.isTest = verifiedSale ? verifiedSale.isTest : !!sale.isTest;
+    const result = await appendSale(saleInput, { serverIsLive });
 
-    const saleRecord = {
-      id: 'SALE-' + Date.now() + '-' + Math.random().toString(36).substr(2, 4),
-      timestamp: new Date().toISOString(),
-      customer: sale.customer || 'Unknown',
-      service: sale.service || 'Detailing Service',
-      vehicle: sale.vehicle || '',
-      amount: sale.amount,
-      commission: commission,
-      commissionRate: commissionRate,
-      paymentMethod: sale.paymentMethod || 'Unknown',
-      source: sale.source || 'manual',
-      stripePaymentId: sale.stripePaymentId || '',
-      notes: sale.notes || '',
-      status: sale.status || 'completed',
-      isTest: isTest
-    };
-
-    let sales = await readSales();
-
-    // If this is a live Stripe sale and test sales exist, sweep them first.
-    // This is the auto-archive on switch back to live mode.
-    if (sale.source?.includes('stripe') && serverIsLive && sales.some(s => s.isTest)) {
-      sales = sales.filter(s => !s.isTest);
-    }
-
-    sales.push(saleRecord);
-    await writeSales(sales);
-
-    res.json({ success: true, sale: saleRecord });
+    res.json({ success: true, sale: result.sale, duplicate: result.duplicate });
   } catch (error) {
     console.error('Log sale error:', error.message);
-    res.status(500).json({ error: error.message || 'Failed to log sale' });
+    res.status(error.statusCode || 500).json({ error: error.message || 'Failed to log sale' });
   }
 };

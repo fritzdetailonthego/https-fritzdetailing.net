@@ -169,26 +169,68 @@ nav a:hover{color:var(--purple-light)}
 </footer>
 
 <script>
+function isSafeHttpUrl(value) {
+  try {
+    const url = new URL(value, window.location.href);
+    return url.protocol === 'https:' || url.protocol === 'http:';
+  } catch (e) {
+    return false;
+  }
+}
+
 async function loadGallery() {
   const track = document.getElementById('gallery-track');
   if (!track) return;
   let posts = [];
   try {
     const res = await fetch('/gallery.json?t=' + Date.now());
-    if (res.ok) { const data = await res.json(); posts = (data.images || []).filter(img => img.url && img.url.includes('instagram.com')); }
+    if (res.ok) { const data = await res.json(); posts = (data.images || []).filter(img => img.url && isSafeHttpUrl(img.url)); }
   } catch(e) {}
   if (posts.length === 0) {
     track.innerHTML = '<a href="https://instagram.com/fritzdetailonthego" target="_blank" rel="noopener" style="flex:0 0 320px;text-decoration:none;color:inherit;margin:0 auto"><div style="background:var(--dark-card);border:1px solid var(--border);border-radius:2px;height:400px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:32px;text-align:center"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--purple)" stroke-width="1.5"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="5"/><circle cx="17.5" cy="6.5" r="1.5"/></svg><div style="font-family:Oswald,sans-serif;font-size:20px;text-transform:uppercase;font-weight:600">Before & After</div><div style="font-size:14px;color:var(--gray)">Follow @fritzdetailonthego for the latest</div></div></a>';
     return;
   }
-  track.innerHTML = posts.map(post => {
-    const cleanUrl = post.url.split('?')[0].replace(/\/$/, '') + '/';
-    return '<div style="flex:0 0 340px;max-width:340px"><blockquote class="instagram-media" data-instgrm-captioned data-instgrm-permalink="' + cleanUrl + '" data-instgrm-version="14" style="background:#1a1a1a;border:0;border-radius:2px;margin:0;max-width:340px;min-width:280px;padding:0;width:100%"></blockquote></div>';
-  }).join('');
-  if (!document.getElementById('ig-embed-script')) {
+  track.innerHTML = '';
+  let hasInstagramEmbeds = false;
+  posts.forEach(post => {
+    const card = document.createElement('div');
+    card.style.cssText = 'flex:0 0 340px;max-width:340px';
+    if (post.url.includes('instagram.com')) {
+      hasInstagramEmbeds = true;
+      const cleanUrl = post.url.split('?')[0].replace(/\/$/, '') + '/';
+      const blockquote = document.createElement('blockquote');
+      blockquote.className = 'instagram-media';
+      blockquote.setAttribute('data-instgrm-captioned', '');
+      blockquote.setAttribute('data-instgrm-permalink', cleanUrl);
+      blockquote.setAttribute('data-instgrm-version', '14');
+      blockquote.style.cssText = 'background:#1a1a1a;border:0;border-radius:2px;margin:0;max-width:340px;min-width:280px;padding:0;width:100%';
+      card.appendChild(blockquote);
+    } else {
+      const link = document.createElement('a');
+      link.href = post.url;
+      link.target = '_blank';
+      link.rel = 'noopener';
+      link.style.cssText = 'display:block;text-decoration:none;color:inherit;background:var(--dark-card);border:1px solid var(--border);border-radius:2px;overflow:hidden';
+      const img = document.createElement('img');
+      img.src = post.url;
+      img.alt = post.caption || 'Fritz detailing result';
+      img.loading = 'lazy';
+      img.style.cssText = 'display:block;width:100%;height:400px;object-fit:cover;background:var(--dark)';
+      link.appendChild(img);
+      if (post.caption) {
+        const caption = document.createElement('div');
+        caption.textContent = post.caption;
+        caption.style.cssText = 'padding:10px 12px;color:var(--gray-light);font-size:13px;text-align:left';
+        link.appendChild(caption);
+      }
+      card.appendChild(link);
+    }
+    track.appendChild(card);
+  });
+  if (hasInstagramEmbeds && !document.getElementById('ig-embed-script')) {
     var s = document.createElement('script'); s.id = 'ig-embed-script'; s.async = true;
     s.src = 'https://www.instagram.com/embed.js'; document.body.appendChild(s);
-  } else if (window.instgrm) { window.instgrm.Embeds.process(); }
+  } else if (hasInstagramEmbeds && window.instgrm) { window.instgrm.Embeds.process(); }
 }
 loadGallery();
 </script>

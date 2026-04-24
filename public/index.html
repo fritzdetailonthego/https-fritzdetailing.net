@@ -660,8 +660,10 @@ nav a:hover{color:var(--purple-light)}
       <label style="display:block;font-size:13px;color:var(--gray);margin-bottom:6px;text-transform:uppercase;letter-spacing:1px;font-family:'Rajdhani',sans-serif;font-weight:600">Amount (USD)</label>
       <div style="position:relative;margin-bottom:16px">
         <span style="position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--purple-light);font-size:18px;font-weight:700;font-family:'Rajdhani',sans-serif">$</span>
-        <input type="number" id="card-amount" min="1" step="1" placeholder="Select a service" readonly style="width:100%;padding:12px 14px 12px 30px;background:var(--dark);border:1px solid var(--border);border-radius:2px;color:#fff;font-size:18px;font-weight:700;outline:none;font-family:'Rajdhani',sans-serif;cursor:not-allowed;opacity:0.8">>
+        <input type="number" id="card-amount" min="1" step="1" placeholder="Select a service" readonly style="width:100%;padding:12px 14px 12px 30px;background:var(--dark);border:1px solid var(--border);border-radius:2px;color:#fff;font-size:18px;font-weight:700;outline:none;font-family:'Rajdhani',sans-serif;cursor:not-allowed;opacity:0.8">
       </div>
+
+      <div id="card-fees" style="display:none;margin-bottom:16px;background:var(--dark);border:1px solid var(--border);border-radius:2px;padding:10px 12px"></div>
 
       <label style="display:block;font-size:13px;color:var(--gray);margin-bottom:6px;text-transform:uppercase;letter-spacing:1px;font-family:'Rajdhani',sans-serif;font-weight:600">Card Details</label>
       <div id="card-element" style="padding:14px;background:var(--dark);border:1px solid var(--border);border-radius:2px;margin-bottom:8px"></div>
@@ -840,6 +842,29 @@ document.addEventListener('keydown', function(e) {
 
 <script src="https://js.stripe.com/v3/"></script>
 <script>
+function escapeHtml(value) {
+  return String(value ?? '').replace(/[&<>"']/g, c => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;'
+  }[c]));
+}
+
+function escapeAttribute(value) {
+  return escapeHtml(value).replace(/`/g, '&#96;');
+}
+
+function isSafeHttpUrl(value) {
+  try {
+    const url = new URL(value, window.location.href);
+    return url.protocol === 'https:' || url.protocol === 'http:';
+  } catch (e) {
+    return false;
+  }
+}
+
 // ===== PRICING TABS =====
 function showPricing(type){
   document.querySelectorAll('.pricing-container').forEach(c=>c.classList.remove('active'));
@@ -957,11 +982,74 @@ async function initStripe() {
 }
 initStripe();
 
+function getCheckedCardFees() {
+  return Array.from(document.querySelectorAll('#card-fees input[type=checkbox]:checked')).map(input => ({
+    name: input.value,
+    amount: parseFloat(input.dataset.price) || 0
+  }));
+}
+
+function renderCardFees() {
+  const container = document.getElementById('card-fees');
+  if (!container) return;
+
+  const fees = Array.isArray(window.customFees) ? window.customFees : [];
+  if (fees.length === 0) {
+    container.style.display = 'none';
+    container.innerHTML = '';
+    return;
+  }
+
+  container.style.display = 'block';
+  container.innerHTML = '';
+
+  const label = document.createElement('div');
+  label.style.cssText = 'font-size:11px;color:var(--gray);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;font-family:Rajdhani,sans-serif;font-weight:600';
+  label.textContent = 'Optional Add-Ons & Fees';
+  container.appendChild(label);
+
+  fees.forEach((fee) => {
+    const amount = Number(fee.amount);
+    if (!Number.isFinite(amount) || amount <= 0 || !fee.name) return;
+
+    const row = document.createElement('label');
+    row.style.cssText = 'display:flex;align-items:flex-start;gap:10px;padding:7px 0;cursor:pointer;font-size:13px;color:var(--gray-light)';
+
+    const input = document.createElement('input');
+    input.type = 'checkbox';
+    input.value = fee.name;
+    input.dataset.price = String(amount);
+    input.style.cssText = 'accent-color:var(--purple);width:16px;height:16px;cursor:pointer;margin-top:2px;flex-shrink:0';
+    input.addEventListener('change', updateAmount);
+
+    const copy = document.createElement('span');
+    copy.style.flex = '1';
+    copy.textContent = fee.name;
+    if (fee.description) {
+      const desc = document.createElement('span');
+      desc.style.cssText = 'display:block;font-size:11px;color:var(--gray);margin-top:2px';
+      desc.textContent = fee.description;
+      copy.appendChild(desc);
+    }
+
+    const price = document.createElement('span');
+    price.style.cssText = 'color:var(--purple-light);font-family:Rajdhani,sans-serif;font-weight:700';
+    price.textContent = '$' + amount.toLocaleString();
+
+    row.appendChild(input);
+    row.appendChild(copy);
+    row.appendChild(price);
+    container.appendChild(row);
+  });
+}
+
 function updateAmount() {
   const sel = document.getElementById('card-service');
   const amtInput = document.getElementById('card-amount');
+  const baseAmount = parseInt(sel.value) || 0;
+  const feeAmount = getCheckedCardFees().reduce((sum, fee) => sum + fee.amount, 0);
   if (sel.value) {
-    amtInput.value = sel.value;
+    amtInput.value = String(baseAmount + feeAmount);
   } else {
     amtInput.value = '';
   }
@@ -972,7 +1060,11 @@ async function handlePayment() {
   const email = document.getElementById('card-email').value.trim();
   const amount = parseInt(document.getElementById('card-amount').value);
   const service = document.getElementById('card-service');
-  const serviceText = service.options[service.selectedIndex]?.text || 'Detailing Service';
+  const selectedFees = getCheckedCardFees();
+  const baseServiceText = service.options[service.selectedIndex]?.text || 'Detailing Service';
+  const serviceText = selectedFees.length > 0
+    ? baseServiceText + ' + ' + selectedFees.map(f => f.name).join(' + ')
+    : baseServiceText;
   const errEl = document.getElementById('card-errors');
 
   if (!name) { errEl.textContent = 'Please enter your name.'; return; }
@@ -1170,9 +1262,11 @@ function invUpdateServices() {
 
     items.forEach(name => {
       const price = prices[name];
+      const amount = Number(price);
+      if (!Number.isFinite(amount)) return;
       const row = document.createElement('label');
       row.style.cssText = 'display:flex;align-items:center;gap:10px;padding:8px 4px;cursor:pointer;font-size:14px;color:var(--gray-light)';
-      row.innerHTML = '<input type="checkbox" value="' + name + '" data-price="' + price + '" onchange="invCalcTotal()" style="accent-color:var(--purple);width:16px;height:16px;cursor:pointer"><span style="flex:1">' + name + '</span><span style="color:var(--purple-light);font-family:Rajdhani,sans-serif;font-weight:700">$' + price.toLocaleString() + '</span>';
+      row.innerHTML = '<input type="checkbox" value="' + escapeAttribute(name) + '" data-price="' + amount + '" onchange="invCalcTotal()" style="accent-color:var(--purple);width:16px;height:16px;cursor:pointer"><span style="flex:1">' + escapeHtml(name) + '</span><span style="color:var(--purple-light);font-family:Rajdhani,sans-serif;font-weight:700">$' + amount.toLocaleString() + '</span>';
       container.appendChild(row);
     });
   }
@@ -1185,10 +1279,12 @@ function invUpdateServices() {
     container.appendChild(label);
 
     window.customFees.forEach(f => {
+      const amount = Number(f.amount);
+      if (!Number.isFinite(amount) || amount <= 0 || !f.name) return;
       const row = document.createElement('label');
       row.style.cssText = 'display:flex;align-items:center;gap:10px;padding:8px 4px;cursor:pointer;font-size:14px;color:var(--gray-light)';
-      const desc = f.description ? '<br><span style="font-size:11px;color:var(--gray)">' + f.description + '</span>' : '';
-      row.innerHTML = '<input type="checkbox" value="' + f.name + '" data-price="' + f.amount + '" data-fee="1" onchange="invCalcTotal()" style="accent-color:var(--purple);width:16px;height:16px;cursor:pointer;flex-shrink:0"><span style="flex:1">' + f.name + desc + '</span><span style="color:var(--purple-light);font-family:Rajdhani,sans-serif;font-weight:700">$' + f.amount.toLocaleString() + '</span>';
+      const desc = f.description ? '<br><span style="font-size:11px;color:var(--gray)">' + escapeHtml(f.description) + '</span>' : '';
+      row.innerHTML = '<input type="checkbox" value="' + escapeAttribute(f.name) + '" data-price="' + amount + '" data-fee="1" onchange="invCalcTotal()" style="accent-color:var(--purple);width:16px;height:16px;cursor:pointer;flex-shrink:0"><span style="flex:1">' + escapeHtml(f.name) + desc + '</span><span style="color:var(--purple-light);font-family:Rajdhani,sans-serif;font-weight:700">$' + amount.toLocaleString() + '</span>';
       container.appendChild(row);
     });
   }
@@ -1220,7 +1316,7 @@ function generateInvoice() {
   checks.forEach(c => {
     const price = parseInt(c.dataset.price);
     total += price;
-    rows += '<tr><td style="padding:10px 16px;border-bottom:1px solid #eee;font-size:14px">' + c.value + '</td><td style="padding:10px 16px;border-bottom:1px solid #eee;text-align:right;font-weight:700;font-size:14px">$' + price.toLocaleString() + '</td></tr>';
+    rows += '<tr><td style="padding:10px 16px;border-bottom:1px solid #eee;font-size:14px">' + escapeHtml(c.value) + '</td><td style="padding:10px 16px;border-bottom:1px solid #eee;text-align:right;font-weight:700;font-size:14px">$' + price.toLocaleString() + '</td></tr>';
   });
 
   const now = new Date();
@@ -1234,11 +1330,11 @@ function generateInvoice() {
     + '<div style="text-align:right"><p style="font-size:20px;font-weight:700;color:#7B2FBE;margin-bottom:4px">INVOICE</p><p style="font-size:13px;color:#666">' + invNum + '</p><p style="font-size:13px;color:#666">' + date + ' at ' + time + '</p></div>'
     + '</div>'
     + '<div style="display:flex;gap:24px;margin-bottom:24px">'
-    + '<div style="flex:1;background:#f8f7fc;border-radius:2px;padding:14px 16px"><p style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:#999;margin-bottom:4px">Customer</p><p style="font-size:16px;font-weight:700">' + name + '</p></div>'
-    + '<div style="flex:1;background:#f8f7fc;border-radius:2px;padding:14px 16px"><p style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:#999;margin-bottom:4px">Vehicle Type</p><p style="font-size:16px;font-weight:700">' + vehicleText + '</p></div>'
+    + '<div style="flex:1;background:#f8f7fc;border-radius:2px;padding:14px 16px"><p style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:#999;margin-bottom:4px">Customer</p><p style="font-size:16px;font-weight:700">' + escapeHtml(name) + '</p></div>'
+    + '<div style="flex:1;background:#f8f7fc;border-radius:2px;padding:14px 16px"><p style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:#999;margin-bottom:4px">Vehicle Type</p><p style="font-size:16px;font-weight:700">' + escapeHtml(vehicleText) + '</p></div>'
     + '</div>'
     + '<table style="width:100%;border-collapse:collapse;margin-bottom:20px"><thead><tr style="background:#7B2FBE;color:#fff"><th style="padding:10px 16px;text-align:left;font-size:13px;text-transform:uppercase;letter-spacing:1px">Service</th><th style="padding:10px 16px;text-align:right;font-size:13px;text-transform:uppercase;letter-spacing:1px">Price</th></tr></thead><tbody>' + rows + '</tbody></table>'
-    + (notes ? '<div style="background:#f8f7fc;border-radius:2px;padding:14px 16px;margin-bottom:20px"><p style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:#999;margin-bottom:4px">Notes</p><p style="font-size:14px">' + notes + '</p></div>' : '')
+    + (notes ? '<div style="background:#f8f7fc;border-radius:2px;padding:14px 16px;margin-bottom:20px"><p style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:#999;margin-bottom:4px">Notes</p><p style="font-size:14px">' + escapeHtml(notes) + '</p></div>' : '')
     + '<div style="display:flex;justify-content:space-between;align-items:center;background:#7B2FBE;color:#fff;border-radius:2px;padding:16px 20px"><span style="font-size:18px;font-weight:700;text-transform:uppercase;letter-spacing:2px">Total Due</span><span style="font-size:28px;font-weight:700">$' + total.toLocaleString() + '</span></div>'
     + '<div style="text-align:center;margin-top:24px;padding-top:16px;border-top:1px solid #eee"><p style="font-size:12px;color:#999">Payment Method: <strong style="color:#1D9E75">CASH</strong></p><p style="font-size:12px;color:#999;margin-top:4px">Thank you for your business!</p></div>'
     + '<script>window.onload=function(){window.print()}<\/script>'
@@ -1255,6 +1351,7 @@ fetch('/api/fees', {
   method: 'GET'
 }).then(r => r.json()).then(d => {
   window.customFees = d.fees || [];
+  if (typeof renderCardFees === 'function') renderCardFees();
   if (typeof invUpdateServices === 'function') invUpdateServices();
 }).catch(() => {});
 invUpdateServices();
@@ -1321,9 +1418,11 @@ async function loadDynamicPricing() {
       for (const [key, tier] of Object.entries(data)) {
         for (const [section, items] of Object.entries({exterior: tier.exterior, interior: tier.interior, packages: tier.packages})) {
           const sLabel = section.charAt(0).toUpperCase() + section.slice(1);
-          opts += `<optgroup label="${tier.label} - ${sLabel}">`;
+          opts += `<optgroup label="${escapeAttribute(tier.label)} - ${sLabel}">`;
           for (const [name, price] of Object.entries(items || {})) {
-            opts += `<option value="${price}">${name} - $${price.toLocaleString()}</option>`;
+            const amount = Number(price);
+            if (!Number.isFinite(amount)) continue;
+            opts += `<option value="${amount}">${escapeHtml(name)} - $${amount.toLocaleString()}</option>`;
           }
           opts += '</optgroup>';
         }
@@ -1336,10 +1435,12 @@ async function loadDynamicPricing() {
     if (cryptoSelect) {
       let opts = '<option value="">Select a service...</option>';
       for (const [key, tier] of Object.entries(data)) {
-        opts += `<optgroup label="${tier.label}">`;
+        opts += `<optgroup label="${escapeAttribute(tier.label)}">`;
         for (const [section, items] of Object.entries({exterior: tier.exterior, interior: tier.interior, packages: tier.packages})) {
           for (const [name, price] of Object.entries(items || {})) {
-            opts += `<option value="${price}">${name} - $${price.toLocaleString()}</option>`;
+            const amount = Number(price);
+            if (!Number.isFinite(amount)) continue;
+            opts += `<option value="${amount}">${escapeHtml(name)} - $${amount.toLocaleString()}</option>`;
           }
         }
         opts += '</optgroup>';
@@ -1375,7 +1476,7 @@ async function loadGallery() {
     const res = await fetch('/gallery.json?t=' + Date.now());
     if (res.ok) {
       const data = await res.json();
-      posts = (data.images || []).filter(img => img.url && img.url.includes('instagram.com'));
+      posts = (data.images || []).filter(img => img.url && isSafeHttpUrl(img.url));
     }
   } catch(e) {}
 
@@ -1393,22 +1494,59 @@ async function loadGallery() {
     return;
   }
 
-  // Build Instagram embeds
-  track.innerHTML = posts.map(post => {
-    const cleanUrl = post.url.split('?')[0].replace(/\/$/, '') + '/';
-    return `<div style="flex:0 0 340px;max-width:340px">
-      <blockquote class="instagram-media" data-instgrm-captioned data-instgrm-permalink="${cleanUrl}" data-instgrm-version="14" style="background:#1a1a1a;border:0;border-radius:2px;margin:0;max-width:340px;min-width:280px;padding:0;width:100%"></blockquote>
-    </div>`;
-  }).join('');
+  track.innerHTML = '';
+  let hasInstagramEmbeds = false;
+  posts.forEach(post => {
+    if (!post.url || !isSafeHttpUrl(post.url)) return;
+
+    const card = document.createElement('div');
+    card.style.cssText = 'flex:0 0 340px;max-width:340px';
+
+    if (post.url.includes('instagram.com')) {
+      hasInstagramEmbeds = true;
+      const cleanUrl = post.url.split('?')[0].replace(/\/$/, '') + '/';
+      const blockquote = document.createElement('blockquote');
+      blockquote.className = 'instagram-media';
+      blockquote.setAttribute('data-instgrm-captioned', '');
+      blockquote.setAttribute('data-instgrm-permalink', cleanUrl);
+      blockquote.setAttribute('data-instgrm-version', '14');
+      blockquote.style.cssText = 'background:#1a1a1a;border:0;border-radius:2px;margin:0;max-width:340px;min-width:280px;padding:0;width:100%';
+      card.appendChild(blockquote);
+    } else {
+      const link = document.createElement('a');
+      link.href = post.url;
+      link.target = '_blank';
+      link.rel = 'noopener';
+      link.style.cssText = 'display:block;text-decoration:none;color:inherit;background:var(--dark-card);border:1px solid var(--border);border-radius:2px;overflow:hidden';
+
+      const img = document.createElement('img');
+      img.src = post.url;
+      img.alt = post.caption || 'Fritz detailing result';
+      img.loading = 'lazy';
+      img.style.cssText = 'display:block;width:100%;height:400px;object-fit:cover;background:var(--dark)';
+      link.appendChild(img);
+
+      if (post.caption) {
+        const caption = document.createElement('div');
+        caption.textContent = post.caption;
+        caption.style.cssText = 'padding:10px 12px;color:var(--gray-light);font-size:13px;text-align:left';
+        link.appendChild(caption);
+      }
+
+      card.appendChild(link);
+    }
+
+    track.appendChild(card);
+  });
 
   // Load Instagram embed script
-  if (!document.getElementById('ig-embed-script')) {
+  if (hasInstagramEmbeds && !document.getElementById('ig-embed-script')) {
     const s = document.createElement('script');
     s.id = 'ig-embed-script';
     s.async = true;
     s.src = 'https://www.instagram.com/embed.js';
     document.body.appendChild(s);
-  } else if (window.instgrm) {
+  } else if (hasInstagramEmbeds && window.instgrm) {
     window.instgrm.Embeds.process();
   }
 }

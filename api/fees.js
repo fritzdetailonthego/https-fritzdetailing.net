@@ -54,7 +54,21 @@ module.exports = async (req, res) => {
     if (action === 'save') {
       const { fees } = req.body;
       if (!Array.isArray(fees)) return res.status(400).json({ error: 'fees must be an array' });
-      await writeFees(fees);
+      const cleanFees = fees.map((fee) => {
+        const amount = Number(fee && fee.amount);
+        const name = typeof (fee && fee.name) === 'string' ? fee.name.trim() : '';
+        if (!name || !Number.isFinite(amount) || amount <= 0) return null;
+        return {
+          id: typeof fee.id === 'string' && fee.id.trim()
+            ? fee.id.trim().slice(0, 80)
+            : name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 80),
+          name: name.slice(0, 120),
+          amount: Math.round(amount * 100) / 100,
+          type: 'flat',
+          description: typeof fee.description === 'string' ? fee.description.trim().slice(0, 240) : ''
+        };
+      }).filter(Boolean);
+      await writeFees(cleanFees);
       return res.json({ success: true });
     }
 

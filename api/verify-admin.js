@@ -11,7 +11,7 @@ function base64UrlEncode(value) {
 }
 
 function getManagerSessionSecret() {
-  return process.env.MANAGER_SESSION_SECRET || process.env.ADMIN_PASSWORD || '';
+  return process.env.MANAGER_SESSION_SECRET || '';
 }
 
 function createManagerToken() {
@@ -45,7 +45,7 @@ module.exports = async (req, res) => {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
   res.setHeader('Access-Control-Allow-Origin', '*');
 
-  const { password } = req.body;
+  const { password, issueManagerToken } = req.body;
 
   if (!process.env.ADMIN_PASSWORD) {
     return res.status(500).json({ error: 'ADMIN_PASSWORD not set in Vercel environment variables.' });
@@ -53,6 +53,17 @@ module.exports = async (req, res) => {
 
   if (!password || password !== process.env.ADMIN_PASSWORD) {
     return res.status(401).json({ error: 'Wrong password' });
+  }
+
+  if (issueManagerToken === false) {
+    return res.json({
+      success: true,
+      user: { role: 'admin' }
+    });
+  }
+
+  if (!getManagerSessionSecret()) {
+    return res.status(500).json({ error: 'MANAGER_SESSION_SECRET must be set to issue manager app sessions.' });
   }
 
   const session = createManagerToken();

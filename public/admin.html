@@ -99,7 +99,7 @@ body{font-family:"Open Sans",sans-serif;background:#0A0A0A;color:var(--white);mi
   <a href="index.html" style="display:flex;align-items:center;gap:10px"><img src="/logo.jpg" alt="Fritz's Detail" style="height:36px;width:auto;border-radius:2px">&larr; Back to Site</a>
   <h1>Admin <span>Panel</span></h1>
   <div class="header-meta">
-    <span class="version-chip" id="admin-version">v1.0.6</span>
+    <span class="version-chip" id="admin-version">Loading version...</span>
   </div>
 </div>
 
@@ -514,6 +514,31 @@ let activeScheduleTab = 'timeline';
 let activeAdminTab = 'bookings';
 const ADMIN_TABS = ['overview', 'pricing', 'bookings', 'gallery', 'manager', 'fees', 'sales'];
 
+function escapeHtml(value) {
+  return String(value ?? '').replace(/[&<>"']/g, c => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;'
+  }[c]));
+}
+
+function escapeAttribute(value) {
+  return escapeHtml(value).replace(/`/g, '&#96;');
+}
+
+function escapeJsString(value) {
+  return String(value ?? '')
+    .replace(/\\/g, '\\\\')
+    .replace(/'/g, "\\'")
+    .replace(/\r?\n/g, ' ');
+}
+
+function escapeJsAttribute(value) {
+  return escapeAttribute(escapeJsString(value));
+}
+
 function getInitialAdminTab() {
   const rawHash = (window.location.hash || '').replace(/^#/, '');
   const normalized = rawHash.startsWith('admin-') ? rawHash.slice(6) : rawHash;
@@ -578,7 +603,7 @@ async function doLogin() {
     const authRes = await fetch('/api/verify-admin', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ password: pw })
+      body: JSON.stringify({ password: pw, issueManagerToken: false })
     });
     const authData = await authRes.json();
     if (!authRes.ok) {
@@ -606,23 +631,28 @@ function renderEditor() {
   let html = '';
 
   for (const [tierKey, tier] of Object.entries(pricingData)) {
-    html += `<div class="tier-section" data-tier="${tierKey}">`;
-    html += `<div class="tier-header">${tier.label}</div>`;
+    const tierAttr = escapeAttribute(tierKey);
+    const tierJs = escapeJsAttribute(tierKey);
+    html += `<div class="tier-section" data-tier="${tierAttr}">`;
+    html += `<div class="tier-header">${escapeHtml(tier.label)}</div>`;
     html += `<div class="tier-sub">Edit service names and prices. Add or remove services as needed.</div>`;
     html += `<table class="price-table">`;
     html += `<thead><tr><th>Service</th><th>Price</th><th></th></tr></thead><tbody>`;
 
     for (const [section, items] of Object.entries({exterior: tier.exterior, interior: tier.interior, packages: tier.packages})) {
       const sectionLabel = section.charAt(0).toUpperCase() + section.slice(1);
+      const sectionJs = escapeJsAttribute(section);
       html += `<tr><td class="cat-header" colspan="3">${sectionLabel}</td></tr>`;
       for (const [name, price] of Object.entries(items)) {
-        html += `<tr data-tier="${tierKey}" data-section="${section}">
-          <td><input class="name-input" value="${name}" data-orig="${name}" onchange="updateName(this,'${tierKey}','${section}')"></td>
-          <td><span style="color:var(--gray);margin-right:2px">$</span><input class="price-input" type="number" min="0" value="${price}" onchange="updatePrice(this,'${tierKey}','${section}','${name}')"></td>
-          <td><button class="del-btn" onclick="deleteService(this,'${tierKey}','${section}','${name}')" title="Remove">×</button></td>
+        const nameAttr = escapeAttribute(name);
+        const nameJs = escapeJsAttribute(name);
+        html += `<tr data-tier="${tierAttr}" data-section="${escapeAttribute(section)}">
+          <td><input class="name-input" value="${nameAttr}" data-orig="${nameAttr}" onchange="updateName(this,'${tierJs}','${sectionJs}')"></td>
+          <td><span style="color:var(--gray);margin-right:2px">$</span><input class="price-input" type="number" min="0" value="${price}" onchange="updatePrice(this,'${tierJs}','${sectionJs}','${nameJs}')"></td>
+          <td><button class="del-btn" onclick="deleteService(this,'${tierJs}','${sectionJs}','${nameJs}')" title="Remove">×</button></td>
         </tr>`;
       }
-      html += `<tr><td colspan="3"><button class="add-row-btn" onclick="addService('${tierKey}','${section}')">+ Add ${sectionLabel} Service</button></td></tr>`;
+      html += `<tr><td colspan="3"><button class="add-row-btn" onclick="addService('${tierJs}','${sectionJs}')">+ Add ${sectionLabel} Service</button></td></tr>`;
     }
 
     html += `</tbody></table></div>`;
@@ -653,9 +683,9 @@ function updateName(input, tier, section) {
   pricingData[tier][section][newName] = price;
   input.dataset.orig = newName;
   const priceInput = input.closest('tr').querySelector('.price-input');
-  priceInput.setAttribute('onchange', `updatePrice(this,'${tier}','${section}','${newName}')`);
+  priceInput.setAttribute('onchange', `updatePrice(this,'${escapeJsString(tier)}','${escapeJsString(section)}','${escapeJsString(newName)}')`);
   const delBtn = input.closest('tr').querySelector('.del-btn');
-  delBtn.setAttribute('onclick', `deleteService(this,'${tier}','${section}','${newName}')`);
+  delBtn.setAttribute('onclick', `deleteService(this,'${escapeJsString(tier)}','${escapeJsString(section)}','${escapeJsString(newName)}')`);
 }
 
 async function deleteService(btn, tier, section, name) {
@@ -778,7 +808,7 @@ async function toggleRevisions() {
         <button onclick="restoreRevision(${r.index})" style="background:var(--purple);color:#fff;border:none;padding:4px 12px;border-radius:2px;cursor:pointer;font-family:'Rajdhani',sans-serif;font-weight:600;font-size:12px;text-transform:uppercase">Restore</button>
       </div>`;
     }).join('');
-  } catch(e) { el.innerHTML = '<div style="color:var(--red);padding:8px;font-size:13px">' + (e.message || 'Failed to load. Set up Blob Storage first.') + '</div>'; }
+  } catch(e) { el.innerHTML = '<div style="color:var(--red);padding:8px;font-size:13px">' + escapeHtml(e.message || 'Failed to load. Set up Blob Storage first.') + '</div>'; }
 }
 
 async function restoreRevision(index) {
@@ -895,11 +925,11 @@ function renderGalleryEditor() {
   container.innerHTML = galleryData.images.map((img, i) => `
     <div style="display:flex;gap:12px;align-items:center;margin-bottom:12px;background:var(--dark);border:1px solid var(--border);border-radius:2px;padding:12px">
       <div style="flex:0 0 60px;height:60px;border-radius:2px;overflow:hidden;background:var(--dark-card)">
-        ${img.url ? `<img src="${img.url}" style="width:100%;height:100%;object-fit:cover" onerror="this.style.display='none'">` : '<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:var(--gray);font-size:11px">No img</div>'}
+        ${img.url ? `<img src="${escapeAttribute(img.url)}" style="width:100%;height:100%;object-fit:cover" onerror="this.style.display='none'">` : '<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:var(--gray);font-size:11px">No img</div>'}
       </div>
       <div style="flex:1;display:flex;flex-direction:column;gap:6px">
-        <input class="input" placeholder="Paste image URL from imgbb.com (e.g. https://i.ibb.co/abc/photo.jpg)" value="${img.url || ''}" onchange="galleryData.images[${i}].url=this.value;renderGalleryEditor()" style="font-size:13px;padding:8px 10px">
-        <input class="input" placeholder="Caption (optional)" value="${img.caption || ''}" onchange="galleryData.images[${i}].caption=this.value" style="font-size:13px;padding:8px 10px">
+        <input class="input" placeholder="Paste image URL from imgbb.com (e.g. https://i.ibb.co/abc/photo.jpg)" value="${escapeAttribute(img.url || '')}" onchange="galleryData.images[${i}].url=this.value;renderGalleryEditor()" style="font-size:13px;padding:8px 10px">
+        <input class="input" placeholder="Caption (optional)" value="${escapeAttribute(img.caption || '')}" onchange="galleryData.images[${i}].caption=this.value" style="font-size:13px;padding:8px 10px">
       </div>
       <button onclick="galleryData.images.splice(${i},1);renderGalleryEditor()" class="del-btn" style="font-size:20px" title="Remove">×</button>
     </div>
@@ -1029,18 +1059,24 @@ async function loadBookings() {
       el.appendChild(createUpcomingBookingRow(booking));
     });
   } catch(e) {
-    document.getElementById('bookings-list').innerHTML = '<p style="color:var(--red);font-size:14px">' + (e.message || 'Failed to load bookings') + '</p>';
+    document.getElementById('bookings-list').innerHTML = '<p style="color:var(--red);font-size:14px">' + escapeHtml(e.message || 'Failed to load bookings') + '</p>';
   }
 }
 
 async function cancelBooking(id) {
   if (!await customConfirm('Cancel this booking?')) return;
-  await fetch('/api/bookings', {
-    method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ action: 'cancel-booking', password: adminPassword, bookingId: id })
-  });
-  loadBookings();
-  showToast('Booking cancelled');
+  try {
+    const res = await fetch('/api/bookings', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'cancel-booking', password: adminPassword, bookingId: id })
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || 'Cancel failed');
+    await loadBookings();
+    showToast('Booking cancelled');
+  } catch (e) {
+    showToast(e.message || 'Cancel failed');
+  }
 }
 
 async function loadAvailability() {
@@ -1077,9 +1113,9 @@ function renderAvailabilityEditor() {
     html += '<div style="display:flex;gap:8px;align-items:center;font-size:13px">' +
       '<label style="width:90px;font-weight:600">' + labels[i] + '</label>' +
       '<input type="checkbox" ' + (cfg.open ? 'checked' : '') + ' onchange="availabilityConfig.weeklyHours[\'' + d + '\'].open=this.checked">' +
-      '<input type="time" class="input" value="' + cfg.start + '" style="width:auto;margin:0;padding:6px 8px;font-size:13px" onchange="availabilityConfig.weeklyHours[\'' + d + '\'].start=this.value">' +
+      '<input type="time" class="input" value="' + escapeAttribute(cfg.start) + '" style="width:auto;margin:0;padding:6px 8px;font-size:13px" onchange="availabilityConfig.weeklyHours[\'' + d + '\'].start=this.value">' +
       '<span style="color:var(--gray)">to</span>' +
-      '<input type="time" class="input" value="' + cfg.end + '" style="width:auto;margin:0;padding:6px 8px;font-size:13px" onchange="availabilityConfig.weeklyHours[\'' + d + '\'].end=this.value">' +
+      '<input type="time" class="input" value="' + escapeAttribute(cfg.end) + '" style="width:auto;margin:0;padding:6px 8px;font-size:13px" onchange="availabilityConfig.weeklyHours[\'' + d + '\'].end=this.value">' +
     '</div>';
   });
   html += '</div>';
@@ -1122,10 +1158,10 @@ function renderBlockedDates() {
   el.innerHTML = '<div style="display:grid;gap:8px">' + dates.map(entry =>
     '<div style="background:rgba(226,75,74,0.08);border:1px solid rgba(226,75,74,0.22);border-radius:2px;padding:10px 12px;display:flex;align-items:flex-start;justify-content:space-between;gap:12px">' +
       '<div>' +
-        '<div style="font-family:Rajdhani,sans-serif;font-size:13px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--red)">' + entry.date + '</div>' +
-        '<div style="font-size:12px;color:var(--gray-light);margin-top:4px">' + (entry.reason || 'No reason provided') + '</div>' +
+        '<div style="font-family:Rajdhani,sans-serif;font-size:13px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--red)">' + escapeHtml(entry.date) + '</div>' +
+        '<div style="font-size:12px;color:var(--gray-light);margin-top:4px">' + escapeHtml(entry.reason || 'No reason provided') + '</div>' +
       '</div>' +
-      '<button onclick="unblockDate(\'' + entry.date + '\')" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:18px;line-height:1">&times;</button>' +
+      '<button onclick="unblockDate(\'' + escapeJsAttribute(entry.date) + '\')" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:18px;line-height:1">&times;</button>' +
     '</div>'
   ).join('') + '</div>';
 }
@@ -1157,11 +1193,11 @@ function renderRecurringBlocks() {
   );
 
   el.innerHTML = '<div style="display:grid;gap:8px">' + sorted.map((block) =>
-    '<div style="background:rgba(226,75,74,0.08);border:1px solid rgba(226,75,74,0.22);border-radius:2px;padding:10px 12px;display:grid;gap:4px">' +
-      '<div style="font-family:Rajdhani,sans-serif;font-size:13px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--red)">' + (block.label || 'Recurring Hold') + '</div>' +
-      '<div style="font-size:12px;color:var(--gray-light)">' + formatRecurringPatternInline(block.recurrence) + ' · ' + (block.time || '--:--') + (block.endTime ? ' - ' + block.endTime : '') + '</div>' +
-      '<div style="font-size:12px;color:var(--gray-light)">Starts ' + (block.date || 'unknown') + (block.endDate ? ' · Ends ' + block.endDate : '') + '</div>' +
-      (block.notes ? '<div style="font-size:12px;color:var(--gray-light)">' + block.notes + '</div>' : '') +
+      '<div style="background:rgba(226,75,74,0.08);border:1px solid rgba(226,75,74,0.22);border-radius:2px;padding:10px 12px;display:grid;gap:4px">' +
+      '<div style="font-family:Rajdhani,sans-serif;font-size:13px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--red)">' + escapeHtml(block.label || 'Recurring Hold') + '</div>' +
+      '<div style="font-size:12px;color:var(--gray-light)">' + escapeHtml(formatRecurringPatternInline(block.recurrence)) + ' · ' + escapeHtml(block.time || '--:--') + (block.endTime ? ' - ' + escapeHtml(block.endTime) : '') + '</div>' +
+      '<div style="font-size:12px;color:var(--gray-light)">Starts ' + escapeHtml(block.date || 'unknown') + (block.endDate ? ' · Ends ' + escapeHtml(block.endDate) : '') + '</div>' +
+      (block.notes ? '<div style="font-size:12px;color:var(--gray-light)">' + escapeHtml(block.notes) + '</div>' : '') +
     '</div>'
   ).join('') + '</div>';
 }
@@ -1241,9 +1277,9 @@ async function loadManagerDevices() {
       devices.map((device) =>
         '<div style="background:var(--dark);border:1px solid var(--border);border-radius:2px;padding:12px 14px;display:flex;justify-content:space-between;gap:12px;align-items:flex-start">' +
           '<div>' +
-            '<div style="color:var(--white);font-weight:600;font-size:14px">' + (device.deviceName || device.platform || 'Manager Device') + '</div>' +
+            '<div style="color:var(--white);font-weight:600;font-size:14px">' + escapeHtml(device.deviceName || device.platform || 'Manager Device') + '</div>' +
             '<div style="color:var(--gray);font-size:12px;margin-top:4px">' +
-              [device.platform, device.appVersion ? ('v' + device.appVersion) : null, device.deviceId || null].filter(Boolean).join(' • ') +
+              escapeHtml([device.platform, device.appVersion ? ('v' + device.appVersion) : null, device.deviceId || null].filter(Boolean).join(' • ')) +
             '</div>' +
             '<div style="color:var(--gray-light);font-size:12px;margin-top:6px">Last seen: ' + (device.lastSeenAt ? new Date(device.lastSeenAt).toLocaleString() : 'Unknown') + '</div>' +
           '</div>' +
@@ -1254,7 +1290,7 @@ async function loadManagerDevices() {
       ).join('') +
       '</div>';
   } catch (e) {
-    el.innerHTML = '<p style="color:var(--red);font-size:13px">' + (e.message || 'Failed to load manager devices') + '</p>';
+    el.innerHTML = '<p style="color:var(--red);font-size:13px">' + escapeHtml(e.message || 'Failed to load manager devices') + '</p>';
   }
 }
 
@@ -1329,8 +1365,8 @@ function renderFees() {
   }
   el.innerHTML = feesList.map((f, i) =>
     '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:var(--dark);border:1px solid var(--border);border-radius:2px;margin-bottom:6px;font-size:14px">' +
-      '<div><strong style="color:var(--white)">' + f.name + '</strong> <span style="color:var(--purple-light);font-family:Rajdhani,sans-serif;font-weight:700;margin-left:8px">$' + f.amount + '</span>' +
-      (f.description ? '<br><span style="color:var(--gray);font-size:12px">' + f.description + '</span>' : '') + '</div>' +
+      '<div><strong style="color:var(--white)">' + escapeHtml(f.name) + '</strong> <span style="color:var(--purple-light);font-family:Rajdhani,sans-serif;font-weight:700;margin-left:8px">$' + f.amount + '</span>' +
+      (f.description ? '<br><span style="color:var(--gray);font-size:12px">' + escapeHtml(f.description) + '</span>' : '') + '</div>' +
       '<button onclick="removeFee(' + i + ')" style="background:none;border:1px solid rgba(226,75,74,0.3);color:var(--red);padding:4px 10px;border-radius:2px;cursor:pointer;font-size:11px;font-family:Rajdhani,sans-serif;font-weight:600;text-transform:uppercase">Remove</button>' +
     '</div>'
   ).join('');
@@ -1510,19 +1546,23 @@ async function loadSales() {
       const color = methodColors[s.paymentMethod] || 'var(--gray)';
       const testBadge = s.isTest ? '<span style="background:#2D7FF9;color:#fff;padding:2px 7px;border-radius:2px;font-size:10px;font-family:Rajdhani,sans-serif;font-weight:700;letter-spacing:1px;margin-right:6px">TEST</span>' : '';
       const rowBg = s.isTest ? 'background:rgba(45,127,249,0.06);' : '';
+      const amount = Number(s.amount) || 0;
+      const commission = Number(s.commission) || 0;
+      const safeId = escapeJsAttribute(s.id || '');
+      const safeCustomerForJs = escapeJsAttribute(s.customer || '');
       return `<tr style="border-bottom:1px solid rgba(255,255,255,0.03);${rowBg}">
         <td style="padding:10px 12px;color:var(--gray-light)">${date}</td>
-        <td style="padding:10px 12px;color:var(--white);font-weight:500">${testBadge}${s.customer}</td>
-        <td style="padding:10px 12px;color:var(--gray-light)">${s.service}</td>
-        <td style="padding:10px 12px;text-align:right;font-family:'Rajdhani',sans-serif;font-weight:700;font-size:15px">$${s.amount.toLocaleString()}</td>
-        <td style="padding:10px 12px;text-align:right;font-family:'Rajdhani',sans-serif;font-weight:700;font-size:15px;color:#1D9E75">$${s.commission.toLocaleString()}</td>
-        <td style="padding:10px 12px;text-align:center"><span style="background:${color};color:#fff;padding:3px 10px;border-radius:2px;font-size:11px;font-family:'Rajdhani',sans-serif;font-weight:600;text-transform:uppercase;letter-spacing:0.5px">${s.paymentMethod}</span></td>
-        <td style="padding:10px 12px;text-align:center"><button onclick="deleteSale('${s.id}','${(s.customer||'').replace(/'/g,"\\'")}')" title="Delete this sale" style="background:none;border:1px solid rgba(226,75,74,0.4);color:var(--red);padding:4px 10px;border-radius:2px;cursor:pointer;font-size:11px;font-family:Rajdhani,sans-serif;font-weight:700">Delete</button></td>
+        <td style="padding:10px 12px;color:var(--white);font-weight:500">${testBadge}${escapeHtml(s.customer)}</td>
+        <td style="padding:10px 12px;color:var(--gray-light)">${escapeHtml(s.service)}</td>
+        <td style="padding:10px 12px;text-align:right;font-family:'Rajdhani',sans-serif;font-weight:700;font-size:15px">$${amount.toLocaleString()}</td>
+        <td style="padding:10px 12px;text-align:right;font-family:'Rajdhani',sans-serif;font-weight:700;font-size:15px;color:#1D9E75">$${commission.toLocaleString()}</td>
+        <td style="padding:10px 12px;text-align:center"><span style="background:${color};color:#fff;padding:3px 10px;border-radius:2px;font-size:11px;font-family:'Rajdhani',sans-serif;font-weight:600;text-transform:uppercase;letter-spacing:0.5px">${escapeHtml(s.paymentMethod)}</span></td>
+        <td style="padding:10px 12px;text-align:center"><button onclick="deleteSale('${safeId}','${safeCustomerForJs}')" title="Delete this sale" style="background:none;border:1px solid rgba(226,75,74,0.4);color:var(--red);padding:4px 10px;border-radius:2px;cursor:pointer;font-size:11px;font-family:Rajdhani,sans-serif;font-weight:700">Delete</button></td>
       </tr>`;
     }).join('');
 
   } catch(e) {
-    document.getElementById('sales-tbody').innerHTML = '<tr><td colspan="7" style="padding:24px;text-align:center;color:var(--red)">' + (e.message || 'Failed to load sales. Make sure BLOB_READ_WRITE_TOKEN is set in Vercel env vars.') + '</td></tr>';
+    document.getElementById('sales-tbody').innerHTML = '<tr><td colspan="7" style="padding:24px;text-align:center;color:var(--red)">' + escapeHtml(e.message || 'Failed to load sales. Make sure BLOB_READ_WRITE_TOKEN is set in Vercel env vars.') + '</td></tr>';
   }
 }
 

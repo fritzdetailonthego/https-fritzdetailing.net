@@ -1,6 +1,6 @@
 const path = require('path');
 const fs = require('fs');
-const { getValidPricesInCents } = require('./_pricing');
+const { getValidPaymentAmountsInCents } = require('./_pricing');
 
 function readConfig() {
   try {
@@ -29,10 +29,10 @@ module.exports = async (req, res) => {
       return res.status(400).json({ error: 'Invalid amount' });
     }
 
-    // Only accept prices from the menu. No custom amounts.
-    const validPrices = getValidPricesInCents();
+    // Only accept menu prices, optionally plus configured add-on fees.
+    const validPrices = await getValidPaymentAmountsInCents();
     if (!validPrices.has(amount)) {
-      return res.status(400).json({ error: 'Invalid price. Please select a service from the menu.' });
+      return res.status(400).json({ error: 'Invalid price. Please select a service and configured add-ons from the menu.' });
     }
 
     // Pick secret key based on admin toggle

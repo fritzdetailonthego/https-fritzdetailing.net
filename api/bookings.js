@@ -70,7 +70,7 @@ function base64UrlDecode(value) {
 }
 
 function getManagerSessionSecret() {
-  return process.env.MANAGER_SESSION_SECRET || process.env.ADMIN_PASSWORD || '';
+  return process.env.MANAGER_SESSION_SECRET || '';
 }
 
 function timingSafeEqualString(left, right) {
@@ -92,13 +92,15 @@ function getManagerTokenFromRequest(req, body) {
 
 function verifyManagerToken(token) {
   if (!token) return null;
+  const secret = getManagerSessionSecret();
+  if (!secret) return null;
 
   const [encodedPayload, signature] = String(token).split('.');
   if (!encodedPayload || !signature) return null;
 
   const expectedSignature = base64UrlEncode(
     crypto
-      .createHmac('sha256', getManagerSessionSecret())
+      .createHmac('sha256', secret)
       .update(encodedPayload)
       .digest()
   );

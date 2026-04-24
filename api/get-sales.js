@@ -1,4 +1,4 @@
-const { list } = require('@vercel/blob');
+const { getCommissionRate, readSales } = require('./_sales');
 
 module.exports = async (req, res) => {
   if (req.method === 'OPTIONS') {
@@ -19,20 +19,13 @@ module.exports = async (req, res) => {
   }
 
   try {
-    const token = process.env.BLOB_READ_WRITE_TOKEN;
-    let sales = [];
-
-    const { blobs } = await list({ prefix: 'sales-data', token });
-    if (blobs.length > 0) {
-      const r = await fetch(blobs[0].url, { headers: { Authorization: `Bearer ${token}` } });
-      if (r.ok) sales = await r.json();
-    }
+    let sales = await readSales();
 
     sales.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
 
-    const totalRevenue = sales.reduce((sum, s) => sum + (s.amount || 0), 0);
-    const totalCommission = sales.reduce((sum, s) => sum + (s.commission || 0), 0);
-    const commissionRate = parseFloat(process.env.COMMISSION_RATE || '0.10');
+    const totalRevenue = sales.reduce((sum, s) => sum + (Number(s.amount) || 0), 0);
+    const totalCommission = sales.reduce((sum, s) => sum + (Number(s.commission) || 0), 0);
+    const commissionRate = getCommissionRate();
 
     res.json({
       sales,
