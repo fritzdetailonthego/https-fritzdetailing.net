@@ -5,6 +5,7 @@ const packageJson = require('../package.json');
 const BOOKINGS_PATH = 'bookings-data.json';
 const AVAILABILITY_PATH = 'availability-config.json';
 const MANAGER_DEVICES_PATH = 'manager-devices.json';
+const SUPPORT_TICKETS_PATH = 'manager-support-tickets.json';
 const DAY_MS = 24 * 60 * 60 * 1000;
 const MANAGER_TOKEN_TTL_SECONDS = 30 * 24 * 60 * 60;
 const EXPO_PUSH_ENDPOINT = 'https://exp.host/--/api/v2/push/send';
@@ -13,6 +14,10 @@ const JSON_BLOB_MAX_ATTEMPTS = 3;
 const DEFAULT_BLOCKED_SLOT_DURATION_MINUTES = 30;
 const MAX_BLOCK_DURATION_MINUTES = 24 * 60;
 const RECURRING_PATTERNS = new Set(['daily', 'weekdays', 'weekends', 'weekly', 'custom']);
+const SUPPORT_TICKET_TYPES = new Set(['error', 'fix', 'question', 'other']);
+const SUPPORT_TICKET_PRIORITIES = new Set(['low', 'normal', 'urgent']);
+const SUPPORT_TICKET_STATUSES = new Set(['open', 'in-progress', 'resolved', 'closed']);
+const SUPPORT_TICKETS_MAX = 200;
 
 function buildDefaultAvailability() {
   return {
@@ -512,6 +517,79 @@ function serializeManagerDevice(device) {
       ? normalizedDevice.pushToken.slice(0, 20) + '...'
       : null
   };
+}
+
+function cleanTicketString(value, fallback, maxLength) {
+  const normalized = typeof value === 'string' ? value.trim().replace(/\s+/g, ' ') : '';
+  const nextValue = normalized || fallback;
+  return nextValue.slice(0, maxLength);
+}
+
+function cleanTicketBody(value, fallback, maxLength) {
+  const normalized = typeof value === 'string' ? value.trim() : '';
+  const nextValue = normalized || fallback;
+  return nextValue.slice(0, maxLength);
+}
+
+function normalizeSupportTicketType(value) {
+  const normalized = typeof value === 'string' ? value.trim().toLowerCase() : '';
+  return SUPPORT_TICKET_TYPES.has(normalized) ? normalized : 'error';
+}
+
+function normalizeSupportTicketPriority(value) {
+  const normalized = typeof value === 'string' ? value.trim().toLowerCase() : '';
+  return SUPPORT_TICKET_PRIORITIES.has(normalized) ? normalized : 'normal';
+}
+
+function normalizeSupportTicketStatus(value) {
+  const normalized = typeof value === 'string' ? value.trim().toLowerCase() : '';
+  return SUPPORT_TICKET_STATUSES.has(normalized) ? normalized : 'open';
+}
+
+function normalizeSupportTicket(ticket) {
+  ticket = ticket && typeof ticket === 'object' ? ticket : {};
+  const nowIso = new Date().toISOString();
+  const createdAt = typeof ticket.createdAt === 'string' ? ticket.createdAt : nowIso;
+  const updatedAt = typeof ticket.updatedAt === 'string' ? ticket.updatedAt : createdAt;
+  const status = normalizeSupportTicketStatus(ticket.status);
+
+  return {
+    id:
+      typeof ticket.id === 'string' && ticket.id.trim()
+        ? ticket.id.trim()
+        : `ST-${Date.now()}-${crypto.randomBytes(2).toString('hex')}`,
+    type: normalizeSupportTicketType(ticket.type),
+    priority: normalizeSupportTicketPriority(ticket.priority),
+    status,
+    title: cleanTicketString(ticket.title, 'Manager support request', 140),
+    message: cleanTicketBody(ticket.message, '', 4000),
+    reporterName: cleanTicketString(ticket.reporterName, 'Manager', 80),
+    contact: cleanTicketString(ticket.contact, '', 120),
+    deviceId: cleanTicketString(ticket.deviceId, '', 120),
+    deviceName: cleanTicketString(ticket.deviceName, '', 120),
+    appVersion: cleanTicketString(ticket.appVersion, '', 40),
+    context: cleanTicketBody(ticket.context, '', 1200),
+    adminNote: cleanTicketBody(ticket.adminNote, '', 2000),
+    createdAt,
+    updatedAt,
+    ...(typeof ticket.resolvedAt === 'string' && status === 'resolved' ? { resolvedAt: ticket.resolvedAt } : {}),
+    ...(typeof ticket.closedAt === 'string' && status === 'closed' ? { closedAt: ticket.closedAt } : {})
+  };
+}
+
+function sortSupportTickets(tickets) {
+  return [...tickets]
+    .map(normalizeSupportTicket)
+    .sort((left, right) => {
+      const leftOpen = left.status === 'open' || left.status === 'in-progress';
+      const rightOpen = right.status === 'open' || right.status === 'in-progress';
+      if (leftOpen !== rightOpen) return leftOpen ? -1 : 1;
+      return right.updatedAt.localeCompare(left.updatedAt);
+    });
+}
+
+function serializeSupportTicket(ticket) {
+  return normalizeSupportTicket(ticket);
 }
 
 function chunkArray(items, chunkSize) {
@@ -1108,6 +1186,24 @@ module.exports = async (req, res) => {
     await writeJsonBlob(MANAGER_DEVICES_PATH, devices, etag, token);
   }
 
+  async function readSupportTickets() {
+    const { data, etag } = await readJsonBlob(SUPPORT_TICKETS_PATH, [], token);
+    const payload = Array.isArray(data) ? data : [];
+    return {
+      data: sortSupportTickets(payload).slice(0, SUPPORT_TICKETS_MAX),
+      etag
+    };
+  }
+
+  async function writeSupportTickets(tickets, etag) {
+    await writeJsonBlob(
+      SUPPORT_TICKETS_PATH,
+      sortSupportTickets(tickets).slice(0, SUPPORT_TICKETS_MAX),
+      etag,
+      token
+    );
+  }
+
   async function sendExpoPushNotifications(devices, messageFactory) {
     const eligibleDevices = devices.filter((device) => isExpoPushToken(device.pushToken));
     if (eligibleDevices.length === 0) {
@@ -1218,6 +1314,28 @@ module.exports = async (req, res) => {
         phone: booking.phone,
         service: booking.service || '',
         vehicle: booking.vehicle || ''
+      }
+    }));
+
+    if (result.invalidTokens.length > 0) {
+      await pruneManagerDevices(result.invalidTokens);
+    }
+
+    return result;
+  }
+
+  async function notifyManagersAboutSupportTicket(ticket) {
+    const { data: devices } = await readManagerDevices();
+    const result = await sendExpoPushNotifications(devices, () => ({
+      title: ticket.priority === 'urgent' ? 'Urgent Support Ticket' : 'Support Ticket',
+      body: `${ticket.reporterName}: ${ticket.title}`,
+      data: {
+        type: 'support-ticket-created',
+        ticketId: ticket.id,
+        ticketType: ticket.type,
+        priority: ticket.priority,
+        status: ticket.status,
+        createdAt: ticket.createdAt
       }
     }));
 
@@ -1456,6 +1574,129 @@ module.exports = async (req, res) => {
         ...result,
         registeredDevices,
         pushCapable: devices.filter((device) => isExpoPushToken(device.pushToken)).length
+      });
+    }
+
+    if (action === 'list-support-tickets') {
+      if (!authed) return res.status(401).json({ error: 'Unauthorized' });
+
+      const { data: tickets } = await readSupportTickets();
+      return res.json({
+        tickets: tickets.map(serializeSupportTicket),
+        openCount: tickets.filter((ticket) => ticket.status === 'open' || ticket.status === 'in-progress').length
+      });
+    }
+
+    if (action === 'create-support-ticket') {
+      if (!authed) return res.status(401).json({ error: 'Unauthorized' });
+
+      const {
+        type,
+        priority,
+        title,
+        message,
+        reporterName,
+        contact,
+        deviceId,
+        deviceName,
+        appVersion,
+        context
+      } = req.body || {};
+      const normalizedTitle = cleanTicketString(title, '', 140);
+      const normalizedMessage = cleanTicketBody(message, '', 4000);
+
+      if (!normalizedTitle || !normalizedMessage) {
+        return res.status(400).json({ error: 'A title and details are required.' });
+      }
+
+      const nowIso = new Date().toISOString();
+      let savedTicket = null;
+
+      await updateSingletonJsonBlob({
+        read: readSupportTickets,
+        write: writeSupportTickets,
+        errorMessage: 'Could not create the support ticket. Please try again.',
+        mutate: async (tickets) => {
+          savedTicket = normalizeSupportTicket({
+            id: `ST-${Date.now()}-${crypto.randomBytes(2).toString('hex')}`,
+            type,
+            priority,
+            status: 'open',
+            title: normalizedTitle,
+            message: normalizedMessage,
+            reporterName,
+            contact,
+            deviceId,
+            deviceName,
+            appVersion,
+            context,
+            createdAt: nowIso,
+            updatedAt: nowIso
+          });
+
+          return [savedTicket, ...tickets].slice(0, SUPPORT_TICKETS_MAX);
+        }
+      });
+
+      let notificationResult = { attempted: 0, sent: 0, invalidTokens: [] };
+      try {
+        notificationResult = await notifyManagersAboutSupportTicket(savedTicket);
+      } catch (notificationError) {
+        console.error('Support ticket push notification error:', notificationError.message);
+      }
+
+      return res.json({
+        success: true,
+        ticket: serializeSupportTicket(savedTicket),
+        notifications: notificationResult
+      });
+    }
+
+    if (action === 'update-support-ticket') {
+      if (!authed) return res.status(401).json({ error: 'Unauthorized' });
+
+      const ticketId =
+        typeof (req.body && req.body.ticketId) === 'string'
+          ? req.body.ticketId.trim()
+          : '';
+      if (!ticketId) {
+        return res.status(400).json({ error: 'A support ticket id is required.' });
+      }
+
+      const nextStatus = normalizeSupportTicketStatus(req.body && req.body.status);
+      const adminNote = cleanTicketBody(req.body && req.body.adminNote, '', 2000);
+      let updatedTicket = null;
+
+      await updateSingletonJsonBlob({
+        read: readSupportTickets,
+        write: writeSupportTickets,
+        errorMessage: 'Could not update the support ticket. Please try again.',
+        mutate: async (tickets) => {
+          const ticketIndex = tickets.findIndex((ticket) => ticket.id === ticketId);
+          if (ticketIndex < 0) {
+            const notFoundError = new Error('Support ticket not found.');
+            notFoundError.statusCode = 404;
+            throw notFoundError;
+          }
+
+          const nowIso = new Date().toISOString();
+          updatedTicket = normalizeSupportTicket({
+            ...tickets[ticketIndex],
+            status: nextStatus,
+            adminNote,
+            updatedAt: nowIso,
+            ...(nextStatus === 'resolved' ? { resolvedAt: nowIso } : {}),
+            ...(nextStatus === 'closed' ? { closedAt: nowIso } : {})
+          });
+
+          tickets[ticketIndex] = updatedTicket;
+          return tickets;
+        }
+      });
+
+      return res.json({
+        success: true,
+        ticket: serializeSupportTicket(updatedTicket)
       });
     }
 

@@ -374,6 +374,16 @@ body{font-family:"Open Sans",sans-serif;background:#0A0A0A;color:var(--white);mi
     <div id="manager-devices-list" style="margin-top:14px"></div>
   </div>
 
+  <div style="margin-top:32px;padding-top:32px;border-top:1px solid var(--border)">
+    <div class="section-label">Support Tickets</div>
+    <p style="color:var(--gray);font-size:14px;margin-bottom:16px">Manager app errors and fix requests submitted from the Session screen. Use this as a lightweight ticket board for follow-up.</p>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+      <button class="btn btn-outline" id="refresh-support-tickets-btn" onclick="loadSupportTickets()">Refresh Tickets</button>
+    </div>
+    <div id="support-ticket-status" class="status-bar" style="margin-top:12px"></div>
+    <div id="support-tickets-list" style="margin-top:14px"></div>
+  </div>
+
     </div>
 
     <div class="admin-tab-panel" id="admin-tab-panel-fees">
@@ -563,6 +573,11 @@ function setAdminTab(tab, options) {
 
   if (nextTab === 'bookings') {
     window.dispatchEvent(new CustomEvent('admin-bookings-opened', { detail: { scheduleTab: activeScheduleTab } }));
+  }
+
+  if (nextTab === 'manager') {
+    loadManagerDevices();
+    loadSupportTickets();
   }
 }
 
@@ -1341,6 +1356,187 @@ async function sendTestPushNotification() {
   }
 }
 
+// ===== SUPPORT TICKETS =====
+let supportTickets = [];
+
+function getManagerFacingErrorMessage(error) {
+  const message = error && error.message ? String(error.message) : String(error || 'Request failed');
+  const normalized = message.toLowerCase();
+  if (
+    normalized.includes('allowoverwrite') ||
+    normalized.includes('already exists') ||
+    normalized.includes('blobpreconditionfailederror') ||
+    normalized.includes('etag') ||
+    normalized.includes('precondition failed') ||
+    normalized.includes('vercel blob')
+  ) {
+    return 'The schedule or ticket board was updated at the same time. Please try again.';
+  }
+  return message;
+}
+
+function getSupportTicketStatusStyle(status) {
+  if (status === 'open') return 'border-color:rgba(245,158,11,0.45);color:#F59E0B;background:rgba(245,158,11,0.12)';
+  if (status === 'in-progress') return 'border-color:rgba(155,79,222,0.5);color:var(--purple-light);background:rgba(123,47,190,0.12)';
+  if (status === 'resolved') return 'border-color:rgba(29,158,117,0.45);color:var(--green);background:rgba(29,158,117,0.12)';
+  if (status === 'closed') return 'border-color:rgba(123,47,190,0.25);color:var(--gray);background:var(--dark)';
+  return 'border-color:var(--border);color:var(--gray-light);background:var(--dark)';
+}
+
+function renderSupportTickets() {
+  const el = document.getElementById('support-tickets-list');
+  if (!el) return;
+
+  if (!supportTickets.length) {
+    el.innerHTML = '<p style="color:var(--gray);font-size:13px">No support tickets have been submitted yet.</p>';
+    return;
+  }
+
+  const actionLabels = {
+    open: 'Reopen',
+    'in-progress': 'In Progress',
+    resolved: 'Resolve',
+    closed: 'Close'
+  };
+
+  el.innerHTML =
+    '<div style="display:grid;gap:10px">' +
+    supportTickets.map((ticket) => {
+      const id = escapeAttribute(ticket.id || '');
+      const jsId = escapeJsAttribute(ticket.id || '');
+      const status = ticket.status || 'open';
+      const actions = ['in-progress', 'resolved', 'closed', 'open']
+        .filter((nextStatus) => nextStatus !== status)
+        .map((nextStatus) =>
+          '<button class="btn btn-outline" style="padding:7px 10px;font-size:11px" onclick="updateSupportTicket(&quot;' + jsId + '&quot;,&quot;' + nextStatus + '&quot;)">' +
+            actionLabels[nextStatus] +
+          '</button>'
+        )
+        .join('');
+
+      return (
+        '<div data-ticket-id="' + id + '" style="background:var(--dark);border:1px solid var(--border);border-radius:2px;padding:14px;display:grid;gap:10px">' +
+          '<div style="display:flex;gap:12px;justify-content:space-between;align-items:flex-start;flex-wrap:wrap">' +
+            '<div style="min-width:220px;flex:1">' +
+              '<div style="color:var(--white);font-weight:700;font-size:15px">' + escapeHtml(ticket.title || 'Support ticket') + '</div>' +
+              '<div style="color:var(--gray);font-size:12px;margin-top:4px">' +
+                escapeHtml([ticket.type || 'error', ticket.priority || 'normal', ticket.createdAt ? new Date(ticket.createdAt).toLocaleString() : null].filter(Boolean).join(' / ')) +
+              '</div>' +
+            '</div>' +
+            '<div style="font-family:Rajdhani,sans-serif;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:4px 8px;border-radius:2px;border:1px solid;' + getSupportTicketStatusStyle(status) + '">' +
+              escapeHtml(status) +
+            '</div>' +
+          '</div>' +
+          '<div style="color:var(--gray-light);font-size:13px;line-height:1.55;white-space:pre-wrap">' + escapeHtml(ticket.message || '') + '</div>' +
+          '<div style="color:var(--gray);font-size:12px;line-height:1.5">' +
+            escapeHtml([
+              ticket.reporterName ? ('Reporter: ' + ticket.reporterName) : null,
+              ticket.contact ? ('Contact: ' + ticket.contact) : null,
+              ticket.deviceName ? ('Device: ' + ticket.deviceName) : null,
+              ticket.appVersion ? ('App v' + ticket.appVersion) : null
+            ].filter(Boolean).join(' | ')) +
+          '</div>' +
+          (ticket.adminNote
+            ? '<div style="border-left:2px solid var(--green);padding-left:10px;color:var(--green);font-size:12px;line-height:1.5">Admin note: ' + escapeHtml(ticket.adminNote) + '</div>'
+            : '') +
+          (ticket.context
+            ? '<details style="color:var(--gray);font-size:12px"><summary style="cursor:pointer;color:var(--purple-light)">Context</summary><pre style="white-space:pre-wrap;font-family:monospace;margin-top:8px;color:var(--gray-light)">' + escapeHtml(ticket.context) + '</pre></details>'
+            : '') +
+          '<div style="display:flex;gap:8px;flex-wrap:wrap">' + actions + '</div>' +
+        '</div>'
+      );
+    }).join('') +
+    '</div>';
+}
+
+async function loadSupportTickets() {
+  const el = document.getElementById('support-tickets-list');
+  const statusEl = document.getElementById('support-ticket-status');
+  const button = document.getElementById('refresh-support-tickets-btn');
+  if (!el || !adminPassword) return;
+
+  if (button) button.disabled = true;
+  if (statusEl) {
+    statusEl.className = 'status-bar';
+    statusEl.style.display = 'block';
+    statusEl.style.background = 'rgba(123,47,190,0.15)';
+    statusEl.style.borderColor = 'rgba(123,47,190,0.3)';
+    statusEl.style.color = 'var(--purple-light)';
+    statusEl.textContent = 'Loading support tickets...';
+  }
+  el.innerHTML = '<p style="color:var(--gray);font-size:13px">Loading support tickets...</p>';
+
+  try {
+    const res = await fetch('/api/bookings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'list-support-tickets', password: adminPassword })
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || data.message || 'Failed to load support tickets');
+
+    supportTickets = Array.isArray(data.tickets) ? data.tickets : [];
+    renderSupportTickets();
+
+    if (statusEl) {
+      const openCount = Number.isInteger(data.openCount) ? data.openCount : supportTickets.filter((ticket) => ticket.status === 'open' || ticket.status === 'in-progress').length;
+      statusEl.className = 'status-bar success';
+      statusEl.textContent = openCount + ' open ticket' + (openCount === 1 ? '' : 's') + ' / ' + supportTickets.length + ' total.';
+    }
+  } catch (e) {
+    const message = getManagerFacingErrorMessage(e);
+    el.innerHTML = '<p style="color:var(--red);font-size:13px">' + escapeHtml(message) + '</p>';
+    if (statusEl) {
+      statusEl.className = 'status-bar error';
+      statusEl.textContent = message;
+    }
+  } finally {
+    if (button) button.disabled = false;
+  }
+}
+
+async function updateSupportTicket(ticketId, status) {
+  if (!ticketId || !adminPassword) return;
+  const statusEl = document.getElementById('support-ticket-status');
+  const adminNote = window.prompt('Admin note (optional):', '');
+  if (adminNote === null) return;
+
+  if (statusEl) {
+    statusEl.className = 'status-bar';
+    statusEl.style.display = 'block';
+    statusEl.style.background = 'rgba(123,47,190,0.15)';
+    statusEl.style.borderColor = 'rgba(123,47,190,0.3)';
+    statusEl.style.color = 'var(--purple-light)';
+    statusEl.textContent = 'Updating support ticket...';
+  }
+
+  try {
+    const res = await fetch('/api/bookings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'update-support-ticket',
+        password: adminPassword,
+        ticketId,
+        status,
+        adminNote
+      })
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || data.message || 'Failed to update support ticket');
+
+    showToast('Support ticket updated');
+    await loadSupportTickets();
+  } catch (e) {
+    const message = getManagerFacingErrorMessage(e);
+    if (statusEl) {
+      statusEl.className = 'status-bar error';
+      statusEl.textContent = message;
+    }
+    showToast(message);
+  }
+}
+
 // ===== FEES MANAGEMENT =====
 let feesList = [];
 
@@ -1512,6 +1708,7 @@ doLogin = async function() {
     loadAvailability();
     loadFees();
     loadManagerDevices();
+    loadSupportTickets();
   }
 };
 
