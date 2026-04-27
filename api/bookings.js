@@ -1877,82 +1877,82 @@ module.exports = async (req, res) => {
       }
 
       const { data: availability } = await readAvailability();
+      let savedBooking = null;
 
-      for (let attempt = 0; attempt < 3; attempt++) {
-        const { data: bookings, etag } = await readBookings();
-        const bookingIndex = bookings.findIndex((entry) => entry.id === bookingId);
+      await updateSingletonJsonBlob({
+        read: readBookings,
+        write: writeBookings,
+        errorMessage: 'That time block changed before it could be saved. Please try again.',
+        mutate: async (bookings) => {
+          const bookingIndex = bookings.findIndex((entry) => entry.id === bookingId);
 
-        if (bookingIndex < 0) {
-          return res.status(404).json({ error: 'Booking not found.' });
-        }
-
-        const existingBooking = normalizeBooking(bookings[bookingIndex]);
-        const nowIso = new Date().toISOString();
-        let nextBooking;
-
-        if (nextStatus === 'cancelled') {
-          nextBooking = {
-            ...existingBooking,
-            status: 'cancelled',
-            updatedAt: nowIso,
-            cancelledAt: nowIso
-          };
-        } else {
-          const validation = validateBookingRequest(date, time, availability, bookings, {
-            bookingType,
-            durationMinutes,
-            excludeBookingId: bookingId,
-            requireSlotAlignment: false
-          });
-
-          if (!validation.ok) {
-            return res.status(validation.status).json({ error: validation.error });
+          if (bookingIndex < 0) {
+            const notFoundError = new Error('Booking not found.');
+            notFoundError.statusCode = 404;
+            throw notFoundError;
           }
 
-          const defaultName =
-            bookingType === 'travel' ? 'Travel Buffer' : bookingType === 'private' ? 'Private Hold' : '';
-          const defaultService =
-            bookingType === 'travel' ? 'Travel Interval' : bookingType === 'private' ? 'Private Block' : '';
+          const existingBooking = normalizeBooking(bookings[bookingIndex]);
+          const nowIso = new Date().toISOString();
+          let nextBooking;
 
-          nextBooking = {
-            ...existingBooking,
-            date,
-            time: validation.time,
-            name: (typeof name === 'string' && name.trim()) || defaultName,
-            phone: typeof phone === 'string' ? phone : '',
-            vehicle: vehicle || '',
-            service: service || defaultService,
-            notes: notes || '',
-            status: nextStatus,
-            bookingType,
-            durationMinutes: validation.durationMinutes,
-            source: existingBooking.source || 'manager',
-            updatedAt: nowIso
-          };
+          if (nextStatus === 'cancelled') {
+            nextBooking = {
+              ...existingBooking,
+              status: 'cancelled',
+              updatedAt: nowIso,
+              cancelledAt: nowIso
+            };
+          } else {
+            const validation = validateBookingRequest(date, time, availability, bookings, {
+              bookingType,
+              durationMinutes,
+              excludeBookingId: bookingId,
+              requireSlotAlignment: false
+            });
 
-          if (nextStatus !== 'cancelled' && nextBooking.cancelledAt) {
-            delete nextBooking.cancelledAt;
+            if (!validation.ok) {
+              const validationError = new Error(validation.error);
+              validationError.statusCode = validation.status;
+              throw validationError;
+            }
+
+            const defaultName =
+              bookingType === 'travel' ? 'Travel Buffer' : bookingType === 'private' ? 'Private Hold' : '';
+            const defaultService =
+              bookingType === 'travel' ? 'Travel Interval' : bookingType === 'private' ? 'Private Block' : '';
+
+            nextBooking = {
+              ...existingBooking,
+              date,
+              time: validation.time,
+              name: (typeof name === 'string' && name.trim()) || defaultName,
+              phone: typeof phone === 'string' ? phone : '',
+              vehicle: vehicle || '',
+              service: service || defaultService,
+              notes: notes || '',
+              status: nextStatus,
+              bookingType,
+              durationMinutes: validation.durationMinutes,
+              source: existingBooking.source || 'manager',
+              updatedAt: nowIso
+            };
+
+            if (nextBooking.cancelledAt) {
+              delete nextBooking.cancelledAt;
+            }
           }
+
+          savedBooking = normalizeBooking(nextBooking);
+          bookings[bookingIndex] = savedBooking;
+          return bookings;
         }
+      });
 
-        bookings[bookingIndex] = nextBooking;
-
-        try {
-          await writeBookings(bookings, etag);
-          return res.json({
-            success: true,
-            booking: normalizeBooking(nextBooking)
-          });
-        } catch (error) {
-          if (error instanceof BlobPreconditionFailedError) {
-            continue;
-          }
-
-          throw error;
-        }
-      }
-
-      return res.status(409).json({ error: 'That time block changed before it could be saved. Please try again.' });
+      return res.json({
+        success: true,
+        booking: savedBooking
+      });
     }
 
     if (action === 'list-bookings') {
