@@ -2,7 +2,7 @@
   "worksWeekends": true,
   "acceptingNewClients": true,
   "showPricing": true,
-  "stripeTestMode": false,
+  "stripeTestMode": true,
   "payments": {
     "cashApp": true,
     "card": true,
