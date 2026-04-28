@@ -173,6 +173,28 @@
     return `${hours}h ${minutes}m`;
   }
 
+  function getManagerFacingErrorMessage(error) {
+    if (typeof window.getManagerFacingErrorMessage === 'function') {
+      return window.getManagerFacingErrorMessage(error);
+    }
+
+    const message = error && error.message ? String(error.message) : String(error || 'Request failed');
+    const normalized = message.toLowerCase();
+    if (
+      normalized.includes('failed to read') ||
+      normalized.includes('storage is temporarily unavailable') ||
+      normalized.includes('store is blocked') ||
+      normalized.includes('store has been suspended') ||
+      normalized.includes('bookings-data.json') ||
+      normalized.includes('orders-data.json') ||
+      normalized.includes('availability-config.json')
+    ) {
+      return 'Live data storage is temporarily unavailable. Please refresh and try again.';
+    }
+
+    return message;
+  }
+
   function durationToInput(totalMinutes) {
     const hours = Math.floor(totalMinutes / 60);
     const minutes = totalMinutes % 60;
@@ -689,7 +711,7 @@
     });
     const data = await response.json().catch(() => ({}));
     if (!response.ok) {
-      throw new Error(data.error || data.message || 'Request failed');
+      throw new Error(getManagerFacingErrorMessage(data.error || data.message || 'Request failed'));
     }
     return data;
   }
@@ -853,7 +875,7 @@
       requestAnimationFrame(scrollTimelineToAnchor);
       schedulePoll();
     } catch (error) {
-      state.lastError = error.message || 'Could not load the live schedule.';
+      state.lastError = getManagerFacingErrorMessage(error);
       render();
     } finally {
       state.loading = false;
@@ -888,7 +910,7 @@
       refreshUpcomingTabs();
       render();
     } catch (error) {
-      state.statusMessage = error.message || 'Sync failed';
+      state.statusMessage = getManagerFacingErrorMessage(error);
       render();
     } finally {
       state.syncing = false;

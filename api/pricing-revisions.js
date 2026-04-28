@@ -1,5 +1,5 @@
 // Stores and retrieves pricing revision history in Vercel Blob
-const { put, list } = require('@vercel/blob');
+const { put, get } = require('@vercel/blob');
 const {
   hasGitHubJsonStore,
   readGitHubJson,
@@ -34,24 +34,34 @@ module.exports = async (req, res) => {
   const token = process.env.BLOB_READ_WRITE_TOKEN;
 
   async function readRevisionsState() {
-    if (hasGitHubJsonStore()) {
-      const state = await readGitHubJson(PRICING_REVISIONS_PATH, []);
-      return {
-        ...state,
-        data: Array.isArray(state.data) ? state.data : []
-      };
+    let blobError = null;
+    try {
+      const result = await get(PRICING_REVISIONS_PATH, {
+        access: 'public',
+        token,
+        useCache: false
+      });
+      if (result) {
+        const text = await new Response(result.stream).text();
+        const data = JSON.parse(text);
+        return { data: Array.isArray(data) ? data : [], storage: 'blob' };
+      }
+    } catch (error) {
+      blobError = error;
     }
 
-    try {
-      const { blobs } = await list({ prefix: 'pricing-revisions-data', token });
-      if (blobs.length > 0) {
-        const r = await fetch(blobs[0].url, { headers: { Authorization: `Bearer ${token}` } });
-        if (r.ok) {
-          const data = await r.json();
-          return { data: Array.isArray(data) ? data : [], storage: 'blob' };
-        }
+    if (hasGitHubJsonStore()) {
+      try {
+        const state = await readGitHubJson(PRICING_REVISIONS_PATH, []);
+        return {
+          ...state,
+          data: Array.isArray(state.data) ? state.data : []
+        };
+      } catch (_githubError) {
+        if (blobError) throw blobError;
       }
-    } catch(e) {}
+    }
+
     return { data: [], storage: 'blob' };
   }
 

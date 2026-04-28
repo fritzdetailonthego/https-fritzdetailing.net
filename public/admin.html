@@ -464,6 +464,7 @@ body{font-family:"Open Sans",sans-serif;background:#0A0A0A;color:var(--white);mi
         <select class="input" id="ms-method">
           <option value="cash">Cash</option>
           <option value="cashapp">Cash App</option>
+          <option value="paypal">PayPal</option>
           <option value="crypto">Crypto (XMR/BTC)</option>
           <option value="card">Card (manual)</option>
           <option value="other">Other</option>
@@ -1161,7 +1162,7 @@ async function loadBookings() {
       el.appendChild(createUpcomingBookingRow(booking));
     });
   } catch(e) {
-    document.getElementById('bookings-list').innerHTML = '<p style="color:var(--red);font-size:14px">' + escapeHtml(e.message || 'Failed to load bookings') + '</p>';
+    document.getElementById('bookings-list').innerHTML = '<p style="color:var(--red);font-size:14px">' + escapeHtml(getManagerFacingErrorMessage(e)) + '</p>';
   }
 }
 
@@ -1177,7 +1178,7 @@ async function cancelBooking(id) {
     await loadBookings();
     showToast('Booking cancelled');
   } catch (e) {
-    showToast(e.message || 'Cancel failed');
+    showToast(getManagerFacingErrorMessage(e));
   }
 }
 
@@ -1319,7 +1320,7 @@ async function blockDate() {
     await loadAvailability();
     showToast('Date blocked');
   } catch (e) {
-    showToast(e.message || 'Block failed');
+    showToast(getManagerFacingErrorMessage(e));
   }
 }
 
@@ -1334,7 +1335,7 @@ async function unblockDate(date) {
     await loadAvailability();
     showToast('Date unblocked');
   } catch (e) {
-    showToast(e.message || 'Unblock failed');
+    showToast(getManagerFacingErrorMessage(e));
   }
 }
 
@@ -1349,7 +1350,7 @@ async function saveAvailability() {
     await loadAvailability();
     showToast('Availability saved');
   } catch (e) {
-    showToast(e.message || 'Availability save failed');
+    showToast(getManagerFacingErrorMessage(e));
   }
 }
 
@@ -1392,7 +1393,7 @@ async function loadManagerDevices() {
       ).join('') +
       '</div>';
   } catch (e) {
-    el.innerHTML = '<p style="color:var(--red);font-size:13px">' + escapeHtml(e.message || 'Failed to load manager devices') + '</p>';
+    el.innerHTML = '<p style="color:var(--red);font-size:13px">' + escapeHtml(getManagerFacingErrorMessage(e)) + '</p>';
   }
 }
 
@@ -1435,8 +1436,8 @@ async function sendTestPushNotification() {
     showToast('Test push sent');
   } catch (e) {
     statusEl.className = 'status-bar error';
-    statusEl.textContent = e.message || 'Test push failed';
-    showToast('Test push failed');
+    statusEl.textContent = getManagerFacingErrorMessage(e);
+    showToast(getManagerFacingErrorMessage(e));
   } finally {
     loadManagerDevices();
     button.disabled = false;
@@ -1449,6 +1450,20 @@ let supportTickets = [];
 function getManagerFacingErrorMessage(error) {
   const message = error && error.message ? String(error.message) : String(error || 'Request failed');
   const normalized = message.toLowerCase();
+  if (
+    normalized.includes('failed to read') ||
+    normalized.includes('storage is temporarily unavailable') ||
+    normalized.includes('store is blocked') ||
+    normalized.includes('store has been suspended') ||
+    normalized.includes('bookings-data.json') ||
+    normalized.includes('orders-data.json') ||
+    normalized.includes('availability-config.json') ||
+    normalized.includes('manager-devices.json') ||
+    normalized.includes('manager-support-tickets.json') ||
+    normalized.includes('sales-data.json')
+  ) {
+    return 'Live data storage is temporarily unavailable. Please refresh and try again.';
+  }
   if (
     normalized.includes('allowoverwrite') ||
     normalized.includes('already exists') ||
@@ -1835,7 +1850,7 @@ async function loadSales() {
 
     tbody.innerHTML = salesData.map(s => {
       const date = new Date(s.timestamp).toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' });
-      const methodColors = { card:'#7B2FBE', cash:'#1D9E75', cashapp:'#00D632', crypto:'#FF6600', manual:'var(--gray)' };
+      const methodColors = { card:'#7B2FBE', cash:'#1D9E75', cashapp:'#00D632', paypal:'#0070BA', crypto:'#FF6600', manual:'var(--gray)' };
       const color = methodColors[s.paymentMethod] || 'var(--gray)';
       const testBadge = s.isTest ? '<span style="background:#2D7FF9;color:#fff;padding:2px 7px;border-radius:2px;font-size:10px;font-family:Rajdhani,sans-serif;font-weight:700;letter-spacing:1px;margin-right:6px">TEST</span>' : '';
       const rowBg = s.isTest ? 'background:rgba(45,127,249,0.06);' : '';
@@ -1855,7 +1870,7 @@ async function loadSales() {
     }).join('');
 
   } catch(e) {
-    document.getElementById('sales-tbody').innerHTML = '<tr><td colspan="7" style="padding:24px;text-align:center;color:var(--red)">' + escapeHtml(e.message || 'Failed to load sales. Make sure BLOB_READ_WRITE_TOKEN is set in Vercel env vars.') + '</td></tr>';
+    document.getElementById('sales-tbody').innerHTML = '<tr><td colspan="7" style="padding:24px;text-align:center;color:var(--red)">' + escapeHtml(getManagerFacingErrorMessage(e)) + '</td></tr>';
   }
 }
 
@@ -1867,7 +1882,7 @@ async function logManualSale() {
   const vehicle = document.getElementById('ms-vehicle').value.trim();
   const notes = document.getElementById('ms-notes').value.trim();
 
-  if (!customer || !amount) { showToast('Enter customer name and amount'); return; }
+  if (!customer || !service || !amount) { showToast('Enter customer, service, and amount'); return; }
 
   try {
     const res = await fetch('/api/log-sale', {
@@ -1889,7 +1904,7 @@ async function logManualSale() {
     document.getElementById('manual-sale-form').style.display = 'none';
     loadSales();
   } catch(e) {
-    showToast(e.message || 'Failed to log sale');
+    showToast(getManagerFacingErrorMessage(e));
   }
 }
 

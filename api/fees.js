@@ -1,5 +1,5 @@
 // Manage custom fees (distance, pet hair, etc). Stored in Vercel Blob.
-const { put, list } = require('@vercel/blob');
+const { put, get } = require('@vercel/blob');
 const {
   hasGitHubJsonStore,
   readGitHubJson,
@@ -27,24 +27,34 @@ module.exports = async (req, res) => {
       { id: 'biohazard', name: 'Biohazard Cleanup', amount: 75, type: 'flat', description: 'Vomit, blood, or similar cleanup' }
     ];
 
-    if (hasGitHubJsonStore()) {
-      const state = await readGitHubJson(FEES_PATH, defaultFees);
-      return {
-        ...state,
-        data: Array.isArray(state.data) ? state.data : defaultFees
-      };
+    let blobError = null;
+    try {
+      const result = await get(FEES_PATH, {
+        access: 'public',
+        token,
+        useCache: false
+      });
+      if (result) {
+        const text = await new Response(result.stream).text();
+        const data = JSON.parse(text);
+        return { data: Array.isArray(data) ? data : defaultFees, storage: 'blob' };
+      }
+    } catch (error) {
+      blobError = error;
     }
 
-    try {
-      const { blobs } = await list({ prefix: 'fees-data', token });
-      if (blobs.length > 0) {
-        const r = await fetch(blobs[0].url, { headers: { Authorization: `Bearer ${token}` } });
-        if (r.ok) {
-          const data = await r.json();
-          return { data: Array.isArray(data) ? data : defaultFees, storage: 'blob' };
-        }
+    if (hasGitHubJsonStore()) {
+      try {
+        const state = await readGitHubJson(FEES_PATH, defaultFees);
+        return {
+          ...state,
+          data: Array.isArray(state.data) ? state.data : defaultFees
+        };
+      } catch (_githubError) {
+        if (blobError) throw blobError;
       }
-    } catch(e) {}
+    }
+
     return { data: defaultFees, storage: 'blob' };
   }
 

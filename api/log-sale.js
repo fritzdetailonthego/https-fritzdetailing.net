@@ -1,8 +1,14 @@
-// Logs a sale to Vercel Blob Storage (persists across deploys).
+// Logs a sale to durable runtime storage (persists across deploys).
 // Also handles delete, clear-test, and GET ?action=mode for Stripe test/live detection.
 const fs = require('fs');
 const path = require('path');
 const { appendSale, readSales, saleInputFromPaymentIntent, writeSales } = require('../lib/sales');
+const {
+  generateOrderId,
+  generatePublicToken,
+  normalizeOrder,
+  updateOrders
+} = require('../lib/orders');
 
 function readConfig() {
   try {
@@ -14,6 +20,69 @@ function createHttpError(statusCode, message) {
   const error = new Error(message);
   error.statusCode = statusCode;
   return error;
+}
+
+function cleanString(value, maxLength = 500) {
+  return typeof value === 'string' ? value.trim().slice(0, maxLength) : '';
+}
+
+function normalizeManualPaymentMethod(value) {
+  const normalized = cleanString(value, 40).toLowerCase().replace(/[^a-z0-9]/g, '');
+  if (normalized === 'cashapp') return 'cashapp';
+  if (normalized === 'paypal') return 'paypal';
+  if (normalized === 'crypto') return 'crypto';
+  if (normalized === 'card') return 'card';
+  if (normalized === 'other') return 'other';
+  return 'cash';
+}
+
+async function createManualOrderForSale(saleInput) {
+  const amount = Number(saleInput.amount);
+  if (!Number.isFinite(amount) || amount <= 0) {
+    throw createHttpError(400, 'Invalid sale amount.');
+  }
+
+  const nowIso = new Date().toISOString();
+  const customerName = cleanString(saleInput.customer || saleInput.name || 'Manual Sale', 160) || 'Manual Sale';
+  const serviceName = cleanString(saleInput.service || 'Manual Sale', 160) || 'Manual Sale';
+  const paymentMethod = normalizeManualPaymentMethod(saleInput.paymentMethod);
+  const manualOrder = normalizeOrder({
+    id: generateOrderId(),
+    publicToken: generatePublicToken(),
+    status: 'paid',
+    paymentStatus: 'paid',
+    paymentMethod,
+    customer: {
+      name: customerName,
+      email: cleanString(saleInput.email, 160),
+      phone: cleanString(saleInput.phone, 80)
+    },
+    vehicle: cleanString(saleInput.vehicle, 180),
+    services: [
+      {
+        id: `manual:${paymentMethod}:${Date.now()}`,
+        vehicleType: 'manual',
+        vehicleLabel: 'Manual sale',
+        category: 'manual',
+        name: serviceName,
+        price: Math.round(amount * 100) / 100,
+        durationMinutes: Number.isInteger(saleInput.durationMinutes) ? saleInput.durationMinutes : 0
+      }
+    ],
+    serviceSummary: serviceName,
+    subtotal: Math.round(amount * 100) / 100,
+    total: Math.round(amount * 100) / 100,
+    managerFees: [],
+    managerFeeTotal: 0,
+    manualSale: true,
+    manualSaleNotes: cleanString(saleInput.notes, 1000),
+    paidAt: nowIso,
+    createdAt: nowIso,
+    updatedAt: nowIso
+  });
+
+  await updateOrders((orders) => [manualOrder, ...orders], 'Could not create the manual order. Please try again.');
+  return manualOrder;
 }
 
 function getStripeSecretCandidates(preferTestMode) {
@@ -212,7 +281,20 @@ module.exports = async (req, res) => {
     if (!sale || !sale.amount) return res.status(400).json({ error: 'Invalid sale data' });
 
     const verifiedSale = isStripeSale ? await verifyStripeSale(sale, !serverIsLive) : null;
-    const saleInput = verifiedSale || sale;
+    const saleInput = verifiedSale || { ...sale };
+
+    if (!verifiedSale && isAdmin && !saleInput.orderId) {
+      const manualOrder = await createManualOrderForSale(saleInput);
+      saleInput.orderId = manualOrder.id;
+      saleInput.paymentMethod = manualOrder.paymentMethod;
+      saleInput.customer = manualOrder.customer.name;
+      saleInput.service = manualOrder.serviceSummary;
+      saleInput.vehicle = manualOrder.vehicle || saleInput.vehicle || '';
+      saleInput.amount = manualOrder.total;
+      saleInput.source = 'manual-order';
+      saleInput.status = 'completed';
+      saleInput.notes = [saleInput.notes, `Manual order ${manualOrder.id}`].filter(Boolean).join(' | ');
+    }
 
     // Stripe sales inherit test mode from the verified key. Manual sales trust the admin flag.
     saleInput.isTest = verifiedSale ? verifiedSale.isTest : !!sale.isTest;

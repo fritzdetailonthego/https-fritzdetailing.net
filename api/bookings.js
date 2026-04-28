@@ -1240,7 +1240,9 @@ async function readJsonBlob(path, fallbackValue, token) {
     if (!blobResult) {
       return {
         data: cloneJson(fallbackValue),
-        etag: null
+        etag: null,
+        storage: 'blob',
+        missing: true
       };
     }
 
@@ -1248,13 +1250,16 @@ async function readJsonBlob(path, fallbackValue, token) {
 
     return {
       data: JSON.parse(text),
-      etag: blobResult.blob && blobResult.blob.etag ? blobResult.blob.etag : null
+      etag: blobResult.blob && blobResult.blob.etag ? blobResult.blob.etag : null,
+      storage: 'blob'
     };
   } catch (error) {
     if (isBlobNotFoundError(error)) {
       return {
         data: cloneJson(fallbackValue),
-        etag: null
+        etag: null,
+        storage: 'blob',
+        missing: true
       };
     }
 
@@ -1267,11 +1272,32 @@ async function readJsonBlob(path, fallbackValue, token) {
 }
 
 async function readJsonSingleton(path, fallbackValue, token) {
-  if (hasGitHubJsonStore()) {
-    return readGitHubJson(path, fallbackValue);
+  let blobError = null;
+  try {
+    const blobState = await readJsonBlob(path, fallbackValue, token);
+    if (!blobState.missing || !hasGitHubJsonStore()) {
+      return blobState;
+    }
+  } catch (error) {
+    blobError = error;
   }
 
-  return readJsonBlob(path, fallbackValue, token);
+  if (hasGitHubJsonStore()) {
+    try {
+      return await readGitHubJson(path, fallbackValue);
+    } catch (githubError) {
+      if (blobError) throw blobError;
+      throw githubError;
+    }
+  }
+
+  if (blobError) throw blobError;
+  return {
+    data: cloneJson(fallbackValue),
+    etag: null,
+    storage: 'blob',
+    missing: true
+  };
 }
 
 async function getBlobByAccess(path, token) {
@@ -1311,7 +1337,7 @@ async function writeJsonBlob(path, data, etag, token) {
 }
 
 async function writeJsonSingleton(path, data, state, token) {
-  if ((state && state.storage === 'github') || hasGitHubJsonStore()) {
+  if (state && state.storage === 'github') {
     return writeGitHubJson(path, data, state && state.sha, `Update ${path}`);
   }
 
