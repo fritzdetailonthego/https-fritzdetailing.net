@@ -1,5 +1,12 @@
 // Stores and retrieves pricing revision history in Vercel Blob
 const { put, list } = require('@vercel/blob');
+const {
+  hasGitHubJsonStore,
+  readGitHubJson,
+  writeGitHubJson
+} = require('../lib/github-json-store');
+
+const PRICING_REVISIONS_PATH = 'pricing-revisions-data.json';
 
 function createRevisionId() {
   return `rev-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -26,18 +33,45 @@ module.exports = async (req, res) => {
 
   const token = process.env.BLOB_READ_WRITE_TOKEN;
 
-  async function readRevisions() {
+  async function readRevisionsState() {
+    if (hasGitHubJsonStore()) {
+      const state = await readGitHubJson(PRICING_REVISIONS_PATH, []);
+      return {
+        ...state,
+        data: Array.isArray(state.data) ? state.data : []
+      };
+    }
+
     try {
       const { blobs } = await list({ prefix: 'pricing-revisions-data', token });
       if (blobs.length > 0) {
         const r = await fetch(blobs[0].url, { headers: { Authorization: `Bearer ${token}` } });
-        if (r.ok) return await r.json();
+        if (r.ok) {
+          const data = await r.json();
+          return { data: Array.isArray(data) ? data : [], storage: 'blob' };
+        }
       }
     } catch(e) {}
-    return [];
+    return { data: [], storage: 'blob' };
   }
 
-  async function writeRevisions(revisions) {
+  async function readRevisions() {
+    const state = await readRevisionsState();
+    return state.data;
+  }
+
+  async function writeRevisions(revisions, state = null) {
+    if (hasGitHubJsonStore()) {
+      const currentState = state || await readGitHubJson(PRICING_REVISIONS_PATH, []);
+      await writeGitHubJson(
+        PRICING_REVISIONS_PATH,
+        revisions,
+        currentState.sha || null,
+        `Update ${PRICING_REVISIONS_PATH}`
+      );
+      return;
+    }
+
     await put('pricing-revisions-data.json', JSON.stringify(revisions), {
       access: 'public',
       contentType: 'application/json',
@@ -49,11 +83,12 @@ module.exports = async (req, res) => {
 
   try {
     if (action === 'save') {
-      const revisions = await readRevisions();
+      const state = await readRevisionsState();
+      const revisions = state.data;
       revisions.push({ id: createRevisionId(), timestamp: new Date().toISOString(), pricing });
       // Keep last 50 revisions
       if (revisions.length > 50) revisions.splice(0, revisions.length - 50);
-      await writeRevisions(revisions);
+      await writeRevisions(revisions, state);
       return res.json({ success: true, revision: revisions.length });
     }
 

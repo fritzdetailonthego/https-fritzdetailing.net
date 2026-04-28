@@ -4,6 +4,12 @@ const path = require('path');
 const { put, get, BlobPreconditionFailedError } = require('@vercel/blob');
 const packageJson = require('../package.json');
 const {
+  hasGitHubJsonStore,
+  isGitHubJsonConflict,
+  readGitHubJson,
+  writeGitHubJson
+} = require('../lib/github-json-store');
+const {
   appendSale,
   markSaleRefunded,
   saleInputFromPaymentIntent
@@ -1260,6 +1266,14 @@ async function readJsonBlob(path, fallbackValue, token) {
   }
 }
 
+async function readJsonSingleton(path, fallbackValue, token) {
+  if (hasGitHubJsonStore()) {
+    return readGitHubJson(path, fallbackValue);
+  }
+
+  return readJsonBlob(path, fallbackValue, token);
+}
+
 async function getBlobByAccess(path, token) {
   let lastError = null;
   for (const access of ['public', 'private']) {
@@ -1296,16 +1310,25 @@ async function writeJsonBlob(path, data, etag, token) {
   await put(path, JSON.stringify(data), options);
 }
 
+async function writeJsonSingleton(path, data, state, token) {
+  if ((state && state.storage === 'github') || hasGitHubJsonStore()) {
+    return writeGitHubJson(path, data, state && state.sha, `Update ${path}`);
+  }
+
+  return writeJsonBlob(path, data, state && state.etag, token);
+}
+
 async function updateSingletonJsonBlob({ read, write, mutate, errorMessage }) {
   for (let attempt = 0; attempt < JSON_BLOB_MAX_ATTEMPTS; attempt += 1) {
-    const { data, etag } = await read();
+    const state = await read();
+    const { data } = state;
     const nextData = await mutate(cloneJson(data));
 
     try {
-      await write(nextData, etag);
+      await write(nextData, state);
       return nextData;
     } catch (error) {
-      if (error instanceof BlobPreconditionFailedError) {
+      if (error instanceof BlobPreconditionFailedError || isGitHubJsonConflict(error)) {
         continue;
       }
 
@@ -1335,57 +1358,72 @@ module.exports = async (req, res) => {
   const authed = !!managerSession;
 
   async function readBookings() {
-    const { data, etag } = await readJsonBlob(BOOKINGS_PATH, [], token);
+    const state = await readJsonSingleton(BOOKINGS_PATH, [], token);
+    const { data } = state;
     return {
       data: Array.isArray(data) ? data : [],
-      etag
+      etag: state.etag || null,
+      sha: state.sha || null,
+      storage: state.storage || 'blob'
     };
   }
 
-  async function writeBookings(bookings, etag) {
-    await writeJsonBlob(BOOKINGS_PATH, bookings, etag, token);
+  async function writeBookings(bookings, state) {
+    await writeJsonSingleton(BOOKINGS_PATH, bookings, state, token);
   }
 
   async function readAvailability() {
-    const { data, etag } = await readJsonBlob(AVAILABILITY_PATH, buildDefaultAvailability(), token);
+    const state = await readJsonSingleton(AVAILABILITY_PATH, buildDefaultAvailability(), token);
+    const { data } = state;
     return {
       data: normalizeAvailability(data),
-      etag
+      etag: state.etag || null,
+      sha: state.sha || null,
+      storage: state.storage || 'blob'
     };
   }
 
-  async function writeAvailability(availability, etag) {
-    await writeJsonBlob(AVAILABILITY_PATH, availability, etag, token);
+  async function writeAvailability(availability, state) {
+    await writeJsonSingleton(AVAILABILITY_PATH, availability, state, token);
   }
 
   async function readManagerDevices() {
-    const { data, etag } = await readJsonBlob(MANAGER_DEVICES_PATH, [], token);
+    const state = await readJsonSingleton(MANAGER_DEVICES_PATH, [], token);
+    const { data } = state;
     const payload = Array.isArray(data) ? data : [];
     const devices = Array.isArray(payload)
       ? sortManagerDevices(payload.map(normalizeManagerDevice))
       : [];
 
-    return { data: devices, etag };
-  }
-
-  async function writeManagerDevices(devices, etag) {
-    await writeJsonBlob(MANAGER_DEVICES_PATH, devices, etag, token);
-  }
-
-  async function readSupportTickets() {
-    const { data, etag } = await readJsonBlob(SUPPORT_TICKETS_PATH, [], token);
-    const payload = Array.isArray(data) ? data : [];
     return {
-      data: sortSupportTickets(payload).slice(0, SUPPORT_TICKETS_MAX),
-      etag
+      data: devices,
+      etag: state.etag || null,
+      sha: state.sha || null,
+      storage: state.storage || 'blob'
     };
   }
 
-  async function writeSupportTickets(tickets, etag) {
-    await writeJsonBlob(
+  async function writeManagerDevices(devices, state) {
+    await writeJsonSingleton(MANAGER_DEVICES_PATH, devices, state, token);
+  }
+
+  async function readSupportTickets() {
+    const state = await readJsonSingleton(SUPPORT_TICKETS_PATH, [], token);
+    const { data } = state;
+    const payload = Array.isArray(data) ? data : [];
+    return {
+      data: sortSupportTickets(payload).slice(0, SUPPORT_TICKETS_MAX),
+      etag: state.etag || null,
+      sha: state.sha || null,
+      storage: state.storage || 'blob'
+    };
+  }
+
+  async function writeSupportTickets(tickets, state) {
+    await writeJsonSingleton(
       SUPPORT_TICKETS_PATH,
       sortSupportTickets(tickets).slice(0, SUPPORT_TICKETS_MAX),
-      etag,
+      state,
       token
     );
   }

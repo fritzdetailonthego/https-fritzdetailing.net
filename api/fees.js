@@ -1,5 +1,12 @@
 // Manage custom fees (distance, pet hair, etc). Stored in Vercel Blob.
 const { put, list } = require('@vercel/blob');
+const {
+  hasGitHubJsonStore,
+  readGitHubJson,
+  writeGitHubJson
+} = require('../lib/github-json-store');
+
+const FEES_PATH = 'fees-data.json';
 
 module.exports = async (req, res) => {
   if (req.method === 'OPTIONS') {
@@ -12,23 +19,47 @@ module.exports = async (req, res) => {
 
   const token = process.env.BLOB_READ_WRITE_TOKEN;
 
-  async function readFees() {
-    try {
-      const { blobs } = await list({ prefix: 'fees-data', token });
-      if (blobs.length > 0) {
-        const r = await fetch(blobs[0].url, { headers: { Authorization: `Bearer ${token}` } });
-        if (r.ok) return await r.json();
-      }
-    } catch(e) {}
-    return [
+  async function readFeesState() {
+    const defaultFees = [
       { id: 'distance', name: 'Distance Fee (30+ min)', amount: 25, type: 'flat', description: 'Added for locations beyond standard service radius' },
       { id: 'pet-hair', name: 'Heavy Pet Hair', amount: 40, type: 'flat', description: 'For vehicles with excessive pet hair requiring extra cleaning time' },
       { id: 'heavy-soil', name: 'Heavy Soil / Mud', amount: 50, type: 'flat', description: 'For heavily soiled vehicles requiring extra prep' },
       { id: 'biohazard', name: 'Biohazard Cleanup', amount: 75, type: 'flat', description: 'Vomit, blood, or similar cleanup' }
     ];
+
+    if (hasGitHubJsonStore()) {
+      const state = await readGitHubJson(FEES_PATH, defaultFees);
+      return {
+        ...state,
+        data: Array.isArray(state.data) ? state.data : defaultFees
+      };
+    }
+
+    try {
+      const { blobs } = await list({ prefix: 'fees-data', token });
+      if (blobs.length > 0) {
+        const r = await fetch(blobs[0].url, { headers: { Authorization: `Bearer ${token}` } });
+        if (r.ok) {
+          const data = await r.json();
+          return { data: Array.isArray(data) ? data : defaultFees, storage: 'blob' };
+        }
+      }
+    } catch(e) {}
+    return { data: defaultFees, storage: 'blob' };
+  }
+
+  async function readFees() {
+    const state = await readFeesState();
+    return state.data;
   }
 
   async function writeFees(fees) {
+    if (hasGitHubJsonStore()) {
+      const state = await readGitHubJson(FEES_PATH, []);
+      await writeGitHubJson(FEES_PATH, fees, state.sha || null, `Update ${FEES_PATH}`);
+      return;
+    }
+
     await put('fees-data.json', JSON.stringify(fees), {
       access: 'public',
       contentType: 'application/json', addRandomSuffix: false, allowOverwrite: true, token
