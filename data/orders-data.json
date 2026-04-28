@@ -1,1 +1,36 @@
-[]
+[
+  {
+    "id": "ORD-1777416091150-0c5d",
+    "publicToken": "zKtMFEpXFkMfmsqvizYUcEdzsTng2TAy",
+    "status": "cash_due_on_site",
+    "paymentStatus": "cash_due_on_site",
+    "paymentMethod": "cash",
+    "customer": {
+      "name": "Codex Fee Pipeline Test",
+      "email": "codex-fee-pipeline@example.com",
+      "phone": "4235550100"
+    },
+    "vehicle": "Test",
+    "services": [
+      {
+        "id": "sedan:exterior:decontamination",
+        "vehicleType": "sedan",
+        "vehicleLabel": "Sedan / Coupe / Hatchback",
+        "category": "exterior",
+        "name": "Decontamination",
+        "price": 50,
+        "durationMinutes": 60
+      }
+    ],
+    "serviceSummary": "Decontamination",
+    "subtotal": 50,
+    "managerFees": [],
+    "total": 50,
+    "durationMinutes": 60,
+    "cashVerificationCode": "988DA7",
+    "termsAcceptedAt": "2026-04-28T22:41:31.150Z",
+    "createdAt": "2026-04-28T22:41:31.150Z",
+    "updatedAt": "2026-04-28T22:41:31.150Z",
+    "managerFeeTotal": 0
+  }
+]
