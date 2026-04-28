@@ -1,1 +1,37 @@
-[]
+[
+  {
+    "id": "ORD-1777416523387-77b1",
+    "publicToken": "BdQATAnrjBCIWHlfTeZR2Oi39qLBBkfj",
+    "status": "paid",
+    "paymentStatus": "paid",
+    "paymentMethod": "paypal",
+    "customer": {
+      "name": "Codex Manual Pipeline Test",
+      "email": "",
+      "phone": ""
+    },
+    "vehicle": "Test Vehicle",
+    "services": [
+      {
+        "id": "manual:paypal:1777416523387",
+        "vehicleType": "manual",
+        "vehicleLabel": "Manual sale",
+        "category": "manual",
+        "name": "Verification Service",
+        "price": 2,
+        "durationMinutes": 0
+      }
+    ],
+    "serviceSummary": "Verification Service",
+    "subtotal": 2,
+    "total": 2,
+    "managerFees": [],
+    "managerFeeTotal": 0,
+    "manualSale": true,
+    "manualSaleNotes": "remove this verification sale",
+    "paidAt": "2026-04-28T22:48:43.384Z",
+    "createdAt": "2026-04-28T22:48:43.384Z",
+    "updatedAt": "2026-04-28T22:48:43.384Z",
+    "durationMinutes": 0
+  }
+]
