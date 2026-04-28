@@ -1230,20 +1230,10 @@ function validateBookingRequest(dateStr, timeStr, availability, bookings, option
 async function readJsonBlob(path, fallbackValue, token) {
   try {
     const metadata = await head(path, { token });
-    const response = await fetch(metadata.url, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        Accept: JSON_CONTENT_TYPE
-      },
-      cache: 'no-store'
-    });
-
-    if (!response.ok) {
-      throw new Error(`Failed to read ${path}`);
-    }
+    const data = await fetchBlobJson(metadata, path, token);
 
     return {
-      data: await response.json(),
+      data,
       etag: metadata.etag
     };
   } catch (error) {
@@ -1256,6 +1246,39 @@ async function readJsonBlob(path, fallbackValue, token) {
 
     throw error;
   }
+}
+
+async function fetchBlobJson(metadata, path, token) {
+  const urls = [metadata && metadata.downloadUrl, metadata && metadata.url]
+    .filter(Boolean)
+    .filter((value, index, list) => list.indexOf(value) === index);
+
+  let lastFailure = 'no blob url returned';
+  for (const url of urls) {
+    const headerOptions = [
+      { Accept: JSON_CONTENT_TYPE },
+      token ? { Authorization: `Bearer ${token}`, Accept: JSON_CONTENT_TYPE } : null
+    ].filter(Boolean);
+
+    for (const headers of headerOptions) {
+      try {
+        const response = await fetch(url, { headers, cache: 'no-store' });
+        if (response.ok) {
+          return response.json();
+        }
+
+        lastFailure = `${response.status} ${response.statusText || ''}`.trim();
+      } catch (error) {
+        lastFailure = error && error.message ? error.message : 'fetch failed';
+      }
+    }
+  }
+
+  const error = createHttpError(503, 'Schedule storage is temporarily unavailable. Please try again.');
+  error.code = 'BLOB_READ_FAILED';
+  error.storagePath = path;
+  error.storageDetail = lastFailure;
+  throw error;
 }
 
 async function writeJsonBlob(path, data, etag, token) {
@@ -2838,7 +2861,7 @@ module.exports = async (req, res) => {
 
     res.status(400).json({ error: 'Invalid action' });
   } catch (error) {
-    console.error('Booking error:', error.message);
+    console.error('Booking error:', error.storageDetail || error.message);
     const statusCode =
       Number.isInteger(error && error.statusCode) && error.statusCode >= 400
         ? error.statusCode

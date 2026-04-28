@@ -325,6 +325,9 @@ function isValidEmail(value) {
 async function readApiError(response) {
   const data = await response.json().catch(() => ({}));
   const message = data.error || data.message || `Request failed (${response.status})`;
+  if (/orders-data|Vercel Blob|Blob|storage|Failed to read|allowOverwrite|already exists|precondition|ETag/i.test(message)) {
+    return 'Checkout could not save the order. Please try again.';
+  }
   if (/STRIPE_|secret key|publishable key|PaymentIntent|api key|stripe/i.test(message)) {
     return 'Card payment could not be started. Try again later or call Fritz.';
   }

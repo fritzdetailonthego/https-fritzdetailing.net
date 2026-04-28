@@ -97,7 +97,16 @@ module.exports = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Stripe error:', error.message);
-    res.status(500).json({ error: error.message || 'Payment failed' });
+    console.error('Stripe error:', error.storageDetail || error.message);
+    const isStorageError =
+      error && (
+        error.code === 'ORDER_STORAGE_READ_FAILED' ||
+        /orders-data|Blob|storage|Failed to read/i.test(error.message || '')
+      );
+    res.status(error.statusCode && error.statusCode >= 400 ? error.statusCode : 500).json({
+      error: isStorageError
+        ? 'Checkout storage is temporarily unavailable. Please try again.'
+        : error.message || 'Payment failed'
+    });
   }
 };
