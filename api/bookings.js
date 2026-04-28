@@ -1,7 +1,7 @@
 const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
-const { put, head, BlobPreconditionFailedError } = require('@vercel/blob');
+const { put, get, BlobPreconditionFailedError } = require('@vercel/blob');
 const packageJson = require('../package.json');
 const {
   appendSale,
@@ -1229,12 +1229,24 @@ function validateBookingRequest(dateStr, timeStr, availability, bookings, option
 
 async function readJsonBlob(path, fallbackValue, token) {
   try {
-    const metadata = await head(path, { token });
-    const data = await fetchBlobJson(metadata, path, token);
+    const blobResult = await get(path, {
+      access: 'public',
+      token,
+      useCache: false
+    });
+
+    if (!blobResult) {
+      return {
+        data: cloneJson(fallbackValue),
+        etag: null
+      };
+    }
+
+    const text = await new Response(blobResult.stream).text();
 
     return {
-      data,
-      etag: metadata.etag
+      data: JSON.parse(text),
+      etag: blobResult.blob && blobResult.blob.etag ? blobResult.blob.etag : null
     };
   } catch (error) {
     if (isBlobNotFoundError(error)) {
@@ -1244,41 +1256,12 @@ async function readJsonBlob(path, fallbackValue, token) {
       };
     }
 
-    throw error;
+    const readError = createHttpError(503, 'Schedule storage is temporarily unavailable. Please try again.');
+    readError.code = 'BLOB_READ_FAILED';
+    readError.storagePath = path;
+    readError.storageDetail = error && error.message ? error.message : 'blob read failed';
+    throw readError;
   }
-}
-
-async function fetchBlobJson(metadata, path, token) {
-  const urls = [metadata && metadata.downloadUrl, metadata && metadata.url]
-    .filter(Boolean)
-    .filter((value, index, list) => list.indexOf(value) === index);
-
-  let lastFailure = 'no blob url returned';
-  for (const url of urls) {
-    const headerOptions = [
-      { Accept: JSON_CONTENT_TYPE },
-      token ? { Authorization: `Bearer ${token}`, Accept: JSON_CONTENT_TYPE } : null
-    ].filter(Boolean);
-
-    for (const headers of headerOptions) {
-      try {
-        const response = await fetch(url, { headers, cache: 'no-store' });
-        if (response.ok) {
-          return response.json();
-        }
-
-        lastFailure = `${response.status} ${response.statusText || ''}`.trim();
-      } catch (error) {
-        lastFailure = error && error.message ? error.message : 'fetch failed';
-      }
-    }
-  }
-
-  const error = createHttpError(503, 'Schedule storage is temporarily unavailable. Please try again.');
-  error.code = 'BLOB_READ_FAILED';
-  error.storagePath = path;
-  error.storageDetail = lastFailure;
-  throw error;
 }
 
 async function writeJsonBlob(path, data, etag, token) {
