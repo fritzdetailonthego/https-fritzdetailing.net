@@ -12,6 +12,11 @@ function isValidEmail(value) {
   return typeof value === 'string' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
 }
 
+function isCardPaymentEnabled(config) {
+  const payments = config && typeof config.payments === 'object' ? config.payments : {};
+  return payments.card !== false;
+}
+
 module.exports = async (req, res) => {
   if (req.method === 'OPTIONS') {
     res.setHeader('Access-Control-Allow-Origin', '*');
@@ -53,6 +58,10 @@ module.exports = async (req, res) => {
     }
 
     const cfg = readConfig();
+    if (!isCardPaymentEnabled(cfg)) {
+      return res.status(409).json({ error: 'Card payment is not available right now.' });
+    }
+
     const testMode = cfg.stripeTestMode === true;
     const secretKey = testMode ? process.env.STRIPE_SECRET_KEY_TEST : process.env.STRIPE_SECRET_KEY;
 

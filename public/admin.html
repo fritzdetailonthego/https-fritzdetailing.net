@@ -216,13 +216,13 @@ body{font-family:"Open Sans",sans-serif;background:#0A0A0A;color:var(--white);mi
     <div id="payments-panel" style="display:flex;flex-wrap:wrap;gap:12px">
       <label style="display:flex;align-items:center;gap:10px;background:var(--dark);border:1px solid var(--border);border-radius:2px;padding:14px 18px;cursor:pointer;transition:all .2s;flex:1;min-width:200px">
         <div style="position:relative;width:44px;height:24px;flex-shrink:0">
-          <input type="checkbox" id="pm-cashApp" onchange="updatePayment('cashApp',this.checked)" style="opacity:0;width:0;height:0;position:absolute">
+          <input type="checkbox" id="pm-cash" onchange="updatePayment('cash',this.checked)" style="opacity:0;width:0;height:0;position:absolute">
           <div class="toggle-track" style="position:absolute;inset:0;background:rgba(255,255,255,0.1);border-radius:2px;transition:background .2s"></div>
           <div class="toggle-thumb" style="position:absolute;top:2px;left:2px;width:20px;height:20px;background:#fff;border-radius:2px;transition:transform .2s"></div>
         </div>
         <div>
-          <div style="font-family:'Oswald',sans-serif;font-size:14px;text-transform:uppercase;font-weight:600;letter-spacing:0.5px">Cash App</div>
-          <div style="font-size:12px;color:var(--gray)">$zackfritz08</div>
+          <div style="font-family:'Oswald',sans-serif;font-size:14px;text-transform:uppercase;font-weight:600;letter-spacing:0.5px">Cash</div>
+          <div style="font-size:12px;color:var(--gray)">Due on site before service starts</div>
         </div>
       </label>
 
@@ -240,25 +240,37 @@ body{font-family:"Open Sans",sans-serif;background:#0A0A0A;color:var(--white);mi
 
       <label style="display:flex;align-items:center;gap:10px;background:var(--dark);border:1px solid var(--border);border-radius:2px;padding:14px 18px;cursor:pointer;transition:all .2s;flex:1;min-width:200px">
         <div style="position:relative;width:44px;height:24px;flex-shrink:0">
+          <input type="checkbox" id="pm-cashApp" onchange="updatePayment('cashApp',this.checked)" style="opacity:0;width:0;height:0;position:absolute">
+          <div class="toggle-track" style="position:absolute;inset:0;background:rgba(255,255,255,0.1);border-radius:2px;transition:background .2s"></div>
+          <div class="toggle-thumb" style="position:absolute;top:2px;left:2px;width:20px;height:20px;background:#fff;border-radius:2px;transition:transform .2s"></div>
+        </div>
+        <div>
+          <div style="font-family:'Oswald',sans-serif;font-size:14px;text-transform:uppercase;font-weight:600;letter-spacing:0.5px">Cash App</div>
+          <div style="font-size:12px;color:var(--gray)">$zackfritz08</div>
+        </div>
+      </label>
+
+      <label style="display:flex;align-items:center;gap:10px;background:var(--dark);border:1px solid var(--border);border-radius:2px;padding:14px 18px;cursor:pointer;transition:all .2s;flex:1;min-width:200px">
+        <div style="position:relative;width:44px;height:24px;flex-shrink:0">
+          <input type="checkbox" id="pm-paypal" onchange="updatePayment('paypal',this.checked)" style="opacity:0;width:0;height:0;position:absolute">
+          <div class="toggle-track" style="position:absolute;inset:0;background:rgba(255,255,255,0.1);border-radius:2px;transition:background .2s"></div>
+          <div class="toggle-thumb" style="position:absolute;top:2px;left:2px;width:20px;height:20px;background:#fff;border-radius:2px;transition:transform .2s"></div>
+        </div>
+        <div>
+          <div style="font-family:'Oswald',sans-serif;font-size:14px;text-transform:uppercase;font-weight:600;letter-spacing:0.5px">PayPal</div>
+          <div style="font-size:12px;color:var(--gray)">Manual approval before scheduling</div>
+        </div>
+      </label>
+
+      <label style="display:flex;align-items:center;gap:10px;background:var(--dark);border:1px solid var(--border);border-radius:2px;padding:14px 18px;cursor:pointer;transition:all .2s;flex:1;min-width:200px">
+        <div style="position:relative;width:44px;height:24px;flex-shrink:0">
           <input type="checkbox" id="pm-crypto" onchange="updatePayment('crypto',this.checked)" style="opacity:0;width:0;height:0;position:absolute">
           <div class="toggle-track" style="position:absolute;inset:0;background:rgba(255,255,255,0.1);border-radius:2px;transition:background .2s"></div>
           <div class="toggle-thumb" style="position:absolute;top:2px;left:2px;width:20px;height:20px;background:#fff;border-radius:2px;transition:transform .2s"></div>
         </div>
         <div>
           <div style="font-family:'Oswald',sans-serif;font-size:14px;text-transform:uppercase;font-weight:600;letter-spacing:0.5px">Crypto</div>
-          <div style="font-size:12px;color:var(--gray)">Bitcoin & Monero</div>
-        </div>
-      </label>
-
-      <label style="display:flex;align-items:center;gap:10px;background:var(--dark);border:1px solid var(--border);border-radius:2px;padding:14px 18px;cursor:pointer;transition:all .2s;flex:1;min-width:200px">
-        <div style="position:relative;width:44px;height:24px;flex-shrink:0">
-          <input type="checkbox" id="pm-invoice" onchange="updatePayment('invoice',this.checked)" style="opacity:0;width:0;height:0;position:absolute">
-          <div class="toggle-track" style="position:absolute;inset:0;background:rgba(255,255,255,0.1);border-radius:2px;transition:background .2s"></div>
-          <div class="toggle-thumb" style="position:absolute;top:2px;left:2px;width:20px;height:20px;background:#fff;border-radius:2px;transition:transform .2s"></div>
-        </div>
-        <div>
-          <div style="font-family:'Oswald',sans-serif;font-size:14px;text-transform:uppercase;font-weight:600;letter-spacing:0.5px">Cash Invoice</div>
-          <div style="font-size:12px;color:var(--gray)">Generate & print receipt</div>
+          <div style="font-size:12px;color:var(--gray)">Manual approval before scheduling</div>
         </div>
       </label>
     </div>
@@ -1683,14 +1695,22 @@ async function saveFees() {
 }
 
 // ===== SITE SETTINGS =====
-let siteConfig = { worksWeekends: true, acceptingNewClients: true, showPricing: true, stripeTestMode: false, payments: { cashApp: true, card: true, crypto: true, invoice: true } };
+const DEFAULT_PAYMENTS = { cash: true, card: true, cashApp: false, paypal: false, crypto: false };
+let siteConfig = { worksWeekends: true, acceptingNewClients: true, showPricing: true, stripeTestMode: false, payments: { ...DEFAULT_PAYMENTS } };
+
+function normalizePaymentSettings(payments) {
+  const normalized = { ...DEFAULT_PAYMENTS, ...(payments || {}) };
+  if (normalized.invoice === true && payments && payments.cash === undefined) normalized.cash = true;
+  delete normalized.invoice;
+  return normalized;
+}
 
 async function loadSiteConfig() {
   try {
     const res = await fetch('/site-config.json?t=' + Date.now());
     if (res.ok) siteConfig = await res.json();
   } catch(e) {}
-  if (!siteConfig.payments) siteConfig.payments = { cashApp: true, card: true, crypto: true, invoice: true };
+  siteConfig.payments = normalizePaymentSettings(siteConfig.payments);
   document.getElementById('cfg-weekends').checked = siteConfig.worksWeekends !== false;
   document.getElementById('cfg-clients').checked = siteConfig.acceptingNewClients !== false;
   document.getElementById('cfg-pricing').checked = siteConfig.showPricing !== false;
@@ -1699,7 +1719,7 @@ async function loadSiteConfig() {
     testEl.checked = siteConfig.stripeTestMode === true;
     applyAdminTestTheme(siteConfig.stripeTestMode === true);
   }
-  ['cashApp','card','crypto','invoice'].forEach(k => {
+  ['cash','card','cashApp','paypal','crypto'].forEach(k => {
     const el = document.getElementById('pm-' + k);
     if (el) el.checked = siteConfig.payments[k] !== false;
   });
@@ -1710,6 +1730,7 @@ async function saveSiteConfig(statusElId, label) {
   statusEl.textContent = 'Saving...';
   statusEl.style.color = 'var(--purple-light)';
   try {
+    siteConfig.payments = normalizePaymentSettings(siteConfig.payments);
     const res = await fetch('/api/save-config', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -1733,9 +1754,9 @@ async function updateToggle(key, value) {
 }
 
 async function updatePayment(key, value) {
-  if (!siteConfig.payments) siteConfig.payments = {};
+  siteConfig.payments = normalizePaymentSettings(siteConfig.payments);
   siteConfig.payments[key] = value;
-  const names = { cashApp: 'Cash App', card: 'Credit / Debit', crypto: 'Crypto', invoice: 'Cash Invoice' };
+  const names = { cash: 'Cash', cashApp: 'Cash App', card: 'Credit / Debit', paypal: 'PayPal', crypto: 'Crypto' };
   await saveSiteConfig('payments-status', names[key] + ' ' + (value ? 'ON' : 'OFF'));
   showToast(names[key] + ' → ' + (value ? 'ON' : 'OFF'));
 }
@@ -1994,8 +2015,8 @@ loadSales = async function() {
     const banner = document.createElement('div');
     banner.id = 'test-mode-banner';
     banner.textContent = keysMissing
-      ? 'Stripe Test Mode ON · Test keys not configured · Card payments will fail'
-      : 'Stripe Test Mode · No real charges · Test sales auto-delete on switch to live';
+      ? 'Stripe Test Mode ON - Test keys not configured - Card payments will fail'
+      : 'Stripe Test Mode - No real charges - Test sales auto-delete on switch to live';
     document.body.insertBefore(banner, document.body.firstChild);
   } catch(e) {}
 })();
@@ -2019,6 +2040,7 @@ async function loadAdminVersion() {
 
 loadAdminVersion();
 </script>
+<script src="/site-shared.js"></script>
 <script src="/admin-timeline.js"></script>
 </body>
 </html>

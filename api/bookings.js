@@ -504,6 +504,22 @@ function readConfig() {
   }
 }
 
+function normalizePaymentSettings(payments) {
+  const pm = payments && typeof payments === 'object' ? payments : {};
+  return {
+    cash: pm.cash !== false && pm.invoice !== false,
+    card: pm.card !== false,
+    cashApp: pm.cashApp === true,
+    paypal: pm.paypal === true,
+    crypto: pm.crypto === true
+  };
+}
+
+function isCustomerPaymentMethodEnabled(paymentMethod) {
+  const payments = normalizePaymentSettings(readConfig().payments);
+  return paymentMethod === 'card' ? payments.card !== false : paymentMethod === 'cash' ? payments.cash !== false : false;
+}
+
 function getStripeSecretCandidates(preferTestMode) {
   const candidates = [];
   const testKey = process.env.STRIPE_SECRET_KEY_TEST;
@@ -1922,6 +1938,10 @@ module.exports = async (req, res) => {
 
       if (!CUSTOMER_PAYMENT_METHODS.has(paymentMethod)) {
         return res.status(400).json({ error: 'Choose card or cash payment.' });
+      }
+
+      if (!isCustomerPaymentMethodEnabled(paymentMethod)) {
+        return res.status(409).json({ error: 'This payment method is not available right now.' });
       }
 
       if (!name) {

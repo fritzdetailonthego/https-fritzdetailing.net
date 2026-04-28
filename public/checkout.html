@@ -40,11 +40,14 @@ label{display:block;font-family:'Rajdhani',sans-serif;color:var(--gray);font-wei
 input{width:100%;background:var(--surface);border:1px solid var(--border);color:#fff;padding:12px 14px;font:15px 'Open Sans',sans-serif;outline:none}
 input:focus{border-color:var(--purple)}
 .full{grid-column:1/-1}
-.method-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:14px 0}
+.method-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin:14px 0}
 .method{background:var(--surface);border:1px solid var(--border);color:#fff;padding:14px;text-align:left;cursor:pointer}
 .method.active{border-color:var(--border-strong);background:rgba(123,47,190,.14)}
 .method strong{display:block;font-family:'Oswald',sans-serif;text-transform:uppercase;font-size:18px}
 .method span{color:var(--gray);font-size:13px}
+.alternate-methods{display:none;background:var(--surface);border:1px solid var(--border);padding:12px;margin:0 0 14px;color:var(--gray-light);font-size:13px}
+.alternate-methods strong{display:block;font-family:'Rajdhani',sans-serif;color:#fff;letter-spacing:1px;text-transform:uppercase;margin-bottom:4px}
+.alternate-methods span{display:inline-block;border:1px solid var(--border);color:var(--purple-light);font-family:'Rajdhani',sans-serif;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:4px 8px;margin:4px 6px 0 0}
 .terms{display:flex;align-items:flex-start;gap:10px;background:var(--surface);border:1px solid var(--border);padding:12px;margin:14px 0;color:var(--gray-light);font-size:13px}
 .terms input{width:auto;margin-top:4px}
 #card-element{padding:14px;background:var(--surface);border:1px solid var(--border);margin-top:8px}
@@ -108,7 +111,7 @@ input:focus{border-color:var(--purple)}
         </div>
       </div>
 
-      <div class="method-row">
+      <div class="method-row" id="payment-method-row">
         <button type="button" class="method active" data-method="card" onclick="selectPaymentMethod('card')">
           <strong>Card</strong>
           <span>Charged before booking</span>
@@ -118,6 +121,7 @@ input:focus{border-color:var(--purple)}
           <span>Due on site before service</span>
         </button>
       </div>
+      <div class="alternate-methods" id="alternate-methods"></div>
 
       <div id="card-wrap">
         <label>Card Details</label>
@@ -146,7 +150,9 @@ const STRIPE_PK_LIVE = 'pk_live_51TCOBz1xKrhk2iIWpqK6J28lU8BxVrlEpC0mIbR4ZkLA3ka
 let pricingData = {};
 let activeVehicle = 'sedan';
 let selectedServiceIds = new Set();
-let paymentMethod = new URLSearchParams(window.location.search).get('method') === 'cash' ? 'cash' : 'card';
+const requestedPaymentMethod = new URLSearchParams(window.location.search).get('method');
+let paymentSettings = { cash: true, card: true, cashApp: false, paypal: false, crypto: false };
+let paymentMethod = requestedPaymentMethod === 'cash' ? 'cash' : 'card';
 let stripe = null;
 let cardElement = null;
 
@@ -156,6 +162,17 @@ function slugify(value) {
 
 function escapeHtml(value) {
   return String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function normalizePaymentSettings(payments) {
+  const pm = payments || {};
+  return {
+    cash: pm.cash !== false && pm.invoice !== false,
+    card: pm.card !== false,
+    cashApp: pm.cashApp === true,
+    paypal: pm.paypal === true,
+    crypto: pm.crypto === true
+  };
 }
 
 function readServiceValue(name, value) {
@@ -240,10 +257,38 @@ function renderCart() {
   document.getElementById('cart-total').textContent = '$' + total.toLocaleString();
 }
 
+function renderPaymentMethods() {
+  const cardButton = document.querySelector('.method[data-method="card"]');
+  const cashButton = document.querySelector('.method[data-method="cash"]');
+  if (cardButton) cardButton.style.display = paymentSettings.card ? '' : 'none';
+  if (cashButton) cashButton.style.display = paymentSettings.cash ? '' : 'none';
+
+  if (!paymentSettings[paymentMethod]) {
+    paymentMethod = paymentSettings.card ? 'card' : paymentSettings.cash ? 'cash' : '';
+  }
+
+  const alternateLabels = [];
+  if (paymentSettings.cashApp) alternateLabels.push('Cash App');
+  if (paymentSettings.paypal) alternateLabels.push('PayPal');
+  if (paymentSettings.crypto) alternateLabels.push('Crypto');
+  const alternateEl = document.getElementById('alternate-methods');
+  if (alternateEl) {
+    alternateEl.style.display = alternateLabels.length ? 'block' : 'none';
+    alternateEl.innerHTML = alternateLabels.length
+      ? `<strong>Other payment methods</strong>Contact Fritz before sending alternate payment. These methods require manual confirmation before scheduling. <div>${alternateLabels.map(label => `<span>${escapeHtml(label)}</span>`).join('')}</div>`
+      : '';
+  }
+
+  if (!paymentMethod) {
+    showError('Online checkout is not available right now. Call Fritz to schedule.');
+  }
+}
+
 function renderAll() {
   renderVehicles();
   renderServices();
   renderCart();
+  renderPaymentMethods();
   selectPaymentMethod(paymentMethod);
 }
 
@@ -254,6 +299,7 @@ function toggleService(id) {
 }
 
 function selectPaymentMethod(method) {
+  if (!method || !paymentSettings[method]) return;
   paymentMethod = method;
   document.querySelectorAll('.method').forEach(button => {
     button.classList.toggle('active', button.dataset.method === method);
@@ -278,7 +324,11 @@ function isValidEmail(value) {
 
 async function readApiError(response) {
   const data = await response.json().catch(() => ({}));
-  return data.error || data.message || `Request failed (${response.status})`;
+  const message = data.error || data.message || `Request failed (${response.status})`;
+  if (/STRIPE_|secret key|publishable key|PaymentIntent|api key|stripe/i.test(message)) {
+    return 'Card payment could not be started. Try again later or call Fritz.';
+  }
+  return message;
 }
 
 async function initStripe() {
@@ -320,6 +370,7 @@ async function submitCheckout() {
   const serviceIds = Array.from(selectedServiceIds);
   const paymentTermsAccepted = document.getElementById('payment-terms').checked;
 
+  if (!paymentMethod || !paymentSettings[paymentMethod]) return showError('Choose an available payment method.');
   if (!serviceIds.length) return showError('Select at least one service.');
   if (!name) return showError('Enter your name.');
   if (!phone) return showError('Enter your phone number.');
@@ -396,11 +447,27 @@ async function loadPricing() {
   pricingData = await response.json();
   const firstVehicle = Object.keys(pricingData)[0];
   if (firstVehicle) activeVehicle = firstVehicle;
-  renderAll();
+}
+
+async function loadSiteConfig() {
+  try {
+    const response = await fetch('/site-config.json?t=' + Date.now(), { cache: 'no-store' });
+    if (!response.ok) return;
+    const config = await response.json();
+    paymentSettings = normalizePaymentSettings(config.payments);
+    if (requestedPaymentMethod === 'cash' && paymentSettings.cash) paymentMethod = 'cash';
+    else if (requestedPaymentMethod === 'card' && paymentSettings.card) paymentMethod = 'card';
+    else paymentMethod = paymentSettings.card ? 'card' : paymentSettings.cash ? 'cash' : '';
+  } catch (error) {
+    paymentSettings = normalizePaymentSettings(paymentSettings);
+  }
 }
 
 initStripe();
-loadPricing().catch(() => showError('Service menu could not load. Refresh the page and try again.'));
+Promise.all([loadSiteConfig(), loadPricing()])
+  .then(renderAll)
+  .catch(() => showError('Service menu could not load. Refresh the page and try again.'));
 </script>
+<script src="/site-shared.js"></script>
 </body>
 </html>

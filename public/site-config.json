@@ -4,9 +4,10 @@
   "showPricing": true,
   "stripeTestMode": true,
   "payments": {
-    "cashApp": true,
+    "cash": true,
+    "cashApp": false,
     "card": true,
-    "crypto": false,
-    "invoice": true
+    "paypal": false,
+    "crypto": false
   }
 }

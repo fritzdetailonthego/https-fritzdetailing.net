@@ -172,8 +172,10 @@ nav a:hover{color:var(--purple-light)}
 .payment-icon{width:48px;height:48px;border-radius:2px;display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:700}
 .payment-card h3{font-family:'Rajdhani',sans-serif;font-size:18px;font-weight:700;text-transform:uppercase;letter-spacing:1px}
 .payment-card p{font-size:13px;color:var(--gray)}
+.pay-cash .payment-icon{background:#1D9E75;color:#fff}
 .pay-cashapp .payment-icon{background:#00D632;color:#fff}
 .pay-card .payment-icon{background:linear-gradient(135deg,#434343,#1a1a2e);color:var(--purple-light);border:1px solid var(--purple)}
+.pay-paypal .payment-icon{background:#0070BA;color:#fff}
 .pay-crypto .payment-icon{background:#FF6600;color:#fff}
 
 /* AREA */
@@ -540,7 +542,7 @@ nav a:hover{color:var(--purple-light)}
     <h2 class="section-title">Book & <span>Pay</span></h2>
     <p class="section-sub">Start checkout, select services, confirm payment terms, then schedule from the verified booking page.</p>
     <div class="payment-grid">
-      <a href="/checkout.html?method=cash" class="payment-card pay-cashapp" id="pm-cashapp">
+      <a href="/checkout.html?method=cash" class="payment-card pay-cash" id="pm-cash">
         <div class="payment-icon">$</div>
         <h3>Cash</h3>
         <p>Cash is due on site before service starts</p>
@@ -552,19 +554,22 @@ nav a:hover{color:var(--purple-light)}
         <h3>Credit / Debit</h3>
         <p>Card is charged before booking</p>
       </a>
-      <a class="payment-card pay-crypto" id="pm-crypto" href="/checkout.html?method=card" style="display:none">
+      <a class="payment-card pay-cashapp" id="pm-cashapp" href="#contact" style="display:none">
+        <div class="payment-icon">$</div>
+        <h3>Cash App</h3>
+        <p>Contact Fritz before sending payment</p>
+      </a>
+      <a class="payment-card pay-paypal" id="pm-paypal" href="#contact" style="display:none">
+        <div class="payment-icon">P</div>
+        <h3>PayPal</h3>
+        <p>Contact Fritz before sending payment</p>
+      </a>
+      <a class="payment-card pay-crypto" id="pm-crypto" href="#contact" style="display:none">
         <div class="payment-icon">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
         </div>
         <h3>Crypto</h3>
-        <p>Unavailable until provider confirmation is enabled</p>
-      </a>
-      <a class="payment-card" id="pm-invoice" href="/checkout.html?method=cash" style="border-color:rgba(29,158,117,0.4)">
-        <div class="payment-icon" style="background:rgba(29,158,117,0.15);color:#1D9E75;font-size:20px;font-weight:700">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#1D9E75" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
-        </div>
-        <h3>Cash Invoice</h3>
-        <p>Creates a verification code for the appointment</p>
+        <p>Contact Fritz before sending payment</p>
       </a>
     </div>
     <p style="margin-top:24px;color:var(--gray);font-size:14px">Cancellations are free until 24 hours before the appointment. Inside 24 hours, call Fritz to cancel.</p>
@@ -935,8 +940,8 @@ function applyTestTheme(keysMissing) {
   const banner = document.createElement('div');
   banner.id = 'test-mode-banner';
   banner.textContent = keysMissing
-    ? 'Stripe Test Mode ON · Test keys not configured · Card payments will fail'
-    : 'Stripe Test Mode · No real charges · Test sales auto-delete on switch to live';
+    ? 'Stripe Test Mode ON - Test keys not configured - Card payments will fail'
+    : 'Stripe Test Mode - No real charges - Test sales auto-delete on switch to live';
   document.body.insertBefore(banner, document.body.firstChild);
 }
 
@@ -1590,10 +1595,17 @@ async function loadSiteConfig() {
 
     // Payment methods
     const pm = cfg.payments || {};
-    const pmMap = { cashApp: 'pm-cashapp', card: 'pm-card', crypto: 'pm-crypto', invoice: 'pm-invoice' };
+    const normalizedPayments = {
+      cash: pm.cash !== false && pm.invoice !== false,
+      card: pm.card !== false,
+      cashApp: pm.cashApp === true,
+      paypal: pm.paypal === true,
+      crypto: pm.crypto === true
+    };
+    const pmMap = { cash: 'pm-cash', card: 'pm-card', cashApp: 'pm-cashapp', paypal: 'pm-paypal', crypto: 'pm-crypto' };
     for (const key in pmMap) {
       const el = document.getElementById(pmMap[key]);
-      if (el && pm[key] === false) el.style.display = 'none';
+      if (el) el.style.display = normalizedPayments[key] === false ? 'none' : '';
     }
   } catch(e) {
     const weekendEl = document.getElementById('weekend-badge');
@@ -1602,5 +1614,6 @@ async function loadSiteConfig() {
 }
 loadSiteConfig();
 </script>
+<script src="/site-shared.js"></script>
 </body>
 </html>
