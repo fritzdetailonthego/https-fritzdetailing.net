@@ -1,1 +1,36 @@
-[]
+[
+  {
+    "id": "ORD-1777394555430-7e4e",
+    "publicToken": "kPY8L6nRVMeN3Cy4qTZ9rsTA5nwgOEaJ",
+    "status": "requires_payment",
+    "paymentStatus": "requires_payment",
+    "paymentMethod": "card",
+    "customer": {
+      "name": "Codex Data Branch Test",
+      "email": "codex-data-branch-test@example.com",
+      "phone": "4235550100"
+    },
+    "vehicle": "Test Vehicle",
+    "services": [
+      {
+        "id": "sedan:exterior:decontamination",
+        "vehicleType": "sedan",
+        "vehicleLabel": "Sedan / Coupe / Hatchback",
+        "category": "exterior",
+        "name": "Decontamination",
+        "price": 50,
+        "durationMinutes": 60
+      }
+    ],
+    "serviceSummary": "Decontamination",
+    "subtotal": 50,
+    "managerFees": [],
+    "total": 50,
+    "durationMinutes": 60,
+    "cashVerificationCode": "",
+    "termsAcceptedAt": "2026-04-28T16:42:35.427Z",
+    "createdAt": "2026-04-28T16:42:35.427Z",
+    "updatedAt": "2026-04-28T16:42:35.427Z",
+    "managerFeeTotal": 0
+  }
+]
