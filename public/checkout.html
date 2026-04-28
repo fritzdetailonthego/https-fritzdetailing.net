@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Checkout | Fritz's Detail on the Go</title>
+<meta name="description" content="Select detailing services, confirm payment terms, and continue to scheduling.">
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Rajdhani:wght@400;500;600;700&family=Open+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--purple:#7B2FBE;--purple-light:#9B4FDE;--black:#0A0A0A;--dark:#121212;--card:#1A1A1A;--surface:#151515;--white:#FFF;--gray:#999;--gray-light:#CCC;--border:rgba(123,47,190,0.25);--border-strong:rgba(155,79,222,0.5);--green:#1D9E75;--red:#E24B4A}
+body{background:var(--black);color:var(--white);font-family:'Open Sans',sans-serif;line-height:1.6;min-height:100vh}
+.shell{max-width:1180px;margin:0 auto;padding:24px}
+.header{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:24px}
+.brand{display:flex;align-items:center;gap:12px;text-decoration:none;color:var(--white)}
+.brand img{width:52px;height:52px;object-fit:cover;border:1px solid var(--border)}
+.brand-title{font-family:'Oswald',sans-serif;font-size:28px;text-transform:uppercase;line-height:1}
+.brand-sub{font-family:'Rajdhani',sans-serif;color:var(--purple-light);font-weight:700;letter-spacing:2px;text-transform:uppercase;font-size:12px}
+.back{color:var(--gray-light);border:1px solid var(--border);padding:10px 14px;text-decoration:none;font-family:'Rajdhani',sans-serif;font-weight:700;letter-spacing:1.4px;text-transform:uppercase}
+.hero{border:1px solid var(--border);background:linear-gradient(135deg,rgba(123,47,190,.14),rgba(18,18,18,.96));padding:28px;margin-bottom:18px}
+.kicker{font-family:'Rajdhani',sans-serif;color:var(--purple-light);font-weight:700;letter-spacing:2px;text-transform:uppercase;font-size:13px;margin-bottom:8px}
+h1{font-family:'Oswald',sans-serif;font-size:clamp(36px,7vw,72px);text-transform:uppercase;line-height:.95;margin-bottom:12px}
+.hero p{color:var(--gray-light);max-width:760px}
+.grid{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(320px,.65fr);gap:18px}
+.panel{background:var(--card);border:1px solid var(--border);padding:20px}
+.panel-title{font-family:'Oswald',sans-serif;font-size:24px;text-transform:uppercase;margin-bottom:6px}
+.panel-copy{color:var(--gray);font-size:14px;margin-bottom:16px}
+.vehicle-tabs{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px}
+.tab{background:transparent;color:var(--gray-light);border:1px solid var(--border);padding:10px 12px;font-family:'Rajdhani',sans-serif;font-weight:700;letter-spacing:1px;text-transform:uppercase;cursor:pointer}
+.tab.active{background:var(--purple);border-color:var(--purple);color:#fff}
+.service-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px}
+.service-card{background:var(--surface);border:1px solid var(--border);padding:14px;cursor:pointer;min-height:126px;display:flex;flex-direction:column;gap:8px}
+.service-card.active{border-color:var(--border-strong);background:rgba(123,47,190,.14)}
+.service-top{display:flex;justify-content:space-between;gap:12px}
+.service-name{font-family:'Oswald',sans-serif;text-transform:uppercase;font-size:18px;line-height:1.15}
+.service-price{font-family:'Rajdhani',sans-serif;color:var(--purple-light);font-weight:700;font-size:19px}
+.service-meta{font-size:12px;color:var(--gray);font-family:'Rajdhani',sans-serif;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-top:auto}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+label{display:block;font-family:'Rajdhani',sans-serif;color:var(--gray);font-weight:700;letter-spacing:1.4px;text-transform:uppercase;font-size:12px;margin-bottom:6px}
+input{width:100%;background:var(--surface);border:1px solid var(--border);color:#fff;padding:12px 14px;font:15px 'Open Sans',sans-serif;outline:none}
+input:focus{border-color:var(--purple)}
+.full{grid-column:1/-1}
+.method-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:14px 0}
+.method{background:var(--surface);border:1px solid var(--border);color:#fff;padding:14px;text-align:left;cursor:pointer}
+.method.active{border-color:var(--border-strong);background:rgba(123,47,190,.14)}
+.method strong{display:block;font-family:'Oswald',sans-serif;text-transform:uppercase;font-size:18px}
+.method span{color:var(--gray);font-size:13px}
+.terms{display:flex;align-items:flex-start;gap:10px;background:var(--surface);border:1px solid var(--border);padding:12px;margin:14px 0;color:var(--gray-light);font-size:13px}
+.terms input{width:auto;margin-top:4px}
+#card-element{padding:14px;background:var(--surface);border:1px solid var(--border);margin-top:8px}
+.summary{position:sticky;top:16px}
+.summary-row{display:flex;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid rgba(255,255,255,.06);font-size:14px}
+.summary-row strong{font-family:'Rajdhani',sans-serif;color:#fff;text-transform:uppercase;letter-spacing:1px}
+.summary-total{font-family:'Oswald',sans-serif;font-size:34px;color:var(--purple-light);text-align:right;margin-top:10px}
+.btn{display:inline-flex;align-items:center;justify-content:center;width:100%;border:0;background:var(--purple);color:#fff;padding:15px 18px;font-family:'Rajdhani',sans-serif;font-size:16px;font-weight:700;letter-spacing:2px;text-transform:uppercase;cursor:pointer;margin-top:12px}
+.btn:disabled{opacity:.55;cursor:not-allowed}
+.error{display:none;color:#ff8a8a;background:rgba(226,75,74,.12);border:1px solid rgba(226,75,74,.35);padding:12px;margin-top:12px;font-size:14px}
+.success{display:none;color:#7ee0b5;background:rgba(29,158,117,.12);border:1px solid rgba(29,158,117,.35);padding:12px;margin-top:12px;font-size:14px}
+.muted{color:var(--gray);font-size:13px;margin-top:10px}
+@media(max-width:860px){.grid{grid-template-columns:1fr}.summary{position:static}.form-grid{grid-template-columns:1fr}.header{align-items:flex-start;flex-direction:column}}
+</style>
+</head>
+<body>
+<main class="shell">
+  <header class="header">
+    <a class="brand" href="/">
+      <img src="/logo.jpg" alt="Fritz's Detail on the Go logo">
+      <span>
+        <span class="brand-sub">Secure checkout</span>
+        <span class="brand-title">Fritz's Detail</span>
+      </span>
+    </a>
+    <a class="back" href="/">Back to site</a>
+  </header>
+
+  <section class="hero">
+    <div class="kicker">Step 1 of 2</div>
+    <h1>Select Services And Pay</h1>
+    <p>Choose every service needed for this visit. Card orders are charged before scheduling. Cash orders require acknowledgement that cash is due on site before service starts.</p>
+  </section>
+
+  <div class="grid">
+    <section class="panel">
+      <h2 class="panel-title">Service Menu</h2>
+      <p class="panel-copy">Select one or more services. The schedule duration is calculated from the selected services.</p>
+      <div id="vehicle-tabs" class="vehicle-tabs"></div>
+      <div id="service-grid" class="service-grid"></div>
+    </section>
+
+    <aside class="panel summary">
+      <h2 class="panel-title">Customer Details</h2>
+      <div class="form-grid">
+        <div>
+          <label for="customer-name">Name</label>
+          <input id="customer-name" autocomplete="name" placeholder="Full name">
+        </div>
+        <div>
+          <label for="customer-phone">Phone</label>
+          <input id="customer-phone" autocomplete="tel" placeholder="Phone number">
+        </div>
+        <div class="full">
+          <label for="customer-email">Email</label>
+          <input id="customer-email" autocomplete="email" type="email" placeholder="name@example.com">
+        </div>
+        <div class="full">
+          <label for="customer-vehicle">Vehicle</label>
+          <input id="customer-vehicle" placeholder="Year, make, model, color">
+        </div>
+      </div>
+
+      <div class="method-row">
+        <button type="button" class="method active" data-method="card" onclick="selectPaymentMethod('card')">
+          <strong>Card</strong>
+          <span>Charged before booking</span>
+        </button>
+        <button type="button" class="method" data-method="cash" onclick="selectPaymentMethod('cash')">
+          <strong>Cash</strong>
+          <span>Due on site before service</span>
+        </button>
+      </div>
+
+      <div id="card-wrap">
+        <label>Card Details</label>
+        <div id="card-element"></div>
+      </div>
+
+      <label class="terms">
+        <input id="payment-terms" type="checkbox">
+        <span>I understand payment is required for booking. Card payment is charged before scheduling. Cash payment is due on site before service starts. Cancellations are free until 24 hours before the appointment. Inside 24 hours, call Fritz to cancel.</span>
+      </label>
+
+      <div id="cart-lines"></div>
+      <div class="summary-row"><strong>Duration</strong><span id="cart-duration">0 min</span></div>
+      <div class="summary-total" id="cart-total">$0</div>
+      <button class="btn" id="checkout-btn" onclick="submitCheckout()">Continue To Booking</button>
+      <div class="error" id="checkout-error"></div>
+      <div class="success" id="checkout-success"></div>
+      <p class="muted">Fees such as distance, heavy pet hair, or excessive soil are reviewed and added by Fritz after the booking if needed.</p>
+    </aside>
+  </div>
+</main>
+
+<script src="https://js.stripe.com/v3/"></script>
+<script>
+const STRIPE_PK_LIVE = 'pk_live_51TCOBz1xKrhk2iIWpqK6J28lU8BxVrlEpC0mIbR4ZkLA3kaJDGcJHdH5UY1Aeqrnk8K5XtSVTtZZAaKPjp2Gxq6700yZHMpxcl';
+let pricingData = {};
+let activeVehicle = 'sedan';
+let selectedServiceIds = new Set();
+let paymentMethod = new URLSearchParams(window.location.search).get('method') === 'cash' ? 'cash' : 'card';
+let stripe = null;
+let cardElement = null;
+
+function slugify(value) {
+  return String(value || '').trim().toLowerCase().replace(/&/g, 'and').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+}
+
+function escapeHtml(value) {
+  return String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function readServiceValue(name, value) {
+  const defaults = {
+    'premium wash': 120, decontamination: 60, 'paint correction': 180, wax: 60,
+    'trim restoration': 60, 'tire shine': 30, 'headlight restoration': 60,
+    'ceramic glass protection': 30, 'engine bay clean': 60, 'ceramic coat': 480,
+    'interior clean': 120, 'carpet shampoo': 60, 'steam clean': 60,
+    maintenance: 120, 'the shiny package': 240, 'wash, clay, seal': 120, 'truck bed clean': 30
+  };
+  if (typeof value === 'number') return { price: value, durationMinutes: defaults[String(name).toLowerCase()] || 120 };
+  if (value && typeof value === 'object') {
+    return {
+      price: Number(value.price || value.amount) || 0,
+      durationMinutes: parseInt(value.durationMinutes || value.duration || value.minutes, 10) || defaults[String(name).toLowerCase()] || 120
+    };
+  }
+  return { price: 0, durationMinutes: defaults[String(name).toLowerCase()] || 120 };
+}
+
+function buildCatalog() {
+  const services = [];
+  for (const [vehicleType, tier] of Object.entries(pricingData)) {
+    for (const section of ['exterior', 'interior', 'packages']) {
+      const items = tier[section] || {};
+      for (const [name, rawValue] of Object.entries(items)) {
+        const value = readServiceValue(name, rawValue);
+        if (value.price <= 0) continue;
+        services.push({
+          id: `${slugify(vehicleType)}:${section}:${slugify(name)}`,
+          vehicleType,
+          vehicleLabel: tier.label || vehicleType,
+          category: section,
+          name,
+          price: value.price,
+          durationMinutes: value.durationMinutes
+        });
+      }
+    }
+  }
+  return services;
+}
+
+function formatDuration(minutes) {
+  if (!minutes) return '0 min';
+  const hours = Math.floor(minutes / 60);
+  const rest = minutes % 60;
+  if (!hours) return `${rest} min`;
+  return rest ? `${hours} hr ${rest} min` : `${hours} hr`;
+}
+
+function renderVehicles() {
+  const tabs = document.getElementById('vehicle-tabs');
+  tabs.innerHTML = Object.entries(pricingData).map(([key, tier]) =>
+    `<button type="button" class="tab ${key === activeVehicle ? 'active' : ''}" onclick="activeVehicle='${key}';renderAll()">${escapeHtml(tier.label || key)}</button>`
+  ).join('');
+}
+
+function renderServices() {
+  const grid = document.getElementById('service-grid');
+  const services = buildCatalog().filter(service => service.vehicleType === activeVehicle);
+  grid.innerHTML = services.map(service => {
+    const active = selectedServiceIds.has(service.id);
+    return `<button type="button" class="service-card ${active ? 'active' : ''}" onclick="toggleService('${service.id}')">
+      <span class="service-top">
+        <span class="service-name">${escapeHtml(service.name)}</span>
+        <span class="service-price">$${service.price.toLocaleString()}</span>
+      </span>
+      <span class="service-meta">${escapeHtml(service.category)} | ${formatDuration(service.durationMinutes)}</span>
+    </button>`;
+  }).join('');
+}
+
+function renderCart() {
+  const selected = buildCatalog().filter(service => selectedServiceIds.has(service.id));
+  const total = selected.reduce((sum, service) => sum + service.price, 0);
+  const duration = selected.reduce((sum, service) => sum + service.durationMinutes, 0);
+  document.getElementById('cart-lines').innerHTML = selected.length
+    ? selected.map(service => `<div class="summary-row"><span>${escapeHtml(service.name)}</span><strong>$${service.price.toLocaleString()}</strong></div>`).join('')
+    : '<div class="summary-row"><span>No services selected</span><strong>$0</strong></div>';
+  document.getElementById('cart-duration').textContent = formatDuration(duration);
+  document.getElementById('cart-total').textContent = '$' + total.toLocaleString();
+}
+
+function renderAll() {
+  renderVehicles();
+  renderServices();
+  renderCart();
+  selectPaymentMethod(paymentMethod);
+}
+
+function toggleService(id) {
+  if (selectedServiceIds.has(id)) selectedServiceIds.delete(id);
+  else selectedServiceIds.add(id);
+  renderAll();
+}
+
+function selectPaymentMethod(method) {
+  paymentMethod = method;
+  document.querySelectorAll('.method').forEach(button => {
+    button.classList.toggle('active', button.dataset.method === method);
+  });
+  document.getElementById('card-wrap').style.display = method === 'card' ? 'block' : 'none';
+}
+
+function showError(message) {
+  const el = document.getElementById('checkout-error');
+  el.textContent = message || 'Checkout failed. Please try again.';
+  el.style.display = 'block';
+}
+
+function clearMessages() {
+  document.getElementById('checkout-error').style.display = 'none';
+  document.getElementById('checkout-success').style.display = 'none';
+}
+
+function isValidEmail(value) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || '').trim());
+}
+
+async function readApiError(response) {
+  const data = await response.json().catch(() => ({}));
+  return data.error || data.message || `Request failed (${response.status})`;
+}
+
+async function initStripe() {
+  try {
+    const modeRes = await fetch('/api/log-sale?action=mode', { method: 'GET' });
+    const mode = await modeRes.json();
+    const key = mode.testMode ? mode.publishableKey : STRIPE_PK_LIVE;
+    if (!key) {
+      showError('Stripe test mode is enabled, but test publishable key is not configured.');
+      return;
+    }
+    stripe = Stripe(key);
+    const elements = stripe.elements();
+    cardElement = elements.create('card', {
+      style: {
+        base: {
+          color: '#fff',
+          fontFamily: 'Open Sans, sans-serif',
+          fontSize: '15px',
+          '::placeholder': { color: '#777' },
+          iconColor: '#9B4FDE'
+        },
+        invalid: { color: '#E24B4A', iconColor: '#E24B4A' }
+      }
+    });
+    cardElement.mount('#card-element');
+  } catch (error) {
+    showError('Payment form could not load. Refresh the page and try again.');
+  }
+}
+
+async function submitCheckout() {
+  clearMessages();
+  const btn = document.getElementById('checkout-btn');
+  const name = document.getElementById('customer-name').value.trim();
+  const phone = document.getElementById('customer-phone').value.trim();
+  const email = document.getElementById('customer-email').value.trim();
+  const vehicle = document.getElementById('customer-vehicle').value.trim();
+  const serviceIds = Array.from(selectedServiceIds);
+  const paymentTermsAccepted = document.getElementById('payment-terms').checked;
+
+  if (!serviceIds.length) return showError('Select at least one service.');
+  if (!name) return showError('Enter your name.');
+  if (!phone) return showError('Enter your phone number.');
+  if (!isValidEmail(email)) return showError('Enter a valid email address.');
+  if (!paymentTermsAccepted) return showError('Accept the payment and cancellation terms before continuing.');
+  if (paymentMethod === 'card' && (!stripe || !cardElement)) return showError('Payment form is still loading. Try again in a moment.');
+
+  btn.disabled = true;
+  btn.textContent = paymentMethod === 'card' ? 'Processing Card...' : 'Creating Cash Order...';
+
+  try {
+    const orderRes = await fetch('/api/bookings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'create-order',
+        paymentMethod,
+        paymentTermsAccepted,
+        customer: { name, phone, email },
+        vehicle,
+        serviceIds
+      })
+    });
+    if (!orderRes.ok) throw new Error(await readApiError(orderRes));
+    let orderData = await orderRes.json();
+
+    if (paymentMethod === 'cash') {
+      window.location.href = orderData.bookingUrl;
+      return;
+    }
+
+    const intentRes = await fetch('/api/create-payment-intent', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        orderId: orderData.order.id,
+        token: new URL(orderData.bookingUrl, window.location.href).searchParams.get('token')
+      })
+    });
+    if (!intentRes.ok) throw new Error(await readApiError(intentRes));
+    const intentData = await intentRes.json();
+
+    const { error, paymentIntent } = await stripe.confirmCardPayment(intentData.clientSecret, {
+      payment_method: {
+        card: cardElement,
+        billing_details: { name, email, phone }
+      }
+    });
+    if (error) throw new Error(error.message);
+    if (!paymentIntent || paymentIntent.status !== 'succeeded') throw new Error('Card payment was not confirmed.');
+
+    const confirmRes = await fetch('/api/bookings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'confirm-card-order',
+        orderId: orderData.order.id,
+        token: new URL(orderData.bookingUrl, window.location.href).searchParams.get('token'),
+        paymentIntentId: paymentIntent.id
+      })
+    });
+    if (!confirmRes.ok) throw new Error(await readApiError(confirmRes));
+    orderData = await confirmRes.json();
+    window.location.href = orderData.bookingUrl;
+  } catch (error) {
+    showError(error.message || 'Checkout failed. Please try again.');
+    btn.disabled = false;
+    btn.textContent = 'Continue To Booking';
+  }
+}
+
+async function loadPricing() {
+  const response = await fetch('/pricing.json?t=' + Date.now());
+  pricingData = await response.json();
+  const firstVehicle = Object.keys(pricingData)[0];
+  if (firstVehicle) activeVehicle = firstVehicle;
+  renderAll();
+}
+
+initStripe();
+loadPricing().catch(() => showError('Service menu could not load. Refresh the page and try again.'));
+</script>
+</body>
+</html>

@@ -23,18 +23,26 @@ module.exports = async (req, res) => {
 
     sales.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
 
-    const totalRevenue = sales.reduce((sum, s) => sum + (Number(s.amount) || 0), 0);
-    const totalCommission = sales.reduce((sum, s) => sum + (Number(s.commission) || 0), 0);
+    const totalRevenue = sales.reduce((sum, s) => {
+      const amount = Number(s.amount) || 0;
+      const refundAmount = s.status === 'refunded' ? (Number(s.refundAmount) || amount) : 0;
+      return sum + Math.max(0, amount - refundAmount);
+    }, 0);
+    const totalCommission = sales.reduce((sum, s) => {
+      if (s.status === 'refunded') return sum;
+      return sum + (Number(s.commission) || 0);
+    }, 0);
     const commissionRate = getCommissionRate();
+    const activeSales = sales.filter((sale) => sale.status !== 'refunded');
 
     res.json({
       sales,
       summary: {
-        totalSales: sales.length,
+        totalSales: activeSales.length,
         totalRevenue: Math.round(totalRevenue * 100) / 100,
         totalCommission: Math.round(totalCommission * 100) / 100,
         commissionRate,
-        avgSale: sales.length > 0 ? Math.round((totalRevenue / sales.length) * 100) / 100 : 0
+        avgSale: activeSales.length > 0 ? Math.round((totalRevenue / activeSales.length) * 100) / 100 : 0
       }
     });
   } catch (error) {

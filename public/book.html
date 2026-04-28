@@ -1,141 +1,141 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Book an Appointment | Fritz's Detail on the Go</title>
-<meta name="description" content="Book your mobile car detailing appointment with Fritz's Detail on the Go. Pick a date and time, we come to you in Southwest Virginia.">
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Schedule Appointment | Fritz's Detail on the Go</title>
+<meta name="description" content="Schedule a verified Fritz's Detail on the Go order.">
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Rajdhani:wght@400;500;600;700&family=Open+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-:root{--purple:#7B2FBE;--purple-light:#9B4FDE;--black:#0A0A0A;--dark:#121212;--dark-card:#1A1A1A;--white:#FFF;--gray:#999;--gray-light:#CCC;--border:rgba(123,47,190,0.25);
---lavender:#B57EDC;
---lavender-light:#C9A9E8;
---lavender-dark:#8E5BC4;--green:#1D9E75;--red:#E24B4A}
-body{font-family:"Open Sans",sans-serif;background:#0A0A0A;color:var(--white);line-height:1.6;min-height:100vh}
-.header{position:fixed;top:0;left:0;right:0;z-index:100;padding:12px 24px;background:rgba(10,10,10,0.92);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
-.header-brand{display:flex;align-items:center;gap:10px;text-decoration:none}
-.header-brand span{font-family:'Oswald',sans-serif;font-size:18px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:#fff}
-.header-brand em{color:var(--purple-light);font-style:normal}
-.container{max-width:600px;margin:0 auto;padding:100px 20px 40px}
-h1{font-family:'Oswald',sans-serif;font-size:28px;text-transform:uppercase;font-weight:700;margin-bottom:8px;text-align:center}
-h1 em{color:var(--purple-light);font-style:normal}
-.subtitle{color:var(--gray);text-align:center;margin-bottom:32px;font-size:15px}
-.step{display:none;animation:fadeIn .3s ease}
+:root{--purple:#7B2FBE;--purple-light:#9B4FDE;--black:#0A0A0A;--dark:#121212;--card:#1A1A1A;--surface:#151515;--white:#FFF;--gray:#999;--gray-light:#CCC;--border:rgba(123,47,190,.25);--border-strong:rgba(155,79,222,.5);--green:#1D9E75;--red:#E24B4A}
+body{background:var(--black);color:var(--white);font-family:'Open Sans',sans-serif;min-height:100vh;line-height:1.6}
+.container{max-width:880px;margin:0 auto;padding:24px}
+.brand{display:flex;align-items:center;gap:12px;color:var(--white);text-decoration:none;margin-bottom:22px}
+.brand img{width:52px;height:52px;object-fit:cover;border:1px solid var(--border)}
+.brand-title{display:block;font-family:'Oswald',sans-serif;font-size:28px;line-height:1;text-transform:uppercase}
+.brand-sub{display:block;font-family:'Rajdhani',sans-serif;color:var(--purple-light);font-weight:700;letter-spacing:2px;text-transform:uppercase;font-size:12px}
+.hero{background:linear-gradient(135deg,rgba(123,47,190,.14),rgba(18,18,18,.96));border:1px solid var(--border);padding:28px;margin-bottom:16px}
+.kicker{font-family:'Rajdhani',sans-serif;color:var(--purple-light);font-weight:700;letter-spacing:2px;text-transform:uppercase;font-size:13px;margin-bottom:8px}
+h1{font-family:'Oswald',sans-serif;font-size:clamp(34px,7vw,64px);line-height:.96;text-transform:uppercase;margin-bottom:10px}
+.hero p{color:var(--gray-light)}
+.panel{background:var(--card);border:1px solid var(--border);padding:20px;margin-bottom:16px}
+.panel-title{font-family:'Oswald',sans-serif;font-size:24px;text-transform:uppercase;margin-bottom:8px}
+.summary-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px}
+.summary-item{background:var(--surface);border:1px solid var(--border);padding:12px}
+.summary-label{font-family:'Rajdhani',sans-serif;color:var(--gray);font-weight:700;letter-spacing:1.4px;text-transform:uppercase;font-size:12px}
+.summary-value{color:#fff;font-weight:700;margin-top:4px}
+.progress{display:flex;gap:8px;margin-bottom:16px}
+.dot{height:6px;flex:1;background:rgba(255,255,255,.12)}
+.dot.active,.dot.done{background:var(--purple)}
+.step{display:none}
 .step.active{display:block}
-@keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
-.step-label{font-family:'Rajdhani',sans-serif;font-size:13px;text-transform:uppercase;letter-spacing:2px;color:var(--purple-light);font-weight:600;margin-bottom:12px}
-.step-title{font-family:'Oswald',sans-serif;font-size:22px;text-transform:uppercase;margin-bottom:16px;font-weight:600}
-
-/* Calendar */
-.cal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
-.cal-header button{background:var(--dark-card);border:1px solid var(--border);color:#fff;width:36px;height:36px;border-radius:2px;cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center}
-.cal-header button:hover{border-color:var(--purple)}
-.cal-month{font-family:'Oswald',sans-serif;font-size:18px;text-transform:uppercase;letter-spacing:1px}
-.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:24px}
-.cal-day-label{text-align:center;font-size:11px;color:var(--gray);font-family:'Rajdhani',sans-serif;font-weight:600;text-transform:uppercase;padding:4px}
-.cal-day{text-align:center;padding:10px 4px;border-radius:2px;cursor:pointer;font-size:14px;font-weight:500;transition:all .15s;border:1px solid transparent}
-.cal-day:hover:not(.disabled):not(.empty){background:rgba(123,47,190,0.15);border-color:var(--purple)}
-.cal-day.selected{background:var(--purple);color:#fff;font-weight:700}
-.cal-day.disabled{color:rgba(255,255,255,0.15);cursor:default}
-.cal-day.today{border-color:var(--purple);color:var(--purple-light)}
-.cal-day.empty{cursor:default}
-
-/* Slots */
-.slots-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px;margin-bottom:24px}
-.slot{background:var(--dark-card);border:1px solid var(--border);border-radius:2px;padding:12px;text-align:center;cursor:pointer;font-family:'Rajdhani',sans-serif;font-weight:600;font-size:15px;transition:all .15s}
-.slot:hover{border-color:var(--purple);background:rgba(123,47,190,0.1)}
-.slot.selected{background:var(--purple);color:#fff;border-color:var(--purple)}
-.no-slots{color:var(--gray);text-align:center;padding:32px;font-size:15px}
-
-/* Form */
-.input{width:100%;padding:12px 14px;background:var(--dark);border:1px solid var(--border);border-radius:2px;color:#fff;font-size:15px;font-family:'Open Sans',sans-serif;outline:none;margin-bottom:12px;transition:border .2s}
-.input:focus{border-color:var(--purple)}
-.input::placeholder{color:var(--gray)}
-.btn{font-family:'Rajdhani',sans-serif;font-weight:700;font-size:16px;letter-spacing:2px;text-transform:uppercase;padding:14px 28px;border-radius:2px;border:none;cursor:pointer;width:100%;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:8px}
-.btn-primary{background:var(--purple);color:#fff}
-.btn-primary:hover{background:var(--purple-light)}
-.btn-outline{background:transparent;color:var(--white);border:2px solid var(--border);margin-top:8px}
-.btn:disabled{opacity:0.5;cursor:not-allowed}
-
-/* Progress */
-.progress{display:flex;gap:8px;justify-content:center;margin-bottom:24px}
-.progress-dot{width:10px;height:10px;border-radius:2px;background:rgba(255,255,255,0.1);transition:background .2s}
-.progress-dot.active{background:var(--purple)}
-.progress-dot.done{background:var(--green)}
-
-/* Success */
-.success-box{text-align:center;padding:40px 20px}
-.success-box .checkmark{width:64px;height:64px;background:rgba(29,158,117,0.15);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 20px}
-.success-box h2{font-family:'Oswald',sans-serif;font-size:28px;text-transform:uppercase;color:var(--green);margin-bottom:8px}
-.confirm-detail{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid rgba(255,255,255,0.05);font-size:14px}
-.confirm-detail .label{color:var(--gray)}
-.error-msg{background:rgba(226,75,74,0.1);border:1px solid rgba(226,75,74,0.3);color:var(--red);padding:12px;border-radius:2px;font-size:14px;margin-bottom:12px;display:none}
-</style></head>
+.cal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.cal-header button,.btn-outline{background:transparent;border:1px solid var(--border);color:#fff;padding:10px 14px;font-family:'Rajdhani',sans-serif;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;cursor:pointer}
+.cal-month{font-family:'Oswald',sans-serif;font-size:22px;text-transform:uppercase}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
+.cal-day-label{text-align:center;color:var(--gray);font-family:'Rajdhani',sans-serif;font-weight:700;font-size:12px}
+.cal-day{background:var(--surface);border:1px solid var(--border);min-height:44px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-family:'Rajdhani',sans-serif;font-weight:700}
+.cal-day:hover,.cal-day.selected{border-color:var(--border-strong);background:rgba(123,47,190,.16);color:var(--purple-light)}
+.cal-day.disabled{opacity:.25;pointer-events:none}
+.slots-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px}
+.slot{background:var(--surface);border:1px solid var(--border);padding:12px;text-align:center;cursor:pointer;font-family:'Rajdhani',sans-serif;font-weight:700;letter-spacing:1px;text-transform:uppercase}
+.slot.selected{border-color:var(--border-strong);background:rgba(123,47,190,.16);color:var(--purple-light)}
+.input-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+label{display:block;font-family:'Rajdhani',sans-serif;color:var(--gray);font-weight:700;letter-spacing:1.4px;text-transform:uppercase;font-size:12px;margin-bottom:6px}
+input,textarea{width:100%;background:var(--surface);border:1px solid var(--border);color:#fff;padding:12px 14px;font:15px 'Open Sans',sans-serif;outline:none}
+textarea{resize:vertical;min-height:92px}
+input:focus,textarea:focus{border-color:var(--purple)}
+.full{grid-column:1/-1}
+.btn{display:inline-flex;align-items:center;justify-content:center;width:100%;border:0;background:var(--purple);color:#fff;padding:15px 18px;font-family:'Rajdhani',sans-serif;font-size:16px;font-weight:700;letter-spacing:2px;text-transform:uppercase;cursor:pointer;margin-top:12px}
+.btn:disabled{opacity:.55;cursor:not-allowed}
+.error{display:none;color:#ff8a8a;background:rgba(226,75,74,.12);border:1px solid rgba(226,75,74,.35);padding:12px;margin-top:12px;font-size:14px}
+.success{display:none;color:#7ee0b5;background:rgba(29,158,117,.12);border:1px solid rgba(29,158,117,.35);padding:12px;margin-top:12px;font-size:14px}
+.callout{background:var(--surface);border:1px solid var(--border);padding:12px;color:var(--gray-light);font-size:14px;margin-top:12px}
+.cancel-btn{background:transparent;border:1px solid rgba(226,75,74,.45);color:#ff9a9a}
+@media(max-width:680px){.input-grid{grid-template-columns:1fr}.container{padding:16px}.cal-day{min-height:38px;font-size:13px}}
+</style>
+</head>
 <body>
-<header class="header">
-  <a href="/" class="header-brand"><img src="/logo.jpg" alt="Fritz's Detail" style="height:42px;border-radius:2px"><span>Fritz's <em>Detail</em></span></a>
-  <a href="tel:+12762470921" style="color:var(--gray-light);text-decoration:none;font-family:'Rajdhani',sans-serif;font-size:14px;font-weight:600">(276) 247-0921</a>
-</header>
+<main class="container">
+  <a class="brand" href="/">
+    <img src="/logo.jpg" alt="Fritz's Detail on the Go logo">
+    <span><span class="brand-sub">Verified order scheduling</span><span class="brand-title">Fritz's Detail</span></span>
+  </a>
 
-<div class="container">
-  <h1>Book Your <em>Detail</em></h1>
-  <p class="subtitle">Pick a date, choose a time, and we'll come to you.</p>
+  <section class="hero">
+    <div class="kicker">Step 2 of 2</div>
+    <h1>Schedule Your Appointment</h1>
+    <p>This page only schedules a verified order. If you have not completed checkout, start with the service menu.</p>
+  </section>
 
-  <div class="progress">
-    <div class="progress-dot active" id="dot-1"></div>
-    <div class="progress-dot" id="dot-2"></div>
-    <div class="progress-dot" id="dot-3"></div>
-  </div>
+  <section class="panel" id="order-panel">
+    <h2 class="panel-title">Order Summary</h2>
+    <div id="order-summary" class="summary-grid"></div>
+    <div class="callout" id="cash-callout" style="display:none"></div>
+  </section>
 
-  <!-- STEP 1: Pick a date -->
-  <div class="step active" id="step-1">
-    <div class="step-label">Step 1 of 3</div>
-    <div class="step-title">Pick a Date</div>
-    <div class="cal-header">
-      <button onclick="changeMonth(-1)">&#8249;</button>
-      <div class="cal-month" id="cal-month"></div>
-      <button onclick="changeMonth(1)">&#8250;</button>
+  <section class="panel" id="schedule-panel">
+    <div class="progress">
+      <div class="dot active" id="dot-1"></div>
+      <div class="dot" id="dot-2"></div>
+      <div class="dot" id="dot-3"></div>
     </div>
-    <div class="cal-grid" id="cal-grid"></div>
-  </div>
 
-  <!-- STEP 2: Pick a time -->
-  <div class="step" id="step-2">
-    <div class="step-label">Step 2 of 3</div>
-    <div class="step-title">Pick a Time</div>
-    <p id="selected-date-label" style="color:var(--gray);font-size:14px;margin-bottom:16px"></p>
-    <div id="slots-container"><div class="no-slots">Loading available times...</div></div>
-    <button class="btn btn-outline" onclick="goStep(1)">Back</button>
-  </div>
-
-  <!-- STEP 3: Your info -->
-  <div class="step" id="step-3">
-    <div class="step-label">Step 3 of 3</div>
-    <div class="step-title">Your Info</div>
-    <div id="book-error" class="error-msg"></div>
-    <input class="input" id="bk-name" placeholder="Your name *" required>
-    <input class="input" id="bk-phone" placeholder="Phone number *" type="tel" required>
-    <input class="input" id="bk-vehicle" placeholder="Vehicle (e.g. 2020 Honda Civic)">
-    <select class="input" id="bk-service" style="cursor:pointer">
-      <option value="">What service do you need?</option>
-      <option>Other (describe in notes)</option>
-    </select>
-    <textarea class="input" id="bk-notes" placeholder="Notes (optional)" rows="2" style="resize:vertical"></textarea>
-    <button class="btn btn-primary" id="book-btn" onclick="submitBooking()">Confirm Booking</button>
-    <button class="btn btn-outline" onclick="goStep(2)">Back</button>
-  </div>
-
-  <!-- SUCCESS -->
-  <div class="step" id="step-success">
-    <div class="success-box">
-      <div class="checkmark"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#1D9E75" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg></div>
-      <h2>You're Booked!</h2>
-      <p style="color:var(--gray);margin-bottom:24px">Fritz will be at your location at the scheduled time.</p>
-      <div id="confirm-details" style="background:var(--dark-card);border:1px solid var(--border);border-radius:2px;padding:16px;text-align:left;margin-bottom:24px"></div>
-      <p style="color:var(--gray);font-size:13px">Questions? Text Fritz at <a href="sms:+12762470921" style="color:var(--purple-light)">(276) 247-0921</a></p>
-      <a href="/" class="btn btn-outline" style="margin-top:16px;text-decoration:none;display:inline-flex;width:auto">Back to Home</a>
+    <div class="step active" id="step-1">
+      <h2 class="panel-title">Pick A Date</h2>
+      <div class="cal-header">
+        <button type="button" onclick="changeMonth(-1)">Prev</button>
+        <div class="cal-month" id="cal-month"></div>
+        <button type="button" onclick="changeMonth(1)">Next</button>
+      </div>
+      <div class="cal-grid" id="calendar"></div>
     </div>
-  </div>
-</div>
+
+    <div class="step" id="step-2">
+      <h2 class="panel-title">Pick A Start Time</h2>
+      <p id="selected-date-label" style="color:var(--gray);font-size:14px;margin-bottom:14px"></p>
+      <div id="slots-container"><div class="callout">Loading available times...</div></div>
+      <button type="button" class="btn-outline" style="margin-top:12px" onclick="goStep(1)">Back</button>
+    </div>
+
+    <div class="step" id="step-3">
+      <h2 class="panel-title">Confirm Details</h2>
+      <div class="input-grid">
+        <div>
+          <label for="bk-phone">Phone</label>
+          <input id="bk-phone" type="tel" autocomplete="tel">
+        </div>
+        <div>
+          <label for="bk-vehicle">Vehicle</label>
+          <input id="bk-vehicle" placeholder="Year, make, model, color">
+        </div>
+        <div class="full">
+          <label for="bk-notes">Address, access notes, or service notes</label>
+          <textarea id="bk-notes" placeholder="Street address, parking instructions, condition notes, or anything Fritz should know."></textarea>
+        </div>
+      </div>
+      <button class="btn" id="book-btn" onclick="submitBooking()">Confirm Booking</button>
+      <button type="button" class="btn-outline" style="margin-top:10px" onclick="goStep(2)">Back</button>
+      <div class="error" id="book-error"></div>
+    </div>
+
+    <div class="step" id="step-success">
+      <h2 class="panel-title" style="color:var(--green)">Booking Confirmed</h2>
+      <div id="confirm-details" class="summary-grid"></div>
+      <div class="callout">Cancellations are free until 24 hours before the appointment. Inside 24 hours, call Fritz at <a href="tel:+12762470921" style="color:var(--purple-light)">(276) 247-0921</a>.</div>
+      <button class="btn cancel-btn" id="cancel-btn" onclick="cancelBooking()">Cancel This Booking</button>
+      <div class="error" id="cancel-error"></div>
+      <div class="success" id="cancel-success"></div>
+    </div>
+  </section>
+</main>
 
 <script>
+const params = new URLSearchParams(window.location.search);
+const orderId = params.get('orderId');
+const token = params.get('token');
+let order = null;
 let currentMonth = new Date().getMonth();
 let currentYear = new Date().getFullYear();
 let selectedDate = null;
@@ -143,108 +143,61 @@ let selectedTime = null;
 let selectedTimeLabel = null;
 let bookingConfig = { maxAdvanceDays: 30 };
 
+function escapeHtml(value) {
+  return String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function formatDuration(minutes) {
+  const value = Number(minutes) || 0;
+  const hours = Math.floor(value / 60);
+  const rest = value % 60;
+  if (!hours) return `${rest} min`;
+  return rest ? `${hours} hr ${rest} min` : `${hours} hr`;
+}
+
+function formatMoney(value) {
+  return '$' + (Number(value) || 0).toLocaleString();
+}
+
+function appendSummary(container, label, value) {
+  const div = document.createElement('div');
+  div.className = 'summary-item';
+  div.innerHTML = `<div class="summary-label">${escapeHtml(label)}</div><div class="summary-value">${escapeHtml(value || 'Not provided')}</div>`;
+  container.appendChild(div);
+}
+
+function renderOrderSummary() {
+  const container = document.getElementById('order-summary');
+  container.innerHTML = '';
+  appendSummary(container, 'Customer', order.customer?.name || '');
+  appendSummary(container, 'Email', order.customer?.email || '');
+  appendSummary(container, 'Services', order.serviceSummary || (order.services || []).map(s => s.name).join(' + '));
+  appendSummary(container, 'Duration', formatDuration(order.durationMinutes));
+  appendSummary(container, 'Payment', `${order.paymentMethod || ''} / ${order.paymentStatus || ''}`);
+  appendSummary(container, 'Total', formatMoney(order.total));
+
+  document.getElementById('bk-phone').value = order.customer?.phone || '';
+  document.getElementById('bk-vehicle').value = order.vehicle || '';
+
+  const cashCallout = document.getElementById('cash-callout');
+  if (order.paymentMethod === 'cash') {
+    cashCallout.style.display = 'block';
+    cashCallout.textContent = `Cash verification code: ${order.cashVerificationCode || 'Pending'}. Cash is due on site before service starts.`;
+  } else {
+    cashCallout.style.display = 'none';
+  }
+}
+
 function getMaxAdvanceDays() {
-  return Number.isInteger(bookingConfig.maxAdvanceDays) && bookingConfig.maxAdvanceDays >= 0
-    ? bookingConfig.maxAdvanceDays
-    : 30;
-}
-
-function collectServiceNames(pricing) {
-  const names = [];
-  const seen = new Set();
-
-  for (const tier of Object.values(pricing || {})) {
-    for (const section of ['exterior', 'interior', 'packages']) {
-      for (const name of Object.keys((tier && tier[section]) || {})) {
-        if (!seen.has(name)) {
-          seen.add(name);
-          names.push(name);
-        }
-      }
-    }
-  }
-
-  return names;
-}
-
-function setBookingServices(services) {
-  const select = document.getElementById('bk-service');
-  if (!select || !Array.isArray(services) || services.length === 0) return;
-
-  const currentValue = select.value;
-  select.innerHTML = '';
-
-  const placeholder = document.createElement('option');
-  placeholder.value = '';
-  placeholder.textContent = 'What service do you need?';
-  select.appendChild(placeholder);
-
-  for (const service of services) {
-    const option = document.createElement('option');
-    option.value = service;
-    option.textContent = service;
-    select.appendChild(option);
-  }
-
-  const other = document.createElement('option');
-  other.value = 'Other (describe in notes)';
-  other.textContent = 'Other (describe in notes)';
-  select.appendChild(other);
-
-  if (currentValue && Array.from(select.options).some((option) => option.value === currentValue)) {
-    select.value = currentValue;
-  }
-}
-
-async function loadBookingConfig() {
-  try {
-    const res = await fetch('/api/bookings', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'get-config' })
-    });
-    if (!res.ok) return;
-
-    const data = await res.json();
-    if (Number.isInteger(data.maxAdvanceDays) && data.maxAdvanceDays >= 0) {
-      bookingConfig.maxAdvanceDays = data.maxAdvanceDays;
-      renderCalendar();
-    }
-  } catch(e) {}
-}
-
-async function loadBookingServices() {
-  try {
-    const res = await fetch('/pricing.json?t=' + Date.now());
-    if (!res.ok) return;
-
-    const pricing = await res.json();
-    setBookingServices(collectServiceNames(pricing));
-  } catch(e) {}
-}
-
-function appendConfirmDetail(container, labelText, valueText) {
-  const row = document.createElement('div');
-  row.className = 'confirm-detail';
-
-  const label = document.createElement('span');
-  label.className = 'label';
-  label.textContent = labelText;
-
-  const value = document.createElement('span');
-  value.textContent = valueText;
-
-  row.appendChild(label);
-  row.appendChild(value);
-  container.appendChild(row);
+  return Number.isInteger(bookingConfig.maxAdvanceDays) && bookingConfig.maxAdvanceDays >= 0 ? bookingConfig.maxAdvanceDays : 30;
 }
 
 function goStep(n) {
-  document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.step').forEach(step => step.classList.remove('active'));
   document.getElementById('step-' + n).classList.add('active');
   for (let i = 1; i <= 3; i++) {
     const dot = document.getElementById('dot-' + i);
-    dot.className = 'progress-dot' + (i < n ? ' done' : i === n ? ' active' : '');
+    dot.className = 'dot' + (i < n ? ' done' : i === n ? ' active' : '');
   }
 }
 
@@ -253,144 +206,203 @@ function renderCalendar() {
   today.setHours(0,0,0,0);
   const maxDate = new Date(today);
   maxDate.setDate(maxDate.getDate() + getMaxAdvanceDays());
-
   const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
   document.getElementById('cal-month').textContent = monthNames[currentMonth] + ' ' + currentYear;
-
   const firstDay = new Date(currentYear, currentMonth, 1).getDay();
   const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
-
-  let html = ['S','M','T','W','T','F','S'].map(d => '<div class="cal-day-label">' + d + '</div>').join('');
-
-  for (let i = 0; i < firstDay; i++) html += '<div class="cal-day empty"></div>';
-
-  for (let d = 1; d <= daysInMonth; d++) {
-    const date = new Date(currentYear, currentMonth, d);
-    const dateStr = currentYear + '-' + String(currentMonth+1).padStart(2,'0') + '-' + String(d).padStart(2,'0');
-    const isPast = date < today;
-    const isTooFar = date > maxDate;
-    const isToday = date.getTime() === today.getTime();
-    const isSelected = dateStr === selectedDate;
-
-    let cls = 'cal-day';
-    if (isPast || isTooFar) cls += ' disabled';
-    else if (isSelected) cls += ' selected';
-    else if (isToday) cls += ' today';
-
-    const onclick = (isPast || isTooFar) ? '' : ' onclick="pickDate(\'' + dateStr + '\')"';
-    html += '<div class="' + cls + '"' + onclick + '>' + d + '</div>';
+  let html = ['S','M','T','W','T','F','S'].map(day => `<div class="cal-day-label">${day}</div>`).join('');
+  for (let i = 0; i < firstDay; i++) html += '<div></div>';
+  for (let day = 1; day <= daysInMonth; day++) {
+    const date = new Date(currentYear, currentMonth, day);
+    const dateStr = currentYear + '-' + String(currentMonth + 1).padStart(2, '0') + '-' + String(day).padStart(2, '0');
+    const disabled = date < today || date > maxDate;
+    const selected = dateStr === selectedDate;
+    html += `<button type="button" class="cal-day ${disabled ? 'disabled' : ''} ${selected ? 'selected' : ''}" ${disabled ? '' : `onclick="pickDate('${dateStr}')"`}>${day}</button>`;
   }
-
-  document.getElementById('cal-grid').innerHTML = html;
+  document.getElementById('calendar').innerHTML = html;
 }
 
-function changeMonth(dir) {
-  currentMonth += dir;
-  if (currentMonth > 11) { currentMonth = 0; currentYear++; }
+function changeMonth(delta) {
+  currentMonth += delta;
   if (currentMonth < 0) { currentMonth = 11; currentYear--; }
+  if (currentMonth > 11) { currentMonth = 0; currentYear++; }
   renderCalendar();
 }
 
 async function pickDate(dateStr) {
   selectedDate = dateStr;
   selectedTime = null;
+  selectedTimeLabel = null;
   renderCalendar();
-
-  const d = new Date(dateStr + 'T12:00:00');
-  const opts = { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' };
-  document.getElementById('selected-date-label').textContent = d.toLocaleDateString('en-US', opts);
-
+  const date = new Date(dateStr + 'T12:00:00');
+  document.getElementById('selected-date-label').textContent = date.toLocaleDateString('en-US', { weekday:'long', month:'long', day:'numeric', year:'numeric' });
   goStep(2);
-  document.getElementById('slots-container').innerHTML = '<div class="no-slots">Loading available times...</div>';
+  document.getElementById('slots-container').innerHTML = '<div class="callout">Loading available times...</div>';
 
   try {
-    const res = await fetch('/api/bookings', {
+    const response = await fetch('/api/bookings', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'get-slots', date: dateStr })
+      body: JSON.stringify({
+        action: 'get-slots',
+        date: dateStr,
+        bookingType: 'customer',
+        durationMinutes: order.durationMinutes
+      })
     });
-    const data = await res.json();
-
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || 'Could not load times.');
     if (data.closed) {
-      document.getElementById('slots-container').innerHTML = '<div class="no-slots">Fritz is not available on this day. Try another date.</div>';
+      document.getElementById('slots-container').innerHTML = '<div class="callout">Fritz is not available on this day. Pick another date.</div>';
       return;
     }
     if (data.blocked) {
-      document.getElementById('slots-container').innerHTML = '<div class="no-slots">This date is blocked. Try another date.</div>';
+      document.getElementById('slots-container').innerHTML = '<div class="callout">This date is blocked. Pick another date.</div>';
       return;
     }
-    if (!data.slots || data.slots.length === 0) {
-      document.getElementById('slots-container').innerHTML = '<div class="no-slots">No available slots on this date. Try another day.</div>';
+    if (!data.slots || !data.slots.length) {
+      document.getElementById('slots-container').innerHTML = '<div class="callout">No available start times fit this order duration.</div>';
       return;
     }
-
-    document.getElementById('slots-container').innerHTML = '<div class="slots-grid">' +
-      data.slots.map(s => '<div class="slot" onclick="pickTime(\'' + s.time + '\',\'' + s.label + '\',this)">' + s.label + '</div>').join('') +
-    '</div>';
-  } catch(e) {
-    document.getElementById('slots-container').innerHTML = '<div class="no-slots" style="color:var(--red)">Could not load slots. Try again.</div>';
+    document.getElementById('slots-container').innerHTML = `<div class="slots-grid">${data.slots.map(slot => `<button type="button" class="slot" onclick="pickTime('${slot.time}','${slot.label}',this)">${slot.label}</button>`).join('')}</div>`;
+  } catch (error) {
+    document.getElementById('slots-container').innerHTML = `<div class="callout" style="color:var(--red)">${escapeHtml(error.message || 'Could not load times.')}</div>`;
   }
 }
 
 function pickTime(time, label, el) {
   selectedTime = time;
   selectedTimeLabel = label;
-  document.querySelectorAll('.slot').forEach(s => s.classList.remove('selected'));
+  document.querySelectorAll('.slot').forEach(slot => slot.classList.remove('selected'));
   el.classList.add('selected');
-  setTimeout(() => goStep(3), 200);
+  setTimeout(() => goStep(3), 150);
 }
 
 async function submitBooking() {
-  const name = document.getElementById('bk-name').value.trim();
+  const errorEl = document.getElementById('book-error');
+  const button = document.getElementById('book-btn');
+  errorEl.style.display = 'none';
   const phone = document.getElementById('bk-phone').value.trim();
   const vehicle = document.getElementById('bk-vehicle').value.trim();
-  const service = document.getElementById('bk-service').value;
   const notes = document.getElementById('bk-notes').value.trim();
-  const errEl = document.getElementById('book-error');
-
-  if (!name || !phone) {
-    errEl.textContent = 'Name and phone number are required.';
-    errEl.style.display = 'block';
+  if (!selectedDate || !selectedTime) {
+    errorEl.textContent = 'Choose a date and start time.';
+    errorEl.style.display = 'block';
     return;
   }
-  errEl.style.display = 'none';
+  if (!phone) {
+    errorEl.textContent = 'Phone number is required.';
+    errorEl.style.display = 'block';
+    return;
+  }
 
-  const btn = document.getElementById('book-btn');
-  btn.disabled = true;
-  btn.textContent = 'Booking...';
-
+  button.disabled = true;
+  button.textContent = 'Confirming...';
   try {
-    const res = await fetch('/api/bookings', {
+    const response = await fetch('/api/bookings', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'book', date: selectedDate, time: selectedTime, name, phone, vehicle, service, notes })
+      body: JSON.stringify({
+        action: 'schedule-paid-order',
+        orderId,
+        token,
+        date: selectedDate,
+        time: selectedTime,
+        phone,
+        vehicle,
+        notes
+      })
     });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error);
-
-    const d = new Date(selectedDate + 'T12:00:00');
-    const confirmDetails = document.getElementById('confirm-details');
-    confirmDetails.innerHTML = '';
-    appendConfirmDetail(confirmDetails, 'Date', d.toLocaleDateString('en-US', { weekday:'long', month:'long', day:'numeric' }));
-    appendConfirmDetail(confirmDetails, 'Time', selectedTimeLabel);
-    appendConfirmDetail(confirmDetails, 'Name', name);
-    appendConfirmDetail(confirmDetails, 'Phone', phone);
-    if (vehicle) appendConfirmDetail(confirmDetails, 'Vehicle', vehicle);
-    if (service) appendConfirmDetail(confirmDetails, 'Service', service);
-
-    document.querySelectorAll('.progress-dot').forEach(d => d.className = 'progress-dot done');
-    document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
-    document.getElementById('step-success').classList.add('active');
-  } catch(e) {
-    errEl.textContent = e.message || 'Booking failed. Try again or text Fritz directly.';
-    errEl.style.display = 'block';
-    btn.disabled = false;
-    btn.textContent = 'Confirm Booking';
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || 'Booking failed.');
+    order = data.order || order;
+    showSuccess(data.booking);
+  } catch (error) {
+    errorEl.textContent = error.message || 'Booking failed.';
+    errorEl.style.display = 'block';
+    button.disabled = false;
+    button.textContent = 'Confirm Booking';
   }
 }
 
-renderCalendar();
-loadBookingConfig();
-loadBookingServices();
+function showSuccess(booking) {
+  const details = document.getElementById('confirm-details');
+  details.innerHTML = '';
+  appendSummary(details, 'Date', booking?.date || order.bookingDate || '');
+  appendSummary(details, 'Time', selectedTimeLabel || booking?.time || order.bookingTime || '');
+  appendSummary(details, 'Customer', order.customer?.name || '');
+  appendSummary(details, 'Services', order.serviceSummary || '');
+  appendSummary(details, 'Payment', `${order.paymentMethod || ''} / ${order.paymentStatus || ''}`);
+  document.querySelectorAll('.dot').forEach(dot => dot.className = 'dot done');
+  document.querySelectorAll('.step').forEach(step => step.classList.remove('active'));
+  document.getElementById('step-success').classList.add('active');
+}
+
+async function cancelBooking() {
+  const errorEl = document.getElementById('cancel-error');
+  const successEl = document.getElementById('cancel-success');
+  errorEl.style.display = 'none';
+  successEl.style.display = 'none';
+  if (!confirm('Cancel this appointment? Cancellations inside 24 hours require a phone call.')) return;
+  try {
+    const response = await fetch('/api/bookings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'cancel-public-booking', orderId, token })
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || 'Cancellation failed.');
+    order = data.order || order;
+    successEl.textContent = data.refund ? `Booking cancelled. Refund issued: ${formatMoney(data.refund.amount)}.` : 'Booking cancelled.';
+    successEl.style.display = 'block';
+    document.getElementById('cancel-btn').disabled = true;
+  } catch (error) {
+    errorEl.textContent = error.message || 'Cancellation failed.';
+    errorEl.style.display = 'block';
+  }
+}
+
+async function loadConfig() {
+  try {
+    const response = await fetch('/api/bookings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'get-config' })
+    });
+    const data = await response.json();
+    if (Number.isInteger(data.maxAdvanceDays)) bookingConfig.maxAdvanceDays = data.maxAdvanceDays;
+  } catch(e) {}
+}
+
+async function loadOrder() {
+  if (!orderId || !token) {
+    window.location.replace('/checkout.html');
+    return;
+  }
+  try {
+    const response = await fetch('/api/bookings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'get-order', orderId, token })
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || 'Order not found.');
+    order = data.order;
+    renderOrderSummary();
+    if (order.bookingId) {
+      showSuccess({ date: order.bookingDate, time: order.bookingTime });
+    } else if (['cancelled','refunded'].includes(order.status)) {
+      throw new Error('This order is closed. Start checkout again if you need a new appointment.');
+    } else if (!['paid','cash_due_on_site'].includes(order.paymentStatus)) {
+      throw new Error('Payment must be confirmed before scheduling.');
+    }
+  } catch (error) {
+    document.getElementById('schedule-panel').innerHTML = `<div class="error" style="display:block">${escapeHtml(error.message || 'Order could not be loaded.')} <a href="/checkout.html" style="color:var(--purple-light)">Start checkout again.</a></div>`;
+  }
+}
+
+loadConfig().then(() => renderCalendar());
+loadOrder();
 </script>
-</body></html>
+</body>
+</html>

@@ -1,11 +1,15 @@
 const path = require('path');
 const fs = require('fs');
-const { getValidPaymentAmountsInCents } = require('../lib/pricing');
+const { findOrderByCredentials, readOrders } = require('../lib/orders');
 
 function readConfig() {
   try {
     return JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'public', 'site-config.json'), 'utf8'));
   } catch(e) { return {}; }
+}
+
+function isValidEmail(value) {
+  return typeof value === 'string' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
 }
 
 module.exports = async (req, res) => {
@@ -23,19 +27,31 @@ module.exports = async (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
 
   try {
-    const { amount, currency, description, receipt_email, metadata } = req.body;
+    const { orderId, token: publicToken } = req.body || {};
+    const { data: orders } = await readOrders();
+    const order = findOrderByCredentials(orders, orderId, publicToken);
 
-    if (!amount || typeof amount !== 'number') {
-      return res.status(400).json({ error: 'Invalid amount' });
+    if (!order) {
+      return res.status(404).json({ error: 'Order not found. Start checkout again.' });
     }
 
-    // Only accept menu prices, optionally plus configured add-on fees.
-    const validPrices = await getValidPaymentAmountsInCents();
-    if (!validPrices.has(amount)) {
-      return res.status(400).json({ error: 'Invalid price. Please select a service and configured add-ons from the menu.' });
+    if (order.paymentMethod !== 'card') {
+      return res.status(400).json({ error: 'This order is not configured for card payment.' });
     }
 
-    // Pick secret key based on admin toggle
+    if (order.status !== 'requires_payment' && order.paymentStatus !== 'requires_payment') {
+      return res.status(409).json({ error: 'This order is not waiting for card payment.' });
+    }
+
+    if (!isValidEmail(order.customer && order.customer.email)) {
+      return res.status(400).json({ error: 'A valid email is required before payment.' });
+    }
+
+    const amount = Math.round(Number(order.total) * 100);
+    if (!Number.isInteger(amount) || amount < 100) {
+      return res.status(400).json({ error: 'Invalid order total.' });
+    }
+
     const cfg = readConfig();
     const testMode = cfg.stripeTestMode === true;
     const secretKey = testMode ? process.env.STRIPE_SECRET_KEY_TEST : process.env.STRIPE_SECRET_KEY;
@@ -49,22 +65,25 @@ module.exports = async (req, res) => {
     }
 
     const stripe = require('stripe')(secretKey);
+    const serviceSummary = order.serviceSummary || (order.services || []).map((service) => service.name).join(' + ');
 
     const paymentIntent = await stripe.paymentIntents.create({
-      amount: amount,
-      currency: currency || 'usd',
-      description: description || "Fritz's Detail on the Go",
+      amount,
+      currency: 'usd',
+      description: serviceSummary || "Fritz's Detail on the Go",
       metadata: {
         business: "Fritz's Detail on the Go",
-        customer_name: metadata?.customer_name || '',
-        service: metadata?.service || '',
+        order_id: order.id,
+        customer_name: order.customer?.name || '',
+        service: serviceSummary || ''
       },
-      ...(receipt_email && { receipt_email }),
+      receipt_email: order.customer.email
     });
 
     res.json({
       clientSecret: paymentIntent.client_secret,
       paymentIntentId: paymentIntent.id,
+      orderId: order.id,
       testMode
     });
 

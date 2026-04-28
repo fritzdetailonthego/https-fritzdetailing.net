@@ -64,17 +64,6 @@ module.exports = async (req, res) => {
       throw new Error(err.message || 'GitHub API error');
     }
 
-    const validPrices = new Set();
-    for (const tier of Object.values(pricing)) {
-      for (const section of ['exterior', 'interior', 'packages']) {
-        if (tier[section]) {
-          for (const price of Object.values(tier[section])) {
-            validPrices.add(price * 100); // cents for Stripe
-          }
-        }
-      }
-    }
-
     res.json({ success: true, message: 'Pricing updated! Site will redeploy in ~30 seconds.' });
 
   } catch (error) {

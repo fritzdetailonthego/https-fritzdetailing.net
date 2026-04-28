@@ -66,13 +66,15 @@ body{font-family:"Open Sans",sans-serif;background:#0A0A0A;color:var(--white);mi
 .tier-sub{font-size:13px;color:var(--gray);margin-bottom:16px}
 .price-table{width:100%;border-collapse:collapse;margin-bottom:8px}
 .price-table th{font-family:'Rajdhani',sans-serif;font-size:12px;text-transform:uppercase;letter-spacing:1.5px;color:var(--gray);font-weight:600;padding:8px 12px;text-align:left;border-bottom:1px solid var(--border);background:rgba(123,47,190,0.05)}
-.price-table th:nth-child(2){text-align:right;width:120px}
-.price-table th:nth-child(3){width:50px}
+.price-table th:nth-child(2),.price-table th:nth-child(3){text-align:right;width:120px}
+.price-table th:nth-child(4){width:50px}
 .price-table td{padding:6px 12px;border-bottom:1px solid rgba(255,255,255,0.03)}
-.price-table td:nth-child(2){text-align:right}
+.price-table td:nth-child(2),.price-table td:nth-child(3){text-align:right}
 .price-table .cat-header{background:rgba(123,47,190,0.08);font-family:'Rajdhani',sans-serif;font-weight:700;font-size:13px;text-transform:uppercase;letter-spacing:1px;color:var(--purple-light);padding:10px 12px}
 .price-input{width:90px;padding:6px 8px;background:var(--dark);border:1px solid var(--border);border-radius:2px;color:#fff;font-size:14px;font-weight:600;text-align:right;font-family:'Rajdhani',sans-serif;outline:none}
+.duration-input{width:90px;padding:6px 8px;background:var(--dark);border:1px solid var(--border);border-radius:2px;color:#fff;font-size:14px;font-weight:600;text-align:right;font-family:'Rajdhani',sans-serif;outline:none}
 .price-input:focus{border-color:var(--purple)}
+.duration-input:focus{border-color:var(--purple)}
 .name-input{width:100%;padding:6px 8px;background:transparent;border:1px solid transparent;border-radius:2px;color:var(--gray-light);font-size:14px;font-family:'Open Sans',sans-serif;outline:none}
 .name-input:focus{border-color:var(--border);background:var(--dark)}
 .del-btn{background:none;border:none;color:var(--red);cursor:pointer;font-size:16px;opacity:0.4;transition:opacity .2s;padding:4px 8px}
@@ -269,7 +271,7 @@ body{font-family:"Open Sans",sans-serif;background:#0A0A0A;color:var(--white);mi
 
   <div style="border-top:1px solid var(--border);padding-top:32px;margin-bottom:0">
   <div class="section-label">Manage Pricing</div>
-  <p style="color:var(--gray);font-size:14px;margin-bottom:20px">Edit prices below. Changes update pricing tables, payment forms, and invoices. Hit Save when done.</p>
+  <p style="color:var(--gray);font-size:14px;margin-bottom:20px">Edit prices and default durations below. Changes update pricing tables, checkout totals, and schedule block sizes. Hit Save when done.</p>
 
   <div class="toolbar">
     <button class="btn btn-green" onclick="savePricing()">Save & Deploy</button>
@@ -321,7 +323,7 @@ body{font-family:"Open Sans",sans-serif;background:#0A0A0A;color:var(--white);mi
   <!-- BOOKING MANAGEMENT -->
   <div style="margin-top:48px;padding-top:32px;border-top:1px solid var(--border)">
     <div class="section-label">Bookings & Schedule</div>
-    <p style="color:var(--gray);font-size:14px;margin-bottom:16px">Customers book at <a href="/book.html" target="_blank" style="color:var(--purple-light)">/book.html</a>. This Bookings tab is the web Timekeeper board and stays synced with the manager app through the same live backend, bootstrap, and incremental sync flow.</p>
+    <p style="color:var(--gray);font-size:14px;margin-bottom:16px">Customers start at <a href="/checkout.html" target="_blank" style="color:var(--purple-light)">/checkout.html</a>, then schedule through a verified order link. This Bookings tab is the web Timekeeper board and stays synced with the manager app through the same live backend, bootstrap, and incremental sync flow.</p>
 
     <div class="schedule-tabs" style="margin-bottom:16px">
       <button class="schedule-tab is-active" id="schedule-tab-trigger-timeline" onclick="setScheduleTab('timeline')">Timekeeper</button>
@@ -391,7 +393,7 @@ body{font-family:"Open Sans",sans-serif;background:#0A0A0A;color:var(--white);mi
   <!-- CUSTOM FEES -->
   <div style="margin-top:48px;padding-top:32px;border-top:1px solid var(--border)">
     <div class="section-label">Custom Fees & Add-Ons</div>
-    <p style="color:var(--gray);font-size:14px;margin-bottom:16px">Add extra charges like distance, heavy pet hair, excessive dirt, etc. These show up as checkboxes in the invoice generator and card payment form.</p>
+    <p style="color:var(--gray);font-size:14px;margin-bottom:16px">Configure common manager-only fees such as distance, heavy pet hair, or excessive soil. Customers do not select these during checkout. Fritz adds them after review when needed.</p>
 
     <div id="fees-list" style="margin-bottom:16px"></div>
 
@@ -549,6 +551,51 @@ function escapeJsAttribute(value) {
   return escapeAttribute(escapeJsString(value));
 }
 
+function getServicePriceValue(value) {
+  if (typeof value === 'number') return value;
+  if (value && typeof value === 'object') return Number(value.price || value.amount) || 0;
+  return 0;
+}
+
+function getDefaultServiceDuration(name) {
+  const defaults = {
+    'premium wash': 120,
+    decontamination: 60,
+    'paint correction': 180,
+    wax: 60,
+    'trim restoration': 60,
+    'tire shine': 30,
+    'headlight restoration': 60,
+    'ceramic glass protection': 30,
+    'engine bay clean': 60,
+    'ceramic coat': 480,
+    'interior clean': 120,
+    'carpet shampoo': 60,
+    'steam clean': 60,
+    maintenance: 120,
+    'the shiny package': 240,
+    'wash, clay, seal': 120,
+    'truck bed clean': 30
+  };
+  return defaults[String(name || '').toLowerCase()] || 120;
+}
+
+function getServiceDurationValue(name, value) {
+  if (value && typeof value === 'object') {
+    const parsed = parseInt(value.durationMinutes || value.duration || value.minutes, 10);
+    if (Number.isInteger(parsed) && parsed > 0) return parsed;
+  }
+  return getDefaultServiceDuration(name);
+}
+
+function setServicePricingValue(tier, section, name, price, durationMinutes) {
+  if (!pricingData[tier] || !pricingData[tier][section]) return;
+  pricingData[tier][section][name] = {
+    price: Math.max(0, parseInt(price, 10) || 0),
+    durationMinutes: Math.max(1, parseInt(durationMinutes, 10) || getDefaultServiceDuration(name))
+  };
+}
+
 function getInitialAdminTab() {
   const rawHash = (window.location.hash || '').replace(/^#/, '');
   const normalized = rawHash.startsWith('admin-') ? rawHash.slice(6) : rawHash;
@@ -650,24 +697,27 @@ function renderEditor() {
     const tierJs = escapeJsAttribute(tierKey);
     html += `<div class="tier-section" data-tier="${tierAttr}">`;
     html += `<div class="tier-header">${escapeHtml(tier.label)}</div>`;
-    html += `<div class="tier-sub">Edit service names and prices. Add or remove services as needed.</div>`;
+    html += `<div class="tier-sub">Edit service names, prices, and default schedule duration. Add or remove services as needed.</div>`;
     html += `<table class="price-table">`;
-    html += `<thead><tr><th>Service</th><th>Price</th><th></th></tr></thead><tbody>`;
+    html += `<thead><tr><th>Service</th><th>Price</th><th>Minutes</th><th></th></tr></thead><tbody>`;
 
     for (const [section, items] of Object.entries({exterior: tier.exterior, interior: tier.interior, packages: tier.packages})) {
       const sectionLabel = section.charAt(0).toUpperCase() + section.slice(1);
       const sectionJs = escapeJsAttribute(section);
-      html += `<tr><td class="cat-header" colspan="3">${sectionLabel}</td></tr>`;
-      for (const [name, price] of Object.entries(items)) {
+      html += `<tr><td class="cat-header" colspan="4">${sectionLabel}</td></tr>`;
+      for (const [name, value] of Object.entries(items)) {
+        const price = getServicePriceValue(value);
+        const durationMinutes = getServiceDurationValue(name, value);
         const nameAttr = escapeAttribute(name);
         const nameJs = escapeJsAttribute(name);
         html += `<tr data-tier="${tierAttr}" data-section="${escapeAttribute(section)}">
           <td><input class="name-input" value="${nameAttr}" data-orig="${nameAttr}" onchange="updateName(this,'${tierJs}','${sectionJs}')"></td>
           <td><span style="color:var(--gray);margin-right:2px">$</span><input class="price-input" type="number" min="0" value="${price}" onchange="updatePrice(this,'${tierJs}','${sectionJs}','${nameJs}')"></td>
+          <td><input class="duration-input" type="number" min="1" value="${durationMinutes}" onchange="updateDuration(this,'${tierJs}','${sectionJs}','${nameJs}')"></td>
           <td><button class="del-btn" onclick="deleteService(this,'${tierJs}','${sectionJs}','${nameJs}')" title="Remove">×</button></td>
         </tr>`;
       }
-      html += `<tr><td colspan="3"><button class="add-row-btn" onclick="addService('${tierJs}','${sectionJs}')">+ Add ${sectionLabel} Service</button></td></tr>`;
+      html += `<tr><td colspan="4"><button class="add-row-btn" onclick="addService('${tierJs}','${sectionJs}')">+ Add ${sectionLabel} Service</button></td></tr>`;
     }
 
     html += `</tbody></table></div>`;
@@ -681,11 +731,26 @@ function updatePrice(input, tier, section, name) {
   if (pricingData[tier] && pricingData[tier][section]) {
     // Find the actual key (might have been renamed)
     const origName = input.closest('tr').querySelector('.name-input').value;
+    const durationInput = input.closest('tr').querySelector('.duration-input');
+    const durationMinutes = parseInt(durationInput && durationInput.value, 10) || getDefaultServiceDuration(origName);
     // Delete old key if name changed
     if (name !== origName && pricingData[tier][section][name] !== undefined) {
       delete pricingData[tier][section][name];
     }
-    pricingData[tier][section][origName] = val;
+    setServicePricingValue(tier, section, origName, val, durationMinutes);
+  }
+}
+
+function updateDuration(input, tier, section, name) {
+  if (pricingData[tier] && pricingData[tier][section]) {
+    const row = input.closest('tr');
+    const origName = row.querySelector('.name-input').value;
+    const price = parseInt(row.querySelector('.price-input').value, 10) || 0;
+    const durationMinutes = parseInt(input.value, 10) || getDefaultServiceDuration(origName);
+    if (name !== origName && pricingData[tier][section][name] !== undefined) {
+      delete pricingData[tier][section][name];
+    }
+    setServicePricingValue(tier, section, origName, price, durationMinutes);
   }
 }
 
@@ -693,12 +758,16 @@ function updateName(input, tier, section) {
   const oldName = input.dataset.orig;
   const newName = input.value.trim();
   if (!newName || oldName === newName) return;
-  const price = pricingData[tier][section][oldName];
+  const existingValue = pricingData[tier][section][oldName];
+  const price = getServicePriceValue(existingValue);
+  const durationMinutes = getServiceDurationValue(oldName, existingValue);
   delete pricingData[tier][section][oldName];
-  pricingData[tier][section][newName] = price;
+  setServicePricingValue(tier, section, newName, price, durationMinutes);
   input.dataset.orig = newName;
   const priceInput = input.closest('tr').querySelector('.price-input');
   priceInput.setAttribute('onchange', `updatePrice(this,'${escapeJsString(tier)}','${escapeJsString(section)}','${escapeJsString(newName)}')`);
+  const durationInput = input.closest('tr').querySelector('.duration-input');
+  durationInput.setAttribute('onchange', `updateDuration(this,'${escapeJsString(tier)}','${escapeJsString(section)}','${escapeJsString(newName)}')`);
   const delBtn = input.closest('tr').querySelector('.del-btn');
   delBtn.setAttribute('onclick', `deleteService(this,'${escapeJsString(tier)}','${escapeJsString(section)}','${escapeJsString(newName)}')`);
 }
@@ -715,7 +784,9 @@ function addService(tier, section) {
   if (!name) return;
   const price = parseInt(prompt('Price ($):'));
   if (isNaN(price)) return;
-  pricingData[tier][section][name] = price;
+  const durationMinutes = parseInt(prompt('Default duration in minutes:', String(getDefaultServiceDuration(name))));
+  if (isNaN(durationMinutes) || durationMinutes <= 0) return;
+  setServicePricingValue(tier, section, name, price, durationMinutes);
   renderEditor();
   showToast('Service added. Save to apply.');
 }
@@ -842,11 +913,11 @@ async function restoreRevision(index) {
 }
 
 function downloadCSV() {
-  let csv = 'Vehicle Type,Category,Service,Price\n';
+  let csv = 'Vehicle Type,Category,Service,Price,Duration Minutes\n';
   for (const [tierKey, tier] of Object.entries(pricingData)) {
     for (const [section, items] of Object.entries({exterior: tier.exterior, interior: tier.interior, packages: tier.packages})) {
-      for (const [name, price] of Object.entries(items)) {
-        csv += `"${tier.label}","${section}","${name}",${price}\n`;
+      for (const [name, value] of Object.entries(items)) {
+        csv += `"${tier.label}","${section}","${name}",${getServicePriceValue(value)},${getServiceDurationValue(name, value)}\n`;
       }
     }
   }
@@ -886,10 +957,14 @@ function uploadCSV(event) {
         const section = cols[1].replace(/"/g, '').trim().toLowerCase();
         const service = cols[2].replace(/"/g, '').trim();
         const price = parseInt(cols[3].replace(/"/g, '').trim());
+        const durationMinutes = parseInt((cols[4] || '').replace(/"/g, '').trim()) || getDefaultServiceDuration(service);
 
         const tierKey = labelMap[vehicleLabel];
         if (tierKey && newPricing[tierKey][section] !== undefined && service && !isNaN(price)) {
-          newPricing[tierKey][section][service] = price;
+          newPricing[tierKey][section][service] = {
+            price,
+            durationMinutes
+          };
         }
       }
 

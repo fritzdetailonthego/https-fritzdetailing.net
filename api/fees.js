@@ -4,7 +4,7 @@ const { put, list } = require('@vercel/blob');
 module.exports = async (req, res) => {
   if (req.method === 'OPTIONS') {
     res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'POST, GET, OPTIONS');
+    res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
     return res.status(200).end();
   }
@@ -36,10 +36,8 @@ module.exports = async (req, res) => {
   }
 
   try {
-    // PUBLIC GET: list fees. No auth needed, they're shown to customers.
     if (req.method === 'GET') {
-      const fees = await readFees();
-      return res.json({ fees });
+      return res.status(405).json({ error: 'Fees are managed by Fritz after booking.' });
     }
 
     const { password, action } = req.body || {};

@@ -1,6 +1,25 @@
 const crypto = require('crypto');
+const fs = require('fs');
+const path = require('path');
 const { put, head, BlobPreconditionFailedError } = require('@vercel/blob');
 const packageJson = require('../package.json');
+const {
+  appendSale,
+  markSaleRefunded,
+  saleInputFromPaymentIntent
+} = require('../lib/sales');
+const {
+  findOrderByCredentials,
+  generateCashVerificationCode,
+  generateOrderId,
+  generatePublicToken,
+  normalizeOrder,
+  readOrders,
+  serializeOrderForPublic,
+  updateOrders,
+  writeOrders
+} = require('../lib/orders');
+const { validateOrderServices } = require('../lib/pricing');
 
 const BOOKINGS_PATH = 'bookings-data.json';
 const AVAILABILITY_PATH = 'availability-config.json';
@@ -18,6 +37,10 @@ const SUPPORT_TICKET_TYPES = new Set(['error', 'fix', 'question', 'other']);
 const SUPPORT_TICKET_PRIORITIES = new Set(['low', 'normal', 'urgent']);
 const SUPPORT_TICKET_STATUSES = new Set(['open', 'in-progress', 'resolved', 'closed']);
 const SUPPORT_TICKETS_MAX = 200;
+const CUSTOMER_PAYMENT_METHODS = new Set(['card', 'cash']);
+const CANCELLATION_FREE_WINDOW_MS = 24 * 60 * 60 * 1000;
+const BUSINESS_TIME_ZONE = 'America/New_York';
+const FRITZ_PHONE_DISPLAY = '(276) 247-0921';
 
 function buildDefaultAvailability() {
   return {
@@ -438,11 +461,14 @@ function sortBookings(bookings) {
   return bookings;
 }
 
-function getLatestSyncAt(bookings, availability) {
+function getLatestSyncAt(bookings, availability, orders = []) {
   const candidates = [];
 
   for (const booking of bookings) {
     if (typeof booking.updatedAt === 'string') candidates.push(booking.updatedAt);
+  }
+  for (const order of orders) {
+    if (typeof order.updatedAt === 'string') candidates.push(order.updatedAt);
   }
   if (availability && typeof availability.updatedAt === 'string') candidates.push(availability.updatedAt);
 
@@ -454,6 +480,128 @@ function parseSyncTimestamp(value) {
   if (typeof value !== 'string' || !value.trim()) return null;
   const timestamp = Date.parse(value);
   return Number.isNaN(timestamp) ? null : timestamp;
+}
+
+function cleanString(value, maxLength = 240) {
+  return typeof value === 'string' ? value.trim().replace(/\s+/g, ' ').slice(0, maxLength) : '';
+}
+
+function isValidEmail(value) {
+  return typeof value === 'string' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
+}
+
+function createHttpError(statusCode, message) {
+  const error = new Error(message);
+  error.statusCode = statusCode;
+  return error;
+}
+
+function readConfig() {
+  try {
+    return JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'public', 'site-config.json'), 'utf8'));
+  } catch(e) {
+    return {};
+  }
+}
+
+function getStripeSecretCandidates(preferTestMode) {
+  const candidates = [];
+  const testKey = process.env.STRIPE_SECRET_KEY_TEST;
+  const liveKey = process.env.STRIPE_SECRET_KEY;
+
+  if (preferTestMode && testKey) candidates.push({ key: testKey, isTest: true });
+  if (liveKey) candidates.push({ key: liveKey, isTest: false });
+  if (!preferTestMode && testKey) candidates.push({ key: testKey, isTest: true });
+
+  return candidates;
+}
+
+async function retrieveStripePaymentIntent(paymentIntentId, preferTestMode) {
+  if (typeof paymentIntentId !== 'string' || !paymentIntentId.startsWith('pi_')) {
+    throw createHttpError(400, 'A valid Stripe payment id is required.');
+  }
+
+  const candidates = getStripeSecretCandidates(preferTestMode);
+  if (candidates.length === 0) {
+    throw createHttpError(500, 'Stripe secret key is not configured.');
+  }
+
+  let lastError = null;
+  for (const candidate of candidates) {
+    try {
+      const stripe = require('stripe')(candidate.key);
+      const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+      return { paymentIntent, isTest: candidate.isTest, stripe };
+    } catch (error) {
+      lastError = error;
+    }
+  }
+
+  throw createHttpError(400, lastError?.message || 'Could not verify Stripe payment.');
+}
+
+async function refundStripePayment(paymentIntentId, preferTestMode) {
+  const { paymentIntent, isTest, stripe } = await retrieveStripePaymentIntent(paymentIntentId, preferTestMode);
+  if (paymentIntent.status !== 'succeeded') {
+    throw createHttpError(409, 'Only completed card payments can be refunded.');
+  }
+
+  const refund = await stripe.refunds.create({
+    payment_intent: paymentIntent.id
+  });
+
+  return {
+    refund,
+    isTest,
+    amount: (refund.amount || paymentIntent.amount_received || paymentIntent.amount) / 100
+  };
+}
+
+function buildServiceSummary(services) {
+  return Array.isArray(services) && services.length > 0
+    ? services.map((service) => service.name).join(' + ')
+    : 'Detailing Service';
+}
+
+function getOrderBookingUrl(order) {
+  return `/book.html?orderId=${encodeURIComponent(order.id)}&token=${encodeURIComponent(order.publicToken)}`;
+}
+
+function zonedTimeToUtcMs(dateStr, timeStr, timeZone = BUSINESS_TIME_ZONE) {
+  const [year, month, day] = String(dateStr || '').split('-').map((value) => Number(value));
+  const [hour, minute] = String(timeStr || '').split(':').map((value) => Number(value));
+  if (![year, month, day, hour, minute].every(Number.isFinite)) return NaN;
+
+  const utcGuess = Date.UTC(year, month - 1, day, hour, minute);
+  const formatter = new Intl.DateTimeFormat('en-US', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false
+  });
+  const parts = Object.fromEntries(
+    formatter.formatToParts(new Date(utcGuess)).map((part) => [part.type, part.value])
+  );
+  const zonedAsUtc = Date.UTC(
+    Number(parts.year),
+    Number(parts.month) - 1,
+    Number(parts.day),
+    Number(parts.hour),
+    Number(parts.minute),
+    Number(parts.second)
+  );
+  const offsetMs = zonedAsUtc - utcGuess;
+  return utcGuess - offsetMs;
+}
+
+function isInsideCancellationCallWindow(booking, nowMs = Date.now()) {
+  const appointmentStartMs = zonedTimeToUtcMs(booking.date, booking.time);
+  if (!Number.isFinite(appointmentStartMs)) return true;
+  return appointmentStartMs - nowMs <= CANCELLATION_FREE_WINDOW_MS;
 }
 
 function normalizeManagerDevice(device) {
@@ -1346,6 +1494,43 @@ module.exports = async (req, res) => {
     return result;
   }
 
+  async function notifyManagersAboutOrder(order, eventType) {
+    const { data: devices } = await readManagerDevices();
+    const normalizedOrder = normalizeOrder(order);
+    const serviceSummary = normalizedOrder.serviceSummary || buildServiceSummary(normalizedOrder.services);
+    const isCash = normalizedOrder.paymentMethod === 'cash';
+    const title =
+      eventType === 'order-cancelled'
+        ? 'Booking Cancelled'
+        : isCash
+          ? 'Cash Booking Started'
+          : 'Paid Order Ready';
+    const body =
+      eventType === 'order-cancelled'
+        ? `${normalizedOrder.customer?.name || 'Customer'} cancelled ${serviceSummary}`
+        : `${normalizedOrder.customer?.name || 'Customer'} - ${serviceSummary} - $${normalizedOrder.total}`;
+
+    const result = await sendExpoPushNotifications(devices, () => ({
+      title,
+      body,
+      data: {
+        type: eventType,
+        orderId: normalizedOrder.id,
+        bookingId: normalizedOrder.bookingId || '',
+        paymentMethod: normalizedOrder.paymentMethod,
+        paymentStatus: normalizedOrder.paymentStatus,
+        customerName: normalizedOrder.customer?.name || '',
+        service: serviceSummary
+      }
+    }));
+
+    if (result.invalidTokens.length > 0) {
+      await pruneManagerDevices(result.invalidTokens);
+    }
+
+    return result;
+  }
+
   try {
     if (action === 'get-slots') {
       const { date, bookingType, durationMinutes, excludeBookingId } = req.body;
@@ -1386,13 +1571,18 @@ module.exports = async (req, res) => {
     if (action === 'manager-bootstrap') {
       if (!authed) return res.status(401).json({ error: 'Unauthorized' });
 
-      const [{ data: bookings }, { data: availability }] = await Promise.all([readBookings(), readAvailability()]);
+      const [{ data: bookings }, { data: availability }, { data: orders }] = await Promise.all([
+        readBookings(),
+        readAvailability(),
+        readOrders()
+      ]);
       const normalizedBookings = sortBookings(bookings.map(normalizeBooking));
       return res.json({
         bookings: normalizedBookings,
+        orders,
         availability,
         serverTime: new Date().toISOString(),
-        latestSyncAt: getLatestSyncAt(normalizedBookings, availability),
+        latestSyncAt: getLatestSyncAt(normalizedBookings, availability, orders),
         version: typeof packageJson.version === 'string' ? packageJson.version : '0.0.0'
       });
     }
@@ -1401,21 +1591,30 @@ module.exports = async (req, res) => {
       if (!authed) return res.status(401).json({ error: 'Unauthorized' });
 
       const sinceTimestamp = parseSyncTimestamp(req.body && req.body.since);
-      const [{ data: bookings }, { data: availability }] = await Promise.all([readBookings(), readAvailability()]);
+      const [{ data: bookings }, { data: availability }, { data: orders }] = await Promise.all([
+        readBookings(),
+        readAvailability(),
+        readOrders()
+      ]);
       const normalizedBookings = sortBookings(bookings.map(normalizeBooking));
       const changedBookings =
         sinceTimestamp === null
           ? normalizedBookings
           : normalizedBookings.filter((booking) => Date.parse(booking.updatedAt) > sinceTimestamp);
+      const changedOrders =
+        sinceTimestamp === null
+          ? orders
+          : orders.filter((order) => Date.parse(order.updatedAt) > sinceTimestamp);
       const availabilityChanged =
         sinceTimestamp === null ||
         (availability.updatedAt && Date.parse(availability.updatedAt) > sinceTimestamp);
 
       return res.json({
         bookings: changedBookings,
+        orders: changedOrders,
         availability: availabilityChanged ? availability : null,
         serverTime: new Date().toISOString(),
-        latestSyncAt: getLatestSyncAt(normalizedBookings, availability),
+        latestSyncAt: getLatestSyncAt(normalizedBookings, availability, orders),
         version: typeof packageJson.version === 'string' ? packageJson.version : '0.0.0'
       });
     }
@@ -1711,37 +1910,225 @@ module.exports = async (req, res) => {
       });
     }
 
-    if (action === 'book') {
-      const { date, time, name, phone, vehicle, service, notes } = req.body;
-      if (!date || !time || !name || !phone) {
-        return res.status(400).json({ error: 'Date, time, name, and phone are required' });
+    if (action === 'create-order') {
+      const body = req.body || {};
+      const paymentMethod = cleanString(body.paymentMethod, 20).toLowerCase();
+      const customerInput = body.customer && typeof body.customer === 'object' ? body.customer : body;
+      const name = cleanString(customerInput.name, 120);
+      const email = cleanString(customerInput.email, 160).toLowerCase();
+      const phone = cleanString(customerInput.phone, 60);
+      const vehicle = cleanString(customerInput.vehicle || body.vehicle, 180);
+      const paymentTermsAccepted = body.paymentTermsAccepted === true;
+
+      if (!CUSTOMER_PAYMENT_METHODS.has(paymentMethod)) {
+        return res.status(400).json({ error: 'Choose card or cash payment.' });
+      }
+
+      if (!name) {
+        return res.status(400).json({ error: 'Name is required.' });
+      }
+
+      if (!isValidEmail(email)) {
+        return res.status(400).json({ error: 'Enter a valid email address.' });
+      }
+
+      if (!phone) {
+        return res.status(400).json({ error: 'Phone number is required.' });
+      }
+
+      if (!paymentTermsAccepted) {
+        return res.status(400).json({ error: 'Payment terms must be accepted before checkout.' });
+      }
+
+      const cart = validateOrderServices(body.serviceIds);
+      const nowIso = new Date().toISOString();
+      const order = normalizeOrder({
+        id: generateOrderId(),
+        publicToken: generatePublicToken(),
+        status: paymentMethod === 'card' ? 'requires_payment' : 'cash_due_on_site',
+        paymentStatus: paymentMethod === 'card' ? 'requires_payment' : 'cash_due_on_site',
+        paymentMethod,
+        customer: { name, email, phone },
+        vehicle,
+        services: cart.services,
+        serviceSummary: cart.serviceSummary,
+        subtotal: cart.subtotal,
+        managerFees: [],
+        total: cart.subtotal,
+        durationMinutes: cart.durationMinutes,
+        cashVerificationCode: paymentMethod === 'cash' ? generateCashVerificationCode() : '',
+        termsAcceptedAt: nowIso,
+        createdAt: nowIso,
+        updatedAt: nowIso
+      });
+
+      await updateOrders((orders) => [order, ...orders], 'Could not create the order. Please try again.');
+
+      let notificationResult = { attempted: 0, sent: 0, invalidTokens: [] };
+      if (paymentMethod === 'cash') {
+        try {
+          notificationResult = await notifyManagersAboutOrder(order, 'cash-order-created');
+        } catch (notificationError) {
+          console.error('Cash order push notification error:', notificationError.message);
+        }
+      }
+
+      return res.json({
+        success: true,
+        order: serializeOrderForPublic(order),
+        bookingUrl: getOrderBookingUrl(order),
+        notifications: notificationResult
+      });
+    }
+
+    if (action === 'get-order') {
+      const { orderId, token: publicToken } = req.body || {};
+      const { data: orders } = await readOrders();
+      const order = findOrderByCredentials(orders, orderId, publicToken);
+      if (!order) {
+        return res.status(404).json({ error: 'Order not found. Start checkout again.' });
+      }
+
+      return res.json({
+        success: true,
+        order: serializeOrderForPublic(order),
+        bookingUrl: getOrderBookingUrl(order)
+      });
+    }
+
+    if (action === 'confirm-card-order') {
+      const { orderId, token: publicToken, paymentIntentId } = req.body || {};
+      const cfg = readConfig();
+      const preferTestMode = cfg.stripeTestMode === true;
+      const { paymentIntent, isTest } = await retrieveStripePaymentIntent(paymentIntentId, preferTestMode);
+
+      if (paymentIntent.status !== 'succeeded') {
+        return res.status(409).json({ error: 'Card payment has not been confirmed.' });
+      }
+
+      let savedOrder = null;
+      await updateOrders((orders) => {
+        const order = findOrderByCredentials(orders, orderId, publicToken);
+        if (!order) throw createHttpError(404, 'Order not found. Start checkout again.');
+        if (order.paymentMethod !== 'card') throw createHttpError(400, 'This order is not configured for card payment.');
+
+        const expectedAmount = Math.round(Number(order.total) * 100);
+        const paidAmount = paymentIntent.amount_received || paymentIntent.amount;
+        if (!Number.isInteger(expectedAmount) || expectedAmount !== paidAmount) {
+          throw createHttpError(400, 'Payment amount does not match the order total.');
+        }
+
+        if (paymentIntent.metadata?.order_id && paymentIntent.metadata.order_id !== order.id) {
+          throw createHttpError(400, 'Payment does not match this order.');
+        }
+
+        const nowIso = new Date().toISOString();
+        savedOrder = normalizeOrder({
+          ...order,
+          status: order.bookingId ? 'booked' : 'paid',
+          paymentStatus: 'paid',
+          stripePaymentIntentId: paymentIntent.id,
+          paidAt: nowIso,
+          updatedAt: nowIso
+        });
+
+        return orders.map((entry) => entry.id === savedOrder.id ? savedOrder : entry);
+      }, 'Could not confirm payment. Please try again.');
+
+      await appendSale(
+        {
+          ...saleInputFromPaymentIntent(paymentIntent, isTest, {
+            orderId: savedOrder.id,
+            vehicle: savedOrder.vehicle || ''
+          }),
+          customer: savedOrder.customer?.name || paymentIntent.receipt_email || 'Unknown',
+          service: savedOrder.serviceSummary || buildServiceSummary(savedOrder.services),
+          amount: savedOrder.total,
+          orderId: savedOrder.id
+        },
+        { serverIsLive: !isTest }
+      );
+
+      let notificationResult = { attempted: 0, sent: 0, invalidTokens: [] };
+      try {
+        notificationResult = await notifyManagersAboutOrder(savedOrder, 'paid-order-created');
+      } catch (notificationError) {
+        console.error('Paid order push notification error:', notificationError.message);
+      }
+
+      return res.json({
+        success: true,
+        order: serializeOrderForPublic(savedOrder),
+        bookingUrl: getOrderBookingUrl(savedOrder),
+        notifications: notificationResult
+      });
+    }
+
+    if (action === 'schedule-paid-order') {
+      const { orderId, token: publicToken, date, time } = req.body || {};
+      const phone = cleanString(req.body && req.body.phone, 60);
+      const vehicle = cleanString(req.body && req.body.vehicle, 180);
+      const notes = cleanString(req.body && req.body.notes, 1000);
+      const { data: orders } = await readOrders();
+      const order = findOrderByCredentials(orders, orderId, publicToken);
+
+      if (!order) {
+        return res.status(404).json({ error: 'Order not found. Start checkout again.' });
+      }
+
+      if (order.bookingId) {
+        const { data: bookings } = await readBookings();
+        const existingBooking = bookings.find((booking) => booking.id === order.bookingId);
+        return res.json({
+          success: true,
+          booking: existingBooking ? normalizeBooking(existingBooking) : null,
+          order: serializeOrderForPublic(order),
+          alreadyBooked: true
+        });
+      }
+
+      if (!['paid', 'cash_due_on_site'].includes(order.paymentStatus)) {
+        return res.status(409).json({ error: 'Payment must be confirmed before booking.' });
+      }
+
+      if (!date || !time) {
+        return res.status(400).json({ error: 'Date and time are required.' });
       }
 
       const { data: availability } = await readAvailability();
+      let booking = null;
 
       for (let attempt = 0; attempt < 3; attempt++) {
         const { data: bookings, etag } = await readBookings();
         const validation = validateBookingRequest(date, time, availability, bookings, {
           bookingType: 'customer',
-          durationMinutes: availability.customerBlockMinutes
+          durationMinutes: order.durationMinutes
         });
         if (!validation.ok) {
           return res.status(validation.status).json({ error: validation.error });
         }
 
         const nowIso = new Date().toISOString();
-        const booking = {
+        booking = {
           id: 'BK-' + Date.now() + '-' + Math.random().toString(36).substr(2, 4),
           date,
           time: validation.time,
-          name,
-          phone,
-          vehicle: vehicle || '',
-          service: service || '',
+          name: order.customer?.name || '',
+          email: order.customer?.email || '',
+          phone: phone || order.customer?.phone || '',
+          vehicle: vehicle || order.vehicle || '',
+          service: order.serviceSummary || buildServiceSummary(order.services),
+          services: order.services,
           notes: notes || '',
           status: 'confirmed',
           bookingType: 'customer',
           durationMinutes: validation.durationMinutes,
+          source: 'public-checkout',
+          orderId: order.id,
+          paymentMethod: order.paymentMethod,
+          paymentStatus: order.paymentStatus,
+          total: order.total,
+          cashVerificationCode: order.cashVerificationCode || '',
           createdAt: nowIso,
           updatedAt: nowIso
         };
@@ -1750,24 +2137,172 @@ module.exports = async (req, res) => {
 
         try {
           await writeBookings(bookings, etag);
-
-          let notificationResult = { attempted: 0, sent: 0, invalidTokens: [] };
-          try {
-            notificationResult = await notifyManagersAboutBooking(booking);
-          } catch (notificationError) {
-            console.error('Push notification error:', notificationError.message);
-          }
-
-          return res.json({ success: true, booking, notifications: notificationResult });
+          break;
         } catch (error) {
           if (error instanceof BlobPreconditionFailedError) {
+            booking = null;
             continue;
           }
           throw error;
         }
       }
 
-      return res.status(409).json({ error: 'That slot was just booked. Please pick another.' });
+      if (!booking) {
+        return res.status(409).json({ error: 'That slot was just booked. Please pick another.' });
+      }
+
+      let savedOrder = null;
+      await updateOrders((latestOrders) => {
+        const latestOrder = findOrderByCredentials(latestOrders, orderId, publicToken);
+        if (!latestOrder) throw createHttpError(404, 'Order not found. Start checkout again.');
+
+        const nowIso = new Date().toISOString();
+        savedOrder = normalizeOrder({
+          ...latestOrder,
+          status: 'booked',
+          bookingId: booking.id,
+          bookingDate: booking.date,
+          bookingTime: booking.time,
+          customer: {
+            ...(latestOrder.customer || {}),
+            phone: booking.phone
+          },
+          vehicle: booking.vehicle,
+          scheduledAt: nowIso,
+          updatedAt: nowIso
+        });
+
+        return latestOrders.map((entry) => entry.id === savedOrder.id ? savedOrder : entry);
+      }, 'Could not link the booking to the order. Please contact Fritz.');
+
+      let notificationResult = { attempted: 0, sent: 0, invalidTokens: [] };
+      try {
+        notificationResult = await notifyManagersAboutBooking(booking);
+      } catch (notificationError) {
+        console.error('Push notification error:', notificationError.message);
+      }
+
+      return res.json({
+        success: true,
+        booking,
+        order: serializeOrderForPublic(savedOrder),
+        notifications: notificationResult
+      });
+    }
+
+    if (action === 'cancel-public-booking') {
+      const { orderId, token: publicToken } = req.body || {};
+      const { data: orders } = await readOrders();
+      const order = findOrderByCredentials(orders, orderId, publicToken);
+      if (!order) {
+        return res.status(404).json({ error: 'Order not found.' });
+      }
+
+      if (!order.bookingId) {
+        return res.status(400).json({ error: 'No scheduled booking is attached to this order.' });
+      }
+
+      const { data: bookings } = await readBookings();
+      const existingBooking = bookings.find((booking) => booking.id === order.bookingId);
+      if (!existingBooking) {
+        return res.status(404).json({ error: 'Booking not found.' });
+      }
+
+      if (normalizeBookingStatus(existingBooking.status) === 'cancelled') {
+        return res.json({
+          success: true,
+          booking: normalizeBooking(existingBooking),
+          order: serializeOrderForPublic(order),
+          alreadyCancelled: true
+        });
+      }
+
+      if (isInsideCancellationCallWindow(existingBooking)) {
+        return res.status(409).json({
+          error: `Bookings within 24 hours must be cancelled by phone. Call Fritz at ${FRITZ_PHONE_DISPLAY}.`,
+          callRequired: true,
+          phone: FRITZ_PHONE_DISPLAY
+        });
+      }
+
+      let cancelledBooking = null;
+      await updateSingletonJsonBlob({
+        read: readBookings,
+        write: writeBookings,
+        errorMessage: 'Could not cancel the booking. Please try again.',
+        mutate: async (latestBookings) => {
+          const bookingIndex = latestBookings.findIndex((booking) => booking.id === order.bookingId);
+          if (bookingIndex < 0) throw createHttpError(404, 'Booking not found.');
+
+          const nowIso = new Date().toISOString();
+          cancelledBooking = normalizeBooking({
+            ...latestBookings[bookingIndex],
+            status: 'cancelled',
+            paymentStatus: order.paymentStatus,
+            cancellationPolicy: 'free-before-24-hours',
+            cancelledAt: nowIso,
+            updatedAt: nowIso
+          });
+          latestBookings[bookingIndex] = cancelledBooking;
+          return latestBookings;
+        }
+      });
+
+      let refundResult = null;
+      if (order.paymentMethod === 'card' && order.paymentStatus === 'paid' && order.stripePaymentIntentId) {
+        const cfg = readConfig();
+        refundResult = await refundStripePayment(order.stripePaymentIntentId, cfg.stripeTestMode === true);
+        await markSaleRefunded({
+          stripePaymentId: order.stripePaymentIntentId,
+          orderId: order.id,
+          refundId: refundResult.refund.id,
+          refundAmount: refundResult.amount
+        });
+      }
+
+      let savedOrder = null;
+      await updateOrders((latestOrders) => {
+        const latestOrder = findOrderByCredentials(latestOrders, orderId, publicToken);
+        if (!latestOrder) throw createHttpError(404, 'Order not found.');
+
+        const nowIso = new Date().toISOString();
+        savedOrder = normalizeOrder({
+          ...latestOrder,
+          status: refundResult ? 'refunded' : 'cancelled',
+          paymentStatus: refundResult ? 'refunded' : latestOrder.paymentStatus,
+          cancellation: {
+            policy: 'free-before-24-hours',
+            cancelledAt: nowIso
+          },
+          refundId: refundResult?.refund?.id || latestOrder.refundId || '',
+          refundedAt: refundResult ? nowIso : latestOrder.refundedAt,
+          updatedAt: nowIso
+        });
+
+        return latestOrders.map((entry) => entry.id === savedOrder.id ? savedOrder : entry);
+      }, 'Could not update cancelled order. Please contact Fritz.');
+
+      let notificationResult = { attempted: 0, sent: 0, invalidTokens: [] };
+      try {
+        notificationResult = await notifyManagersAboutOrder(savedOrder, 'order-cancelled');
+      } catch (notificationError) {
+        console.error('Cancellation push notification error:', notificationError.message);
+      }
+
+      return res.json({
+        success: true,
+        booking: cancelledBooking,
+        order: serializeOrderForPublic(savedOrder),
+        refund: refundResult ? { id: refundResult.refund.id, amount: refundResult.amount } : null,
+        notifications: notificationResult
+      });
+    }
+
+    if (action === 'book') {
+      return res.status(410).json({
+        error: 'Public booking now starts at checkout. Select services and payment first.',
+        checkoutUrl: '/checkout.html'
+      });
     }
 
     if (!authed) return res.status(401).json({ error: 'Unauthorized' });
@@ -1960,8 +2495,145 @@ module.exports = async (req, res) => {
       return res.json({ bookings: sortBookings(bookings.map(normalizeBooking)) });
     }
 
+    if (action === 'list-orders') {
+      const { data: orders } = await readOrders();
+      return res.json({ orders });
+    }
+
+    if (action === 'mark-cash-paid') {
+      const orderId = cleanString(req.body && (req.body.orderId || req.body.bookingId), 120);
+      if (!orderId) {
+        return res.status(400).json({ error: 'An order id or booking id is required.' });
+      }
+
+      let savedOrder = null;
+      await updateOrders((orders) => {
+        const order = orders.find((entry) => entry.id === orderId || entry.bookingId === orderId);
+        if (!order) throw createHttpError(404, 'Order not found.');
+        if (order.paymentMethod !== 'cash') throw createHttpError(400, 'Only cash orders can be marked paid this way.');
+
+        const nowIso = new Date().toISOString();
+        savedOrder = normalizeOrder({
+          ...order,
+          status: order.bookingId ? 'booked' : 'paid',
+          paymentStatus: 'paid',
+          cashPaidAt: nowIso,
+          updatedAt: nowIso
+        });
+
+        return orders.map((entry) => entry.id === savedOrder.id ? savedOrder : entry);
+      }, 'Could not mark cash paid. Please try again.');
+
+      await appendSale({
+        customer: savedOrder.customer?.name || 'Unknown',
+        service: savedOrder.serviceSummary || buildServiceSummary(savedOrder.services),
+        vehicle: savedOrder.vehicle || '',
+        amount: savedOrder.total,
+        commission: undefined,
+        paymentMethod: 'cash',
+        source: 'cash-order',
+        orderId: savedOrder.id,
+        notes: savedOrder.cashVerificationCode
+          ? `Cash verification code ${savedOrder.cashVerificationCode}`
+          : '',
+        status: 'completed'
+      });
+
+      await updateSingletonJsonBlob({
+        read: readBookings,
+        write: writeBookings,
+        errorMessage: 'Cash payment was recorded, but the booking could not be refreshed.',
+        mutate: async (bookings) => {
+          const booking = bookings.find((entry) => entry.orderId === savedOrder.id || entry.id === savedOrder.bookingId);
+          if (booking) {
+            booking.paymentStatus = 'paid';
+            booking.updatedAt = new Date().toISOString();
+          }
+          return bookings;
+        }
+      }).catch((error) => {
+        console.error('Cash booking status update error:', error.message);
+      });
+
+      return res.json({
+        success: true,
+        order: savedOrder
+      });
+    }
+
+    if (action === 'add-manager-fee') {
+      const orderId = cleanString(req.body && (req.body.orderId || req.body.bookingId), 120);
+      const feeInput = req.body && req.body.fee && typeof req.body.fee === 'object' ? req.body.fee : req.body;
+      const feeName = cleanString(feeInput.name || feeInput.feeName, 120);
+      const feeDescription = cleanString(feeInput.description || feeInput.feeDescription, 240);
+      const feeAmount = Number(feeInput.amount || feeInput.feeAmount);
+
+      if (!orderId) return res.status(400).json({ error: 'An order id or booking id is required.' });
+      if (!feeName || !Number.isFinite(feeAmount) || feeAmount <= 0) {
+        return res.status(400).json({ error: 'Fee name and amount are required.' });
+      }
+
+      let savedOrder = null;
+      await updateOrders((orders) => {
+        const order = orders.find((entry) => entry.id === orderId || entry.bookingId === orderId);
+        if (!order) throw createHttpError(404, 'Order not found.');
+
+        const nowIso = new Date().toISOString();
+        const managerFees = [
+          ...(Array.isArray(order.managerFees) ? order.managerFees : []),
+          {
+            id: `FEE-${Date.now()}-${crypto.randomBytes(2).toString('hex')}`,
+            name: feeName,
+            amount: Math.round(feeAmount * 100) / 100,
+            description: feeDescription,
+            addedAt: nowIso
+          }
+        ];
+        const managerFeeTotal = managerFees.reduce((sum, fee) => sum + (Number(fee.amount) || 0), 0);
+
+        savedOrder = normalizeOrder({
+          ...order,
+          managerFees,
+          managerFeeTotal: Math.round(managerFeeTotal * 100) / 100,
+          total: Math.round(((Number(order.subtotal) || 0) + managerFeeTotal) * 100) / 100,
+          managerBalanceDue:
+            order.paymentMethod === 'card'
+              ? Math.round(managerFeeTotal * 100) / 100
+              : 0,
+          updatedAt: nowIso
+        });
+
+        return orders.map((entry) => entry.id === savedOrder.id ? savedOrder : entry);
+      }, 'Could not add the fee. Please try again.');
+
+      await updateSingletonJsonBlob({
+        read: readBookings,
+        write: writeBookings,
+        errorMessage: 'Fee was saved, but the booking could not be refreshed.',
+        mutate: async (bookings) => {
+          const booking = bookings.find((entry) => entry.orderId === savedOrder.id || entry.id === savedOrder.bookingId);
+          if (booking) {
+            booking.managerFees = savedOrder.managerFees;
+            booking.managerFeeTotal = savedOrder.managerFeeTotal;
+            booking.total = savedOrder.total;
+            booking.managerBalanceDue = savedOrder.managerBalanceDue || 0;
+            booking.updatedAt = new Date().toISOString();
+          }
+          return bookings;
+        }
+      }).catch((error) => {
+        console.error('Fee booking status update error:', error.message);
+      });
+
+      return res.json({
+        success: true,
+        order: savedOrder
+      });
+    }
+
     if (action === 'cancel-booking') {
       const { bookingId } = req.body;
+      let linkedOrderId = null;
       await updateSingletonJsonBlob({
         read: readBookings,
         write: writeBookings,
@@ -1970,6 +2642,7 @@ module.exports = async (req, res) => {
           const booking = bookings.find((entry) => entry.id === bookingId);
 
           if (booking && booking.status !== 'cancelled') {
+            linkedOrderId = typeof booking.orderId === 'string' ? booking.orderId : null;
             booking.status = 'cancelled';
             booking.updatedAt = new Date().toISOString();
             booking.cancelledAt = booking.updatedAt;
@@ -1978,6 +2651,24 @@ module.exports = async (req, res) => {
           return bookings;
         }
       });
+      if (linkedOrderId) {
+        await updateOrders((orders) => {
+          const nowIso = new Date().toISOString();
+          return orders.map((order) => order.id === linkedOrderId
+            ? normalizeOrder({
+                ...order,
+                status: order.paymentStatus === 'paid' ? 'cancelled' : order.status,
+                cancellation: {
+                  policy: 'manager-cancelled',
+                  cancelledAt: nowIso
+                },
+                updatedAt: nowIso
+              })
+            : order);
+        }).catch((error) => {
+          console.error('Linked order cancel update error:', error.message);
+        });
+      }
       return res.json({ success: true });
     }
 
