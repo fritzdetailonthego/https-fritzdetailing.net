@@ -1229,11 +1229,7 @@ function validateBookingRequest(dateStr, timeStr, availability, bookings, option
 
 async function readJsonBlob(path, fallbackValue, token) {
   try {
-    const blobResult = await get(path, {
-      access: 'public',
-      token,
-      useCache: false
-    });
+    const blobResult = await getBlobByAccess(path, token);
 
     if (!blobResult) {
       return {
@@ -1262,6 +1258,26 @@ async function readJsonBlob(path, fallbackValue, token) {
     readError.storageDetail = error && error.message ? error.message : 'blob read failed';
     throw readError;
   }
+}
+
+async function getBlobByAccess(path, token) {
+  let lastError = null;
+  for (const access of ['public', 'private']) {
+    try {
+      const result = await get(path, {
+        access,
+        token,
+        useCache: false
+      });
+      if (result) return result;
+    } catch (error) {
+      if (isBlobNotFoundError(error)) continue;
+      lastError = error;
+    }
+  }
+
+  if (lastError) throw lastError;
+  return null;
 }
 
 async function writeJsonBlob(path, data, etag, token) {
