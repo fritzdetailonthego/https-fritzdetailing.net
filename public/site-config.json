@@ -7,7 +7,7 @@
     "cash": true,
     "card": true,
     "cashApp": true,
-    "paypal": false,
+    "paypal": true,
     "crypto": false
   }
 }
