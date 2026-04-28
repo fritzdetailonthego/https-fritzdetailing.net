@@ -24,13 +24,22 @@
     ],
     "serviceSummary": "Decontamination",
     "subtotal": 50,
-    "managerFees": [],
-    "total": 50,
+    "managerFees": [
+      {
+        "id": "FEE-1777416504309-0207",
+        "name": "Verification fee",
+        "amount": 1,
+        "description": "removed",
+        "addedAt": "2026-04-28T22:48:24.309Z"
+      }
+    ],
+    "total": 51,
     "durationMinutes": 60,
     "cashVerificationCode": "85D0E5",
     "termsAcceptedAt": "2026-04-28T22:48:23.386Z",
     "createdAt": "2026-04-28T22:48:23.386Z",
-    "updatedAt": "2026-04-28T22:48:23.386Z",
-    "managerFeeTotal": 0
+    "updatedAt": "2026-04-28T22:48:24.309Z",
+    "managerFeeTotal": 1,
+    "managerBalanceDue": 0
   }
 ]
