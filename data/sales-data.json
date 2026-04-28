@@ -1,0 +1,22 @@
+[
+  {
+    "id": "SALE-1777416524101-0mwu",
+    "timestamp": "2026-04-28T22:48:44.101Z",
+    "customer": "Codex Manual Pipeline Test",
+    "service": "Verification Service",
+    "vehicle": "Test Vehicle",
+    "amount": 2,
+    "commission": 0.05,
+    "commissionRate": 0.025,
+    "paymentMethod": "paypal",
+    "source": "manual-order",
+    "stripePaymentId": "",
+    "orderId": "ORD-1777416523387-77b1",
+    "notes": "remove this verification sale | Manual order ORD-1777416523387-77b1",
+    "status": "completed",
+    "refundedAt": "",
+    "refundId": "",
+    "refundAmount": 0,
+    "isTest": false
+  }
+]
