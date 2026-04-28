@@ -24,13 +24,22 @@
     ],
     "serviceSummary": "Decontamination",
     "subtotal": 50,
-    "managerFees": [],
-    "total": 50,
+    "managerFees": [
+      {
+        "id": "FEE-1777416585378-4914",
+        "name": "Bearer fee",
+        "amount": 1,
+        "description": "removed",
+        "addedAt": "2026-04-28T22:49:45.378Z"
+      }
+    ],
+    "total": 51,
     "durationMinutes": 60,
     "cashVerificationCode": "B00B97",
     "termsAcceptedAt": "2026-04-28T22:49:44.568Z",
     "createdAt": "2026-04-28T22:49:44.568Z",
-    "updatedAt": "2026-04-28T22:49:44.568Z",
-    "managerFeeTotal": 0
+    "updatedAt": "2026-04-28T22:49:45.378Z",
+    "managerFeeTotal": 1,
+    "managerBalanceDue": 0
   }
 ]
