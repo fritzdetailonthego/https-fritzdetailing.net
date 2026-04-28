@@ -6,7 +6,7 @@
   "payments": {
     "cash": true,
     "card": true,
-    "cashApp": false,
+    "cashApp": true,
     "paypal": false,
     "crypto": false
   }
