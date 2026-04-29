@@ -1,1 +1,45 @@
-[]
+[
+  {
+    "id": "ORD-1777426189139-0c81",
+    "publicToken": "bX0FRjXTGR_xL1Z_7nYsdwXYPD30_URd",
+    "status": "requires_payment",
+    "paymentStatus": "requires_payment",
+    "paymentMethod": "card",
+    "customer": {
+      "name": "Test Customer",
+      "email": "test.customer@example.com",
+      "phone": "4235550100"
+    },
+    "vehicle": "Test Sedan",
+    "services": [
+      {
+        "id": "sedan:exterior:premium-wash",
+        "vehicleType": "sedan",
+        "vehicleLabel": "Sedan / Coupe / Hatchback",
+        "category": "exterior",
+        "name": "Premium Wash",
+        "price": 90,
+        "durationMinutes": 120
+      },
+      {
+        "id": "sedan:exterior:tire-shine",
+        "vehicleType": "sedan",
+        "vehicleLabel": "Sedan / Coupe / Hatchback",
+        "category": "exterior",
+        "name": "Tire Shine",
+        "price": 25,
+        "durationMinutes": 30
+      }
+    ],
+    "serviceSummary": "Premium Wash + Tire Shine",
+    "subtotal": 115,
+    "managerFees": [],
+    "total": 115,
+    "durationMinutes": 150,
+    "cashVerificationCode": "",
+    "termsAcceptedAt": "2026-04-29T01:29:49.139Z",
+    "createdAt": "2026-04-29T01:29:49.139Z",
+    "updatedAt": "2026-04-29T01:29:49.139Z",
+    "managerFeeTotal": 0
+  }
+]
