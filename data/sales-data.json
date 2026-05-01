@@ -1,1 +1,22 @@
-[]
+[
+  {
+    "id": "SALE-1777613522100-lbwo",
+    "timestamp": "2026-05-01T05:32:02.100Z",
+    "customer": "Codex Pipeline Test Manual",
+    "service": "Codex Pipeline Test Manual Service",
+    "vehicle": "Test Sedan",
+    "amount": 1,
+    "commission": 0.03,
+    "commissionRate": 0.025,
+    "paymentMethod": "cash",
+    "source": "manual-order",
+    "stripePaymentId": "",
+    "orderId": "ORD-1777613521318-796e",
+    "notes": "Codex Pipeline Test manual sale | Manual order ORD-1777613521318-796e",
+    "status": "completed",
+    "refundedAt": "",
+    "refundId": "",
+    "refundAmount": 0,
+    "isTest": true
+  }
+]
