@@ -258,9 +258,16 @@ module.exports = async (req, res) => {
       if (!isAdmin) return res.status(401).json({ error: 'Unauthorized' });
       if (!saleId) return res.status(400).json({ error: 'saleId required' });
       const sales = await readSales();
+      const saleToDelete = sales.find(s => s.id === saleId);
       const filtered = sales.filter(s => s.id !== saleId);
       if (filtered.length === sales.length) return res.status(404).json({ error: 'Sale not found' });
       await writeSales(filtered);
+      if (saleToDelete && saleToDelete.orderId && saleToDelete.source === 'manual-order') {
+        await updateOrders(
+          (orders) => orders.filter((order) => !(order.id === saleToDelete.orderId && order.manualSale === true)),
+          'Sale deleted, but the linked manual order could not be removed.'
+        );
+      }
       return res.json({ success: true, removed: sales.length - filtered.length });
     }
 
@@ -268,8 +275,18 @@ module.exports = async (req, res) => {
       if (!isAdmin) return res.status(401).json({ error: 'Unauthorized' });
       const sales = await readSales();
       const kept = sales.filter(s => !s.isTest);
+      const removedManualOrderIds = sales
+        .filter(s => s.isTest && s.source === 'manual-order' && s.orderId)
+        .map(s => s.orderId);
       const removed = sales.length - kept.length;
       await writeSales(kept);
+      if (removedManualOrderIds.length) {
+        const ids = new Set(removedManualOrderIds);
+        await updateOrders(
+          (orders) => orders.filter((order) => !(ids.has(order.id) && order.manualSale === true)),
+          'Test sales were cleared, but linked manual orders could not be removed.'
+        );
+      }
       return res.json({ success: true, removed });
     }
 

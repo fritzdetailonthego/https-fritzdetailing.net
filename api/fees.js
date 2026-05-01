@@ -27,6 +27,18 @@ module.exports = async (req, res) => {
       { id: 'biohazard', name: 'Biohazard Cleanup', amount: 75, type: 'flat', description: 'Vomit, blood, or similar cleanup' }
     ];
 
+    if (hasGitHubJsonStore()) {
+      try {
+        const state = await readGitHubJson(FEES_PATH, defaultFees);
+        return {
+          ...state,
+          data: Array.isArray(state.data) ? state.data : defaultFees
+        };
+      } catch (_githubError) {
+        // Fall through to Blob only if the GitHub runtime store is unreachable.
+      }
+    }
+
     let blobError = null;
     try {
       const result = await get(FEES_PATH, {
@@ -43,18 +55,7 @@ module.exports = async (req, res) => {
       blobError = error;
     }
 
-    if (hasGitHubJsonStore()) {
-      try {
-        const state = await readGitHubJson(FEES_PATH, defaultFees);
-        return {
-          ...state,
-          data: Array.isArray(state.data) ? state.data : defaultFees
-        };
-      } catch (_githubError) {
-        if (blobError) throw blobError;
-      }
-    }
-
+    if (blobError) throw blobError;
     return { data: defaultFees, storage: 'blob' };
   }
 

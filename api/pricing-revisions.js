@@ -34,6 +34,18 @@ module.exports = async (req, res) => {
   const token = process.env.BLOB_READ_WRITE_TOKEN;
 
   async function readRevisionsState() {
+    if (hasGitHubJsonStore()) {
+      try {
+        const state = await readGitHubJson(PRICING_REVISIONS_PATH, []);
+        return {
+          ...state,
+          data: Array.isArray(state.data) ? state.data : []
+        };
+      } catch (_githubError) {
+        // Fall through to Blob only if the GitHub runtime store is unreachable.
+      }
+    }
+
     let blobError = null;
     try {
       const result = await get(PRICING_REVISIONS_PATH, {
@@ -50,18 +62,7 @@ module.exports = async (req, res) => {
       blobError = error;
     }
 
-    if (hasGitHubJsonStore()) {
-      try {
-        const state = await readGitHubJson(PRICING_REVISIONS_PATH, []);
-        return {
-          ...state,
-          data: Array.isArray(state.data) ? state.data : []
-        };
-      } catch (_githubError) {
-        if (blobError) throw blobError;
-      }
-    }
-
+    if (blobError) throw blobError;
     return { data: [], storage: 'blob' };
   }
 

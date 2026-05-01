@@ -1272,23 +1272,20 @@ async function readJsonBlob(path, fallbackValue, token) {
 }
 
 async function readJsonSingleton(path, fallbackValue, token) {
-  let blobError = null;
-  try {
-    const blobState = await readJsonBlob(path, fallbackValue, token);
-    if (!blobState.missing || !hasGitHubJsonStore()) {
-      return blobState;
-    }
-  } catch (error) {
-    blobError = error;
-  }
-
   if (hasGitHubJsonStore()) {
     try {
       return await readGitHubJson(path, fallbackValue);
-    } catch (githubError) {
-      if (blobError) throw blobError;
-      throw githubError;
+    } catch (_githubError) {
+      // Fall through to Blob only if the GitHub runtime store is unreachable.
     }
+  }
+
+  let blobError = null;
+  try {
+    const blobState = await readJsonBlob(path, fallbackValue, token);
+    return blobState;
+  } catch (error) {
+    blobError = error;
   }
 
   if (blobError) throw blobError;
@@ -1337,7 +1334,7 @@ async function writeJsonBlob(path, data, etag, token) {
 }
 
 async function writeJsonSingleton(path, data, state, token) {
-  if (state && state.storage === 'github') {
+  if (hasGitHubJsonStore()) {
     return writeGitHubJson(path, data, state && state.sha, `Update ${path}`);
   }
 
@@ -1663,6 +1660,9 @@ module.exports = async (req, res) => {
           Number.isInteger(availability.maxAdvanceDays) && availability.maxAdvanceDays >= 0
             ? availability.maxAdvanceDays
             : 30,
+        weeklyHours: availability.weeklyHours || {},
+        blockedDates: Array.isArray(availability.blockedDates) ? availability.blockedDates : [],
+        blockedSlots: Array.isArray(availability.blockedSlots) ? availability.blockedSlots : [],
         slotDuration: availability.slotDuration,
         customerBlockMinutes: availability.customerBlockMinutes,
         privateBlockMinutes: availability.privateBlockMinutes,

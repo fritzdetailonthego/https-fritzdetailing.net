@@ -851,16 +851,25 @@
     render();
   }
 
+  let bootstrapPromise = null;
+
   async function bootstrap(force) {
     const password = typeof window.getAdminPassword === 'function' ? window.getAdminPassword() : '';
     if (!password) return;
-    if (state.loading && !force) return;
+    if (bootstrapPromise) {
+      await bootstrapPromise.catch(() => {});
+      return;
+    }
+    if (state.initialized && !force) {
+      await syncNow();
+      return;
+    }
 
     state.loading = true;
     state.lastError = '';
     render();
 
-    try {
+    bootstrapPromise = (async () => {
       const data = await fetchJson({ action: 'manager-bootstrap' });
       state.bookings = Array.isArray(data.bookings) ? data.bookings : [];
       state.availability = data.availability || null;
@@ -874,11 +883,16 @@
       void refreshSlots();
       requestAnimationFrame(scrollTimelineToAnchor);
       schedulePoll();
+    })();
+
+    try {
+      await bootstrapPromise;
     } catch (error) {
       state.lastError = getManagerFacingErrorMessage(error);
       render();
     } finally {
       state.loading = false;
+      bootstrapPromise = null;
       render();
     }
   }
@@ -928,8 +942,11 @@
   }
 
   function refreshUpcomingTabs() {
-    if (typeof window.loadBookings === 'function') window.loadBookings();
-    if (typeof window.loadAvailability === 'function') window.loadAvailability();
+    const activeScheduleTab = typeof window.getActiveScheduleTab === 'function'
+      ? window.getActiveScheduleTab()
+      : '';
+    if (activeScheduleTab === 'upcoming' && typeof window.loadBookings === 'function') window.loadBookings({ force: true });
+    if (activeScheduleTab === 'availability' && typeof window.loadAvailability === 'function') window.loadAvailability({ force: true });
   }
 
   function syncViewToSelectedDate() {

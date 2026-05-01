@@ -537,6 +537,10 @@ let pricingData = null;
 let adminPassword = '';
 let activeScheduleTab = 'timeline';
 let activeAdminTab = 'bookings';
+let bookingsLoadPromise = null;
+let bookingsLoadedAt = 0;
+let availabilityLoadPromise = null;
+let availabilityLoadedAt = 0;
 const ADMIN_TABS = ['overview', 'pricing', 'bookings', 'gallery', 'manager', 'fees', 'sales'];
 
 function escapeHtml(value) {
@@ -652,6 +656,8 @@ function setScheduleTab(tab) {
   if (activeAdminTab === 'bookings') {
     window.dispatchEvent(new CustomEvent('admin-schedule-tab-changed', { detail: tab }));
   }
+  if (tab === 'upcoming') loadBookings();
+  if (tab === 'availability') loadAvailability();
 }
 
 window.getAdminPassword = () => adminPassword;
@@ -1139,7 +1145,12 @@ function createUpcomingBookingRow(booking) {
   return row;
 }
 
-async function loadBookings() {
+async function loadBookings(options) {
+  const settings = options || {};
+  const now = Date.now();
+  if (bookingsLoadPromise) return bookingsLoadPromise;
+  if (!settings.force && bookingsLoadedAt && now - bookingsLoadedAt < 10000) return;
+  bookingsLoadPromise = (async () => {
   try {
     const res = await fetch('/api/bookings', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -1154,6 +1165,7 @@ async function loadBookings() {
 
     if (upcoming.length === 0) {
       el.innerHTML = '<p style="color:var(--gray);font-size:14px">No upcoming bookings.</p>';
+      bookingsLoadedAt = Date.now();
       return;
     }
 
@@ -1161,9 +1173,14 @@ async function loadBookings() {
     upcoming.forEach((booking) => {
       el.appendChild(createUpcomingBookingRow(booking));
     });
+    bookingsLoadedAt = Date.now();
   } catch(e) {
     document.getElementById('bookings-list').innerHTML = '<p style="color:var(--red);font-size:14px">' + escapeHtml(getManagerFacingErrorMessage(e)) + '</p>';
+  } finally {
+    bookingsLoadPromise = null;
   }
+  })();
+  return bookingsLoadPromise;
 }
 
 async function cancelBooking(id) {
@@ -1182,7 +1199,12 @@ async function cancelBooking(id) {
   }
 }
 
-async function loadAvailability() {
+async function loadAvailability(options) {
+  const settings = options || {};
+  const now = Date.now();
+  if (availabilityLoadPromise) return availabilityLoadPromise;
+  if (!settings.force && availabilityLoadedAt && now - availabilityLoadedAt < 10000) return;
+  availabilityLoadPromise = (async () => {
   try {
     const res = await fetch('/api/bookings', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -1192,7 +1214,13 @@ async function loadAvailability() {
     renderAvailabilityEditor();
     renderBlockedDates();
     renderRecurringBlocks();
+    availabilityLoadedAt = Date.now();
   } catch(e) {}
+  finally {
+    availabilityLoadPromise = null;
+  }
+  })();
+  return availabilityLoadPromise;
 }
 
 function renderAvailabilityEditor() {
@@ -1844,7 +1872,7 @@ async function loadSales() {
 
     const tbody = document.getElementById('sales-tbody');
     if (salesData.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="7" style="padding:24px;text-align:center;color:var(--gray)">No sales recorded yet. Sales auto-log from card payments, or use "Log Manual Sale" for cash/crypto.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="7" style="padding:24px;text-align:center;color:var(--gray)">No sales recorded yet. Card payments and manual sales both create order-linked records.</td></tr>';
       return;
     }
 
@@ -1858,10 +1886,11 @@ async function loadSales() {
       const commission = Number(s.commission) || 0;
       const safeId = escapeJsAttribute(s.id || '');
       const safeCustomerForJs = escapeJsAttribute(s.customer || '');
+      const orderLine = s.orderId ? `<div style="color:var(--gray);font-size:11px;margin-top:3px">Order ${escapeHtml(s.orderId)}</div>` : '';
       return `<tr style="border-bottom:1px solid rgba(255,255,255,0.03);${rowBg}">
         <td style="padding:10px 12px;color:var(--gray-light)">${date}</td>
         <td style="padding:10px 12px;color:var(--white);font-weight:500">${testBadge}${escapeHtml(s.customer)}</td>
-        <td style="padding:10px 12px;color:var(--gray-light)">${escapeHtml(s.service)}</td>
+        <td style="padding:10px 12px;color:var(--gray-light)">${escapeHtml(s.service)}${orderLine}</td>
         <td style="padding:10px 12px;text-align:right;font-family:'Rajdhani',sans-serif;font-weight:700;font-size:15px">$${amount.toLocaleString()}</td>
         <td style="padding:10px 12px;text-align:right;font-family:'Rajdhani',sans-serif;font-weight:700;font-size:15px;color:#1D9E75">$${commission.toLocaleString()}</td>
         <td style="padding:10px 12px;text-align:center"><span style="background:${color};color:#fff;padding:3px 10px;border-radius:2px;font-size:11px;font-family:'Rajdhani',sans-serif;font-weight:600;text-transform:uppercase;letter-spacing:0.5px">${escapeHtml(s.paymentMethod)}</span></td>
@@ -1895,7 +1924,7 @@ async function logManualSale() {
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error);
-    showToast('Sale logged: $' + amount);
+    showToast('Sale logged through order pipeline' + (data.sale && data.sale.orderId ? ': ' + data.sale.orderId : ''));
     document.getElementById('ms-customer').value = '';
     document.getElementById('ms-service').value = '';
     document.getElementById('ms-amount').value = '';

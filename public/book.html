@@ -38,6 +38,8 @@ h1{font-family:'Oswald',sans-serif;font-size:clamp(34px,7vw,64px);line-height:.9
 .cal-day{background:var(--surface);border:1px solid var(--border);min-height:44px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-family:'Rajdhani',sans-serif;font-weight:700}
 .cal-day:hover,.cal-day.selected{border-color:var(--border-strong);background:rgba(123,47,190,.16);color:var(--purple-light)}
 .cal-day.disabled{opacity:.25;pointer-events:none}
+.cal-day.unavailable{opacity:.42;border-color:rgba(255,255,255,.08);color:var(--gray);cursor:not-allowed}
+.cal-day.blocked{opacity:.42;border-color:rgba(226,75,74,.28);color:#ff9a9a;cursor:not-allowed}
 .slots-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px}
 .slot{background:var(--surface);border:1px solid var(--border);padding:12px;text-align:center;cursor:pointer;font-family:'Rajdhani',sans-serif;font-weight:700;letter-spacing:1px;text-transform:uppercase}
 .slot.selected{border-color:var(--border-strong);background:rgba(123,47,190,.16);color:var(--purple-light)}
@@ -141,7 +143,7 @@ let currentYear = new Date().getFullYear();
 let selectedDate = null;
 let selectedTime = null;
 let selectedTimeLabel = null;
-let bookingConfig = { maxAdvanceDays: 30 };
+let bookingConfig = { maxAdvanceDays: 30, weeklyHours: {}, blockedDates: [], blockedSlots: [] };
 
 function escapeHtml(value) {
   return String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -166,6 +168,43 @@ function appendSummary(container, label, value) {
   container.appendChild(div);
 }
 
+function formatPaymentLabel(paymentMethod, paymentStatus) {
+  const method = String(paymentMethod || '').toLowerCase();
+  const status = String(paymentStatus || '').toLowerCase();
+  const methodLabels = {
+    card: 'Card',
+    cash: 'Cash',
+    cashapp: 'Cash App',
+    paypal: 'PayPal',
+    crypto: 'Crypto',
+    other: 'Other'
+  };
+  const base = methodLabels[method] || (paymentMethod || 'Payment');
+  if (method === 'cash' && status === 'cash_due_on_site') return 'Cash - Due on site before service';
+  if (status === 'paid') return `${base} - Paid`;
+  if (status === 'requires_payment') return `${base} - Payment required`;
+  if (status === 'refunded') return `${base} - Refunded`;
+  if (status === 'cancelled') return `${base} - Cancelled`;
+  return base;
+}
+
+function getCustomerFacingErrorMessage(error) {
+  const message = typeof error === 'string' ? error : (error && error.message) || '';
+  const normalized = message.toLowerCase();
+  if (
+    normalized.includes('vercel blob') ||
+    normalized.includes('blob') ||
+    normalized.includes('github') ||
+    normalized.includes('storage') ||
+    normalized.includes('orders-data') ||
+    normalized.includes('bookings-data') ||
+    normalized.includes('store has been suspended')
+  ) {
+    return 'Booking storage is temporarily unavailable. Please try again or call Fritz.';
+  }
+  return message || 'Something went wrong. Please try again.';
+}
+
 function renderOrderSummary() {
   const container = document.getElementById('order-summary');
   container.innerHTML = '';
@@ -173,7 +212,7 @@ function renderOrderSummary() {
   appendSummary(container, 'Email', order.customer?.email || '');
   appendSummary(container, 'Services', order.serviceSummary || (order.services || []).map(s => s.name).join(' + '));
   appendSummary(container, 'Duration', formatDuration(order.durationMinutes));
-  appendSummary(container, 'Payment', `${order.paymentMethod || ''} / ${order.paymentStatus || ''}`);
+  appendSummary(container, 'Payment', formatPaymentLabel(order.paymentMethod, order.paymentStatus));
   appendSummary(container, 'Total', formatMoney(order.total));
 
   document.getElementById('bk-phone').value = order.customer?.phone || '';
@@ -215,9 +254,22 @@ function renderCalendar() {
   for (let day = 1; day <= daysInMonth; day++) {
     const date = new Date(currentYear, currentMonth, day);
     const dateStr = currentYear + '-' + String(currentMonth + 1).padStart(2, '0') + '-' + String(day).padStart(2, '0');
-    const disabled = date < today || date > maxDate;
+    const dayKey = ['sun','mon','tue','wed','thu','fri','sat'][date.getDay()];
+    const dayConfig = bookingConfig.weeklyHours && bookingConfig.weeklyHours[dayKey];
+    const isClosed = !!dayConfig && dayConfig.open === false;
+    const isBlocked = Array.isArray(bookingConfig.blockedDates) && bookingConfig.blockedDates.some((entry) => {
+      if (typeof entry === 'string') return entry === dateStr;
+      return entry && entry.date === dateStr;
+    });
+    const disabled = date < today || date > maxDate || isClosed || isBlocked;
     const selected = dateStr === selectedDate;
-    html += `<button type="button" class="cal-day ${disabled ? 'disabled' : ''} ${selected ? 'selected' : ''}" ${disabled ? '' : `onclick="pickDate('${dateStr}')"`}>${day}</button>`;
+    const classes = ['cal-day'];
+    if (disabled) classes.push('disabled');
+    if (isClosed) classes.push('unavailable');
+    if (isBlocked) classes.push('blocked');
+    if (selected) classes.push('selected');
+    const title = isBlocked ? 'Blocked' : isClosed ? 'Unavailable' : disabled ? 'Not available' : 'Available';
+    html += `<button type="button" class="${classes.join(' ')}" title="${title}" ${disabled ? '' : `onclick="pickDate('${dateStr}')"`}>${day}</button>`;
   }
   document.getElementById('calendar').innerHTML = html;
 }
@@ -318,7 +370,7 @@ async function submitBooking() {
     order = data.order || order;
     showSuccess(data.booking);
   } catch (error) {
-    errorEl.textContent = error.message || 'Booking failed.';
+    errorEl.textContent = getCustomerFacingErrorMessage(error);
     errorEl.style.display = 'block';
     button.disabled = false;
     button.textContent = 'Confirm Booking';
@@ -332,7 +384,7 @@ function showSuccess(booking) {
   appendSummary(details, 'Time', selectedTimeLabel || booking?.time || order.bookingTime || '');
   appendSummary(details, 'Customer', order.customer?.name || '');
   appendSummary(details, 'Services', order.serviceSummary || '');
-  appendSummary(details, 'Payment', `${order.paymentMethod || ''} / ${order.paymentStatus || ''}`);
+  appendSummary(details, 'Payment', formatPaymentLabel(order.paymentMethod, order.paymentStatus));
   document.querySelectorAll('.dot').forEach(dot => dot.className = 'dot done');
   document.querySelectorAll('.step').forEach(step => step.classList.remove('active'));
   document.getElementById('step-success').classList.add('active');
@@ -370,7 +422,10 @@ async function loadConfig() {
       body: JSON.stringify({ action: 'get-config' })
     });
     const data = await response.json();
-    if (Number.isInteger(data.maxAdvanceDays)) bookingConfig.maxAdvanceDays = data.maxAdvanceDays;
+      if (Number.isInteger(data.maxAdvanceDays)) bookingConfig.maxAdvanceDays = data.maxAdvanceDays;
+      bookingConfig.weeklyHours = data.weeklyHours || {};
+      bookingConfig.blockedDates = Array.isArray(data.blockedDates) ? data.blockedDates : [];
+      bookingConfig.blockedSlots = Array.isArray(data.blockedSlots) ? data.blockedSlots : [];
   } catch(e) {}
 }
 
@@ -397,7 +452,8 @@ async function loadOrder() {
       throw new Error('Payment must be confirmed before scheduling.');
     }
   } catch (error) {
-    document.getElementById('schedule-panel').innerHTML = `<div class="error" style="display:block">${escapeHtml(error.message || 'Order could not be loaded.')} <a href="/checkout.html" style="color:var(--purple-light)">Start checkout again.</a></div>`;
+    const message = getCustomerFacingErrorMessage(error).replace(/\s*Start checkout again\.?$/i, '').trim();
+    document.getElementById('schedule-panel').innerHTML = `<div class="error" style="display:block">${escapeHtml(message || 'Order could not be loaded.')} <a href="/checkout.html" style="color:var(--purple-light)">Start checkout again.</a></div>`;
   }
 }
 
