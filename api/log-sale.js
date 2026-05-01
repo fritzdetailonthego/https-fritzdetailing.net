@@ -2,14 +2,20 @@
 // Also handles delete, clear-test, and GET ?action=mode for Stripe test/live detection.
 const fs = require('fs');
 const path = require('path');
-const { appendSale, readSales, saleInputFromPaymentIntent, writeSales } = require('../lib/sales');
-const {
-  generateOrderId,
-  generatePublicToken,
-  normalizeOrder,
-  updateOrders
-} = require('../lib/orders');
 const { getStripeModeStatus } = require('../lib/stripe-mode');
+
+let salesLibCache = null;
+let ordersLibCache = null;
+
+function getSalesLib() {
+  if (!salesLibCache) salesLibCache = require('../lib/sales');
+  return salesLibCache;
+}
+
+function getOrdersLib() {
+  if (!ordersLibCache) ordersLibCache = require('../lib/orders');
+  return ordersLibCache;
+}
 
 function readConfig() {
   try {
@@ -38,6 +44,12 @@ function normalizeManualPaymentMethod(value) {
 }
 
 async function createManualOrderForSale(saleInput) {
+  const {
+    generateOrderId,
+    generatePublicToken,
+    normalizeOrder,
+    updateOrders
+  } = getOrdersLib();
   const amount = Number(saleInput.amount);
   if (!Number.isFinite(amount) || amount <= 0) {
     throw createHttpError(400, 'Invalid sale amount.');
@@ -175,6 +187,7 @@ async function retrieveStripePaymentIntent(paymentIntentId, preferTestMode) {
 }
 
 async function verifyStripeSale(sale, preferTestMode) {
+  const { saleInputFromPaymentIntent } = getSalesLib();
   const { paymentIntent, isTest } = await retrieveStripePaymentIntent(sale && sale.stripePaymentId, preferTestMode);
 
   if (paymentIntent.status !== 'succeeded') {
@@ -211,6 +224,7 @@ async function handleStripeWebhook(req, res) {
     return res.status(400).json({ error: 'Invalid payment intent event.' });
   }
 
+  const { appendSale, saleInputFromPaymentIntent } = getSalesLib();
   const saleInput = saleInputFromPaymentIntent(paymentIntent, isTest);
   const result = await appendSale(saleInput, { serverIsLive: !isTest });
   return res.json({ received: true, saleId: result.sale.id, duplicate: result.duplicate });
@@ -252,12 +266,14 @@ module.exports = async (req, res) => {
     if (action === 'delete') {
       if (!isAdmin) return res.status(401).json({ error: 'Unauthorized' });
       if (!saleId) return res.status(400).json({ error: 'saleId required' });
+      const { readSales, writeSales } = getSalesLib();
       const sales = await readSales();
       const saleToDelete = sales.find(s => s.id === saleId);
       const filtered = sales.filter(s => s.id !== saleId);
       if (filtered.length === sales.length) return res.status(404).json({ error: 'Sale not found' });
       await writeSales(filtered);
       if (saleToDelete && saleToDelete.orderId && saleToDelete.source === 'manual-order') {
+        const { updateOrders } = getOrdersLib();
         await updateOrders(
           (orders) => orders.filter((order) => !(order.id === saleToDelete.orderId && order.manualSale === true)),
           'Sale deleted, but the linked manual order could not be removed.'
@@ -268,6 +284,7 @@ module.exports = async (req, res) => {
 
     if (action === 'clear-test') {
       if (!isAdmin) return res.status(401).json({ error: 'Unauthorized' });
+      const { readSales, writeSales } = getSalesLib();
       const sales = await readSales();
       const kept = sales.filter(s => !s.isTest);
       const removedManualOrderIds = sales
@@ -277,6 +294,7 @@ module.exports = async (req, res) => {
       await writeSales(kept);
       if (removedManualOrderIds.length) {
         const ids = new Set(removedManualOrderIds);
+        const { updateOrders } = getOrdersLib();
         await updateOrders(
           (orders) => orders.filter((order) => !(ids.has(order.id) && order.manualSale === true)),
           'Test sales were cleared, but linked manual orders could not be removed.'
@@ -310,6 +328,7 @@ module.exports = async (req, res) => {
 
     // Stripe sales inherit test mode from the verified key. Manual sales trust the admin flag.
     saleInput.isTest = verifiedSale ? verifiedSale.isTest : !!sale.isTest;
+    const { appendSale } = getSalesLib();
     const result = await appendSale(saleInput, { serverIsLive });
 
     res.json({ success: true, sale: result.sale, duplicate: result.duplicate });
