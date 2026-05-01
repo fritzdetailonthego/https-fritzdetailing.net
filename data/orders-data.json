@@ -1,5 +1,40 @@
 [
   {
+    "id": "ORD-1777613521318-796e",
+    "publicToken": "mvQ_oT4pZV-dtzdA1WoE9EWuEwTMwnO5",
+    "status": "paid",
+    "paymentStatus": "paid",
+    "paymentMethod": "cash",
+    "customer": {
+      "name": "Codex Pipeline Test Manual",
+      "email": "",
+      "phone": ""
+    },
+    "vehicle": "Test Sedan",
+    "services": [
+      {
+        "id": "manual:cash:1777613521318",
+        "vehicleType": "manual",
+        "vehicleLabel": "Manual sale",
+        "category": "manual",
+        "name": "Codex Pipeline Test Manual Service",
+        "price": 1,
+        "durationMinutes": 0
+      }
+    ],
+    "serviceSummary": "Codex Pipeline Test Manual Service",
+    "subtotal": 1,
+    "total": 1,
+    "managerFees": [],
+    "managerFeeTotal": 0,
+    "manualSale": true,
+    "manualSaleNotes": "Codex Pipeline Test manual sale",
+    "paidAt": "2026-05-01T05:32:01.316Z",
+    "createdAt": "2026-05-01T05:32:01.316Z",
+    "updatedAt": "2026-05-01T05:32:01.316Z",
+    "durationMinutes": 0
+  },
+  {
     "id": "ORD-1777613518753-3b36",
     "publicToken": "eYj3FC6h_j-V__CCkJ0evIi3eahbDWKP",
     "status": "booked",
