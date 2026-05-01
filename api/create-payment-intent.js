@@ -103,9 +103,13 @@ module.exports = async (req, res) => {
         error.code === 'ORDER_STORAGE_READ_FAILED' ||
         /orders-data|Blob|storage|Failed to read/i.test(error.message || '')
       );
+    const isStripeConfigError =
+      error && /invalid api key|no api key|api key provided|authentication/i.test(error.message || '');
     res.status(error.statusCode && error.statusCode >= 400 ? error.statusCode : 500).json({
       error: isStorageError
         ? 'Checkout storage is temporarily unavailable. Please try again.'
+        : isStripeConfigError
+          ? 'Card payment is not configured correctly. Choose another payment method or call Fritz.'
         : error.message || 'Payment failed'
     });
   }
