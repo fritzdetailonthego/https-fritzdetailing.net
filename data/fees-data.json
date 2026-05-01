@@ -1,0 +1,37 @@
+[
+  {
+    "id": "distance",
+    "name": "Distance Fee (30+ min)",
+    "amount": 25,
+    "type": "flat",
+    "description": "Added for locations beyond standard service radius"
+  },
+  {
+    "id": "pet-hair",
+    "name": "Heavy Pet Hair",
+    "amount": 40,
+    "type": "flat",
+    "description": "For vehicles with excessive pet hair requiring extra cleaning time"
+  },
+  {
+    "id": "heavy-soil",
+    "name": "Heavy Soil / Mud",
+    "amount": 50,
+    "type": "flat",
+    "description": "For heavily soiled vehicles requiring extra prep"
+  },
+  {
+    "id": "biohazard",
+    "name": "Biohazard Cleanup",
+    "amount": 75,
+    "type": "flat",
+    "description": "Vomit, blood, or similar cleanup"
+  },
+  {
+    "id": "test-fee",
+    "name": "Test Fee",
+    "amount": 10,
+    "type": "flat",
+    "description": ""
+  }
+]
