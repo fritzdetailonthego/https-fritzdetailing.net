@@ -1,5 +1,39 @@
 [
   {
+    "id": "ORD-1777611476919-e2ac",
+    "publicToken": "MWr0y4dLDDvVTyhvv9D7DdjloGhftKdV",
+    "status": "cash_due_on_site",
+    "paymentStatus": "cash_due_on_site",
+    "paymentMethod": "cash",
+    "customer": {
+      "name": "Test Customer",
+      "email": "test.customer@example.com",
+      "phone": "4235550100"
+    },
+    "vehicle": "Test Sedan",
+    "services": [
+      {
+        "id": "sedan:exterior:premium-wash",
+        "vehicleType": "sedan",
+        "vehicleLabel": "Sedan / Coupe / Hatchback",
+        "category": "exterior",
+        "name": "Premium Wash",
+        "price": 90,
+        "durationMinutes": 120
+      }
+    ],
+    "serviceSummary": "Premium Wash",
+    "subtotal": 90,
+    "managerFees": [],
+    "total": 90,
+    "durationMinutes": 120,
+    "cashVerificationCode": "7B0CD2",
+    "termsAcceptedAt": "2026-05-01T04:57:56.919Z",
+    "createdAt": "2026-05-01T04:57:56.919Z",
+    "updatedAt": "2026-05-01T04:57:56.919Z",
+    "managerFeeTotal": 0
+  },
+  {
     "id": "ORD-1777611253966-9843",
     "publicToken": "2qHH2Ybj5T5r4QNsSQGJNx6S5rBU3Giq",
     "status": "requires_payment",
