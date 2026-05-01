@@ -1,5 +1,40 @@
 [
   {
+    "id": "ORD-1777610818180-04e7",
+    "publicToken": "c1RbD8fy3_OU7GG2Wf5yqufnl9ZUdGzf",
+    "status": "paid",
+    "paymentStatus": "paid",
+    "paymentMethod": "cash",
+    "customer": {
+      "name": "Test Customer",
+      "email": "",
+      "phone": ""
+    },
+    "vehicle": "",
+    "services": [
+      {
+        "id": "manual:cash:1777610818181",
+        "vehicleType": "manual",
+        "vehicleLabel": "Manual sale",
+        "category": "manual",
+        "name": "Premium Wash",
+        "price": 90,
+        "durationMinutes": 0
+      }
+    ],
+    "serviceSummary": "Premium Wash",
+    "subtotal": 90,
+    "total": 90,
+    "managerFees": [],
+    "managerFeeTotal": 0,
+    "manualSale": true,
+    "manualSaleNotes": "",
+    "paidAt": "2026-05-01T04:46:58.180Z",
+    "createdAt": "2026-05-01T04:46:58.180Z",
+    "updatedAt": "2026-05-01T04:46:58.180Z",
+    "durationMinutes": 0
+  },
+  {
     "id": "ORD-1777610305177-7c54",
     "publicToken": "zZ0jesVOeWn3_INBEHE-ZDh5sVndVMP6",
     "status": "cash_due_on_site",
