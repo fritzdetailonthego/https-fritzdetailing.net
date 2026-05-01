@@ -1,6 +1,6 @@
 {
   "name": "fritz-detailing",
-  "version": "1.1.9",
+  "version": "1.1.10",
   "description": "Fritz's Detail on the Go — Website + Payments",
   "scripts": {
     "start": "node api/create-payment-intent.js"

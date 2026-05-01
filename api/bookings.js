@@ -1517,7 +1517,8 @@ module.exports = async (req, res) => {
 
     const tokenSet = new Set(pushTokensToRemove);
     for (let attempt = 0; attempt < 3; attempt++) {
-      const { data: devices, etag } = await readManagerDevices();
+      const devicesState = await readManagerDevices();
+      const { data: devices } = devicesState;
       const nowIso = new Date().toISOString();
       let changed = 0;
       const nextDevices = devices.map((device) => {
@@ -1536,10 +1537,10 @@ module.exports = async (req, res) => {
       if (changed === 0) return 0;
 
       try {
-        await writeManagerDevices(sortManagerDevices(nextDevices), etag);
+        await writeManagerDevices(sortManagerDevices(nextDevices), devicesState);
         return changed;
       } catch (error) {
-        if (error instanceof BlobPreconditionFailedError) continue;
+        if (error instanceof BlobPreconditionFailedError || isGitHubJsonConflict(error)) continue;
         throw error;
       }
     }
@@ -1767,7 +1768,8 @@ module.exports = async (req, res) => {
       const nowIso = new Date().toISOString();
 
       for (let attempt = 0; attempt < 3; attempt++) {
-        const { data: devices, etag } = await readManagerDevices();
+        const devicesState = await readManagerDevices();
+        const { data: devices } = devicesState;
         const nextDevice = upsertManagerDevice(devices, {
           pushToken,
           deviceId: normalizedDeviceId,
@@ -1780,10 +1782,10 @@ module.exports = async (req, res) => {
         });
 
         try {
-          await writeManagerDevices(sortManagerDevices(devices), etag);
+          await writeManagerDevices(sortManagerDevices(devices), devicesState);
           return res.json({ success: true, device: serializeManagerDevice(nextDevice) });
         } catch (error) {
-          if (error instanceof BlobPreconditionFailedError) continue;
+          if (error instanceof BlobPreconditionFailedError || isGitHubJsonConflict(error)) continue;
           throw error;
         }
       }
@@ -1801,7 +1803,8 @@ module.exports = async (req, res) => {
       }
 
       for (let attempt = 0; attempt < 3; attempt++) {
-        const { data: devices, etag } = await readManagerDevices();
+        const devicesState = await readManagerDevices();
+        const { data: devices } = devicesState;
         const filteredDevices = devices.filter((device) =>
           device.pushToken !== pushToken && (!normalizedDeviceId || device.deviceId !== normalizedDeviceId)
         );
@@ -1812,10 +1815,10 @@ module.exports = async (req, res) => {
         }
 
         try {
-          await writeManagerDevices(sortManagerDevices(filteredDevices), etag);
+          await writeManagerDevices(sortManagerDevices(filteredDevices), devicesState);
           return res.json({ success: true, removed });
         } catch (error) {
-          if (error instanceof BlobPreconditionFailedError) continue;
+          if (error instanceof BlobPreconditionFailedError || isGitHubJsonConflict(error)) continue;
           throw error;
         }
       }
@@ -2205,7 +2208,8 @@ module.exports = async (req, res) => {
       let booking = null;
 
       for (let attempt = 0; attempt < 3; attempt++) {
-        const { data: bookings, etag } = await readBookings();
+        const bookingsState = await readBookings();
+        const { data: bookings } = bookingsState;
         const validation = validateBookingRequest(date, time, availability, bookings, {
           bookingType: 'customer',
           durationMinutes: order.durationMinutes
@@ -2242,10 +2246,10 @@ module.exports = async (req, res) => {
         bookings.push(booking);
 
         try {
-          await writeBookings(bookings, etag);
+          await writeBookings(bookings, bookingsState);
           break;
         } catch (error) {
-          if (error instanceof BlobPreconditionFailedError) {
+          if (error instanceof BlobPreconditionFailedError || isGitHubJsonConflict(error)) {
             booking = null;
             continue;
           }
@@ -2438,7 +2442,8 @@ module.exports = async (req, res) => {
       const { data: availability } = await readAvailability();
 
       for (let attempt = 0; attempt < 3; attempt++) {
-        const { data: bookings, etag } = await readBookings();
+        const bookingsState = await readBookings();
+        const { data: bookings } = bookingsState;
         const validation = validateBookingRequest(date, time, availability, bookings, {
           bookingType,
           durationMinutes,
@@ -2471,10 +2476,10 @@ module.exports = async (req, res) => {
         bookings.push(booking);
 
         try {
-          await writeBookings(bookings, etag);
+          await writeBookings(bookings, bookingsState);
           return res.json({ success: true, booking });
         } catch (error) {
-          if (error instanceof BlobPreconditionFailedError) {
+          if (error instanceof BlobPreconditionFailedError || isGitHubJsonConflict(error)) {
             continue;
           }
 
