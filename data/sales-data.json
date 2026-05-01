@@ -1,1 +1,22 @@
-[]
+[
+  {
+    "id": "SALE-1777610818950-7qcg",
+    "timestamp": "2026-05-01T04:46:58.950Z",
+    "customer": "Test Customer",
+    "service": "Premium Wash",
+    "vehicle": "",
+    "amount": 90,
+    "commission": 2.25,
+    "commissionRate": 0.025,
+    "paymentMethod": "cash",
+    "source": "manual-order",
+    "stripePaymentId": "",
+    "orderId": "ORD-1777610818180-04e7",
+    "notes": "Manual order ORD-1777610818180-04e7",
+    "status": "completed",
+    "refundedAt": "",
+    "refundId": "",
+    "refundAmount": 0,
+    "isTest": false
+  }
+]
