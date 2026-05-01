@@ -26,12 +26,5 @@
     "amount": 75,
     "type": "flat",
     "description": "Vomit, blood, or similar cleanup"
-  },
-  {
-    "id": "test-fee",
-    "name": "Test Fee",
-    "amount": 10,
-    "type": "flat",
-    "description": "Automated test fee"
   }
 ]
