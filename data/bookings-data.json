@@ -29,7 +29,7 @@
       }
     ],
     "notes": "",
-    "status": "confirmed",
+    "status": "cancelled",
     "bookingType": "customer",
     "durationMinutes": 60,
     "source": "public-checkout",
@@ -39,6 +39,7 @@
     "total": 50,
     "cashVerificationCode": "EC7E99",
     "createdAt": "2026-05-01T20:48:12.905Z",
-    "updatedAt": "2026-05-01T20:48:12.905Z"
+    "updatedAt": "2026-05-01T20:48:54.404Z",
+    "cancelledAt": "2026-05-01T20:48:54.404Z"
   }
 ]
