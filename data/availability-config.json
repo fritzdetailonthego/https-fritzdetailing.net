@@ -1,0 +1,48 @@
+{
+  "weeklyHours": {
+    "mon": {
+      "open": true,
+      "start": "08:00",
+      "end": "18:00"
+    },
+    "tue": {
+      "open": true,
+      "start": "08:00",
+      "end": "18:00"
+    },
+    "wed": {
+      "open": true,
+      "start": "08:00",
+      "end": "18:00"
+    },
+    "thu": {
+      "open": true,
+      "start": "08:00",
+      "end": "18:00"
+    },
+    "fri": {
+      "open": true,
+      "start": "08:00",
+      "end": "18:00"
+    },
+    "sat": {
+      "open": true,
+      "start": "09:00",
+      "end": "17:00"
+    },
+    "sun": {
+      "open": false,
+      "start": "09:00",
+      "end": "17:00"
+    }
+  },
+  "slotDuration": 120,
+  "customerBlockMinutes": 120,
+  "privateBlockMinutes": 120,
+  "travelBufferMinutes": 30,
+  "blockedDates": [],
+  "blockedSlots": [],
+  "recurringBlocks": [],
+  "maxAdvanceDays": 30,
+  "updatedAt": "2026-05-01T05:08:21.164Z"
+}
