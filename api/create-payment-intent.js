@@ -1,6 +1,7 @@
 const path = require('path');
 const fs = require('fs');
 const { findOrderByCredentials, readOrders } = require('../lib/orders');
+const { getStripePaymentConfig, isStripeAuthenticationError } = require('../lib/stripe-mode');
 
 function readConfig() {
   try {
@@ -62,18 +63,15 @@ module.exports = async (req, res) => {
       return res.status(409).json({ error: 'Card payment is not available right now.' });
     }
 
-    const testMode = cfg.stripeTestMode === true;
-    const secretKey = testMode ? process.env.STRIPE_SECRET_KEY_TEST : process.env.STRIPE_SECRET_KEY;
+    const stripeConfig = getStripePaymentConfig(cfg);
 
-    if (!secretKey) {
-      return res.status(500).json({
-        error: testMode
-          ? 'Stripe test mode is ON but STRIPE_SECRET_KEY_TEST env var is not set in Vercel.'
-          : 'STRIPE_SECRET_KEY env var is not set in Vercel.'
+    if (!stripeConfig.secretKey || !stripeConfig.secretLooksValid || !stripeConfig.publishableLooksValid) {
+      return res.status(503).json({
+        error: 'Card payment is not configured correctly. Choose another payment method or call Fritz.'
       });
     }
 
-    const stripe = require('stripe')(secretKey);
+    const stripe = require('stripe')(stripeConfig.secretKey);
     const serviceSummary = order.serviceSummary || (order.services || []).map((service) => service.name).join(' + ');
 
     const paymentIntent = await stripe.paymentIntents.create({
@@ -93,7 +91,7 @@ module.exports = async (req, res) => {
       clientSecret: paymentIntent.client_secret,
       paymentIntentId: paymentIntent.id,
       orderId: order.id,
-      testMode
+      testMode: stripeConfig.testMode
     });
 
   } catch (error) {
@@ -104,7 +102,7 @@ module.exports = async (req, res) => {
         /orders-data|Blob|storage|Failed to read/i.test(error.message || '')
       );
     const isStripeConfigError =
-      error && /invalid api key|no api key|api key provided|authentication/i.test(error.message || '');
+      isStripeAuthenticationError(error);
     res.status(error.statusCode && error.statusCode >= 400 ? error.statusCode : 500).json({
       error: isStorageError
         ? 'Checkout storage is temporarily unavailable. Please try again.'

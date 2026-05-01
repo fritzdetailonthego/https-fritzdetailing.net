@@ -9,6 +9,7 @@ const {
   normalizeOrder,
   updateOrders
 } = require('../lib/orders');
+const { getStripeModeStatus } = require('../lib/stripe-mode');
 
 function readConfig() {
   try {
@@ -224,17 +225,11 @@ module.exports = async (req, res) => {
   }
   res.setHeader('Access-Control-Allow-Origin', '*');
 
-  // GET ?action=mode returns Stripe test/live state and the test pk if configured.
+  // GET ?action=mode returns Stripe mode and safe card readiness status.
   // Driven by site-config.stripeTestMode (admin toggle), not env var detection.
   if (req.method === 'GET' && req.query?.action === 'mode') {
     const cfg = readConfig();
-    const testMode = cfg.stripeTestMode === true;
-    const hasTestKeys = !!(process.env.STRIPE_SECRET_KEY_TEST && process.env.STRIPE_PUBLISHABLE_KEY_TEST);
-    return res.json({
-      testMode,
-      publishableKey: testMode && hasTestKeys ? process.env.STRIPE_PUBLISHABLE_KEY_TEST : null,
-      hasTestKeys
-    });
+    return res.json(await getStripeModeStatus(cfg));
   }
 
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });

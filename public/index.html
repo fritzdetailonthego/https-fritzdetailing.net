@@ -914,7 +914,7 @@ const BACKEND_URL = '/api';
 let stripe, elements, cardElement;
 let STRIPE_TEST_MODE = false;
 
-function applyTestTheme(keysMissing) {
+function applyTestTheme(keysMissing, message) {
   const style = document.createElement('style');
   style.id = 'test-mode-style';
   style.textContent = `
@@ -940,25 +940,26 @@ function applyTestTheme(keysMissing) {
   const banner = document.createElement('div');
   banner.id = 'test-mode-banner';
   banner.textContent = keysMissing
-    ? 'Stripe Test Mode ON - Test keys not configured - Card payments will fail'
+    ? (message || 'Stripe Test Mode ON - Card payments are not configured')
     : 'Stripe Test Mode - No real charges - Test sales auto-delete on switch to live';
   document.body.insertBefore(banner, document.body.firstChild);
 }
 
 async function initStripe() {
   let pk = STRIPE_PK_LIVE;
+  let cardAvailable = true;
   try {
     const res = await fetch('/api/log-sale?action=mode');
     if (res.ok) {
       const data = await res.json();
       if (data.testMode) {
         STRIPE_TEST_MODE = true;
-        if (data.publishableKey) {
+        if (data.cardReady !== false && data.publishableKey) {
           pk = data.publishableKey;
           applyTestTheme(false);
         } else {
-          applyTestTheme(true);
-          // Card button disabled, but theme still shows test mode
+          applyTestTheme(true, data.cardMessage);
+          cardAvailable = false;
           const cardBtn = document.getElementById('pm-card');
           if (cardBtn) { cardBtn.style.opacity = '0.5'; cardBtn.style.pointerEvents = 'none'; }
         }
@@ -966,6 +967,7 @@ async function initStripe() {
     }
   } catch(e) {}
 
+  if (!cardAvailable) return;
   stripe = Stripe(pk);
   elements = stripe.elements({
     appearance: {

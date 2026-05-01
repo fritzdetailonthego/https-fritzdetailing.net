@@ -2040,9 +2040,9 @@ loadSales = async function() {
   try {
     const res = await fetch('/api/log-sale?action=mode');
     if (!res.ok) return;
-    const { testMode, hasTestKeys } = await res.json();
+    const { testMode, hasTestKeys, cardReady, cardMessage } = await res.json();
     if (!testMode) return;
-    const keysMissing = !hasTestKeys;
+    const keysMissing = !hasTestKeys || cardReady === false;
     const style = document.createElement('style');
     style.textContent = `
       #test-mode-banner {
@@ -2059,7 +2059,7 @@ loadSales = async function() {
     const banner = document.createElement('div');
     banner.id = 'test-mode-banner';
     banner.textContent = keysMissing
-      ? 'Stripe Test Mode ON - Test keys not configured - Card payments will fail'
+      ? (cardMessage || 'Stripe Test Mode ON - Card payments are not configured')
       : 'Stripe Test Mode - No real charges - Test sales auto-delete on switch to live';
     document.body.insertBefore(banner, document.body.firstChild);
   } catch(e) {}

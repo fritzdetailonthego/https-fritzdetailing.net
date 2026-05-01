@@ -48,6 +48,8 @@ input:focus{border-color:var(--purple)}
 .alternate-methods{display:none;background:var(--surface);border:1px solid var(--border);padding:12px;margin:0 0 14px;color:var(--gray-light);font-size:13px}
 .alternate-methods strong{display:block;font-family:'Rajdhani',sans-serif;color:#fff;letter-spacing:1px;text-transform:uppercase;margin-bottom:4px}
 .alternate-methods span{display:inline-block;border:1px solid var(--border);color:var(--purple-light);font-family:'Rajdhani',sans-serif;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:4px 8px;margin:4px 6px 0 0}
+.method:disabled{opacity:.45;cursor:not-allowed}
+.notice{display:none;background:rgba(45,127,249,.12);border:1px solid rgba(45,127,249,.38);color:#b8d3ff;padding:12px;margin:0 0 14px;font-size:13px}
 .terms{display:flex;align-items:flex-start;gap:10px;background:var(--surface);border:1px solid var(--border);padding:12px;margin:14px 0;color:var(--gray-light);font-size:13px}
 .terms input{width:auto;margin-top:4px}
 #card-element{padding:14px;background:var(--surface);border:1px solid var(--border);margin-top:8px}
@@ -122,6 +124,7 @@ input:focus{border-color:var(--purple)}
         </button>
       </div>
       <div class="alternate-methods" id="alternate-methods"></div>
+      <div class="notice" id="card-status"></div>
 
       <div id="card-wrap">
         <label>Card Details</label>
@@ -153,6 +156,7 @@ let selectedServiceIds = new Set();
 const requestedPaymentMethod = new URLSearchParams(window.location.search).get('method');
 let paymentSettings = { cash: true, card: true, cashApp: false, paypal: false, crypto: false };
 let paymentMethod = requestedPaymentMethod === 'cash' ? 'cash' : 'card';
+let cardUnavailableMessage = '';
 let stripe = null;
 let cardElement = null;
 
@@ -260,11 +264,23 @@ function renderCart() {
 function renderPaymentMethods() {
   const cardButton = document.querySelector('.method[data-method="card"]');
   const cashButton = document.querySelector('.method[data-method="cash"]');
-  if (cardButton) cardButton.style.display = paymentSettings.card ? '' : 'none';
-  if (cashButton) cashButton.style.display = paymentSettings.cash ? '' : 'none';
+  if (cardButton) {
+    cardButton.style.display = paymentSettings.card ? '' : 'none';
+    cardButton.disabled = !paymentSettings.card;
+  }
+  if (cashButton) {
+    cashButton.style.display = paymentSettings.cash ? '' : 'none';
+    cashButton.disabled = !paymentSettings.cash;
+  }
 
   if (!paymentSettings[paymentMethod]) {
     paymentMethod = paymentSettings.card ? 'card' : paymentSettings.cash ? 'cash' : '';
+  }
+
+  const cardStatusEl = document.getElementById('card-status');
+  if (cardStatusEl) {
+    cardStatusEl.style.display = !paymentSettings.card && cardUnavailableMessage ? 'block' : 'none';
+    cardStatusEl.textContent = cardUnavailableMessage;
   }
 
   const alternateLabels = [];
@@ -338,9 +354,15 @@ async function initStripe() {
   try {
     const modeRes = await fetch('/api/log-sale?action=mode', { method: 'GET' });
     const mode = await modeRes.json();
-    const key = mode.testMode ? mode.publishableKey : STRIPE_PK_LIVE;
+    if (mode.cardReady === false) {
+      paymentSettings.card = false;
+      cardUnavailableMessage = mode.cardMessage || 'Card payment is not available right now. Choose cash or contact Fritz.';
+      return;
+    }
+    const key = mode.publishableKey || (mode.testMode ? null : STRIPE_PK_LIVE);
     if (!key) {
-      showError('Stripe test mode is enabled, but test publishable key is not configured.');
+      paymentSettings.card = false;
+      cardUnavailableMessage = 'Card payment is not configured. Choose cash or contact Fritz.';
       return;
     }
     stripe = Stripe(key);
@@ -359,7 +381,8 @@ async function initStripe() {
     });
     cardElement.mount('#card-element');
   } catch (error) {
-    showError('Payment form could not load. Refresh the page and try again.');
+    paymentSettings.card = false;
+    cardUnavailableMessage = 'Payment form could not load. Choose cash or contact Fritz.';
   }
 }
 
@@ -379,6 +402,7 @@ async function submitCheckout() {
   if (!phone) return showError('Enter your phone number.');
   if (!isValidEmail(email)) return showError('Enter a valid email address.');
   if (!paymentTermsAccepted) return showError('Accept the payment and cancellation terms before continuing.');
+  if (paymentMethod === 'card' && cardUnavailableMessage) return showError(cardUnavailableMessage);
   if (paymentMethod === 'card' && (!stripe || !cardElement)) return showError('Payment form is still loading. Try again in a moment.');
 
   btn.disabled = true;
@@ -466,8 +490,8 @@ async function loadSiteConfig() {
   }
 }
 
-initStripe();
 Promise.all([loadSiteConfig(), loadPricing()])
+  .then(initStripe)
   .then(renderAll)
   .catch(() => showError('Service menu could not load. Refresh the page and try again.'));
 </script>
