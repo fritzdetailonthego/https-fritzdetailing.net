@@ -72,7 +72,7 @@
       }
     ],
     "notes": "balls tesst",
-    "status": "confirmed",
+    "status": "cancelled",
     "bookingType": "customer",
     "durationMinutes": 240,
     "source": "public-checkout",
@@ -82,6 +82,8 @@
     "total": 275,
     "cashVerificationCode": "6B59B8",
     "createdAt": "2026-05-01T20:49:39.702Z",
-    "updatedAt": "2026-05-01T20:49:39.702Z"
+    "updatedAt": "2026-05-01T20:49:44.063Z",
+    "cancellationPolicy": "free-before-24-hours",
+    "cancelledAt": "2026-05-01T20:49:44.063Z"
   }
 ]
