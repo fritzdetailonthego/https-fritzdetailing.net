@@ -1,5 +1,39 @@
 [
   {
+    "id": "ORD-1777613335720-ddca",
+    "publicToken": "Mb_quOg0DqVbEih2oRfqSvYbPL04_EM0",
+    "status": "requires_payment",
+    "paymentStatus": "requires_payment",
+    "paymentMethod": "card",
+    "customer": {
+      "name": "Codex Pipeline Test Card",
+      "email": "codex-pipeline-test-card@example.com",
+      "phone": "4235550100"
+    },
+    "vehicle": "Test Sedan",
+    "services": [
+      {
+        "id": "sedan:exterior:decontamination",
+        "vehicleType": "sedan",
+        "vehicleLabel": "Sedan / Coupe / Hatchback",
+        "category": "exterior",
+        "name": "Decontamination",
+        "price": 50,
+        "durationMinutes": 60
+      }
+    ],
+    "serviceSummary": "Decontamination",
+    "subtotal": 50,
+    "managerFees": [],
+    "total": 50,
+    "durationMinutes": 60,
+    "cashVerificationCode": "",
+    "termsAcceptedAt": "2026-05-01T05:28:55.720Z",
+    "createdAt": "2026-05-01T05:28:55.720Z",
+    "updatedAt": "2026-05-01T05:28:55.720Z",
+    "managerFeeTotal": 0
+  },
+  {
     "id": "ORD-1777612358685-b310",
     "publicToken": "vKmKOCcgSSX1ZaAWWEYqU5i4Z_YrUReh",
     "status": "paid",
