@@ -1,0 +1,19 @@
+[
+  {
+    "id": "ST-1777763769738-cd3a",
+    "type": "question",
+    "priority": "low",
+    "status": "open",
+    "title": "Test",
+    "message": "Idk",
+    "reporterName": "Manager",
+    "contact": "ligma@bofa.cum",
+    "deviceId": "mgr-mooyc708-qb3p5b9k",
+    "deviceName": "Parker's S25 Ultra",
+    "appVersion": "1.4.2",
+    "context": "Backend: https://www.fritzdetailing.net\nBackend version: 1.1.13\nLast sync: 2026-05-02T23:16:07.535Z\nDevice push status: error\nOTA channel: preview",
+    "adminNote": "",
+    "createdAt": "2026-05-02T23:16:09.692Z",
+    "updatedAt": "2026-05-02T23:16:09.692Z"
+  }
+]
