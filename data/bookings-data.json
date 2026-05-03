@@ -116,7 +116,7 @@
       }
     ],
     "notes": "test",
-    "status": "confirmed",
+    "status": "cancelled",
     "bookingType": "customer",
     "durationMinutes": 510,
     "source": "public-checkout",
@@ -126,6 +126,7 @@
     "total": 1025,
     "cashVerificationCode": "32B09A",
     "createdAt": "2026-05-03T09:41:31.320Z",
-    "updatedAt": "2026-05-03T09:41:31.320Z"
+    "updatedAt": "2026-05-03T09:42:08.382Z",
+    "cancelledAt": "2026-05-03T09:42:08.382Z"
   }
 ]
