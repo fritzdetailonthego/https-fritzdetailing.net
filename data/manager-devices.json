@@ -1,1 +1,12 @@
-[]
+[
+  {
+    "pushToken": "",
+    "deviceId": "mgr-mooyc708-qb3p5b9k",
+    "platform": "android",
+    "deviceName": "Parker's S25 Ultra",
+    "appVersion": "1.4.2",
+    "createdAt": "2026-05-03T10:06:43.034Z",
+    "updatedAt": "2026-05-03T10:06:42.962Z",
+    "lastSeenAt": "2026-05-03T10:06:42.962Z"
+  }
+]
