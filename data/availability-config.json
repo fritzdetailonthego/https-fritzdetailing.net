@@ -42,7 +42,21 @@
   "travelBufferMinutes": 30,
   "blockedDates": [],
   "blockedSlots": [],
-  "recurringBlocks": [],
+  "recurringBlocks": [
+    {
+      "id": "RB-2026-05-03-07:00-weekdays-0",
+      "label": "School",
+      "date": "2026-05-03",
+      "time": "07:00",
+      "endTime": "15:00",
+      "durationMinutes": 480,
+      "recurrence": "weekdays",
+      "customDays": [],
+      "endDate": "2026-05-22",
+      "notes": "School",
+      "updatedAt": "2026-05-03T10:09:54.727Z"
+    }
+  ],
   "maxAdvanceDays": 30,
-  "updatedAt": "2026-05-03T10:03:06.952Z"
+  "updatedAt": "2026-05-03T10:09:54.727Z"
 }
