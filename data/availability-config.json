@@ -31,7 +31,7 @@
       "end": "17:00"
     },
     "sun": {
-      "open": false,
+      "open": true,
       "start": "09:00",
       "end": "17:00"
     }
@@ -56,5 +56,5 @@
     }
   ],
   "maxAdvanceDays": 30,
-  "updatedAt": "2026-05-03T09:47:41.240Z"
+  "updatedAt": "2026-05-03T09:48:52.905Z"
 }
