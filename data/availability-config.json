@@ -42,7 +42,19 @@
   "travelBufferMinutes": 30,
   "blockedDates": [],
   "blockedSlots": [],
-  "recurringBlocks": [],
+  "recurringBlocks": [
+    {
+      "id": "RB-2026-05-03-07:00-weekdays-0",
+      "label": "Unavailable",
+      "date": "2026-05-03",
+      "time": "07:00",
+      "endTime": "15:00",
+      "durationMinutes": 480,
+      "recurrence": "weekdays",
+      "customDays": [],
+      "updatedAt": "2026-05-03T09:47:41.240Z"
+    }
+  ],
   "maxAdvanceDays": 30,
-  "updatedAt": "2026-05-01T05:08:21.164Z"
+  "updatedAt": "2026-05-03T09:47:41.240Z"
 }
