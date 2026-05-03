@@ -8,6 +8,6 @@
     "card": true,
     "cashApp": true,
     "paypal": true,
-    "crypto": false
+    "crypto": true
   }
 }
