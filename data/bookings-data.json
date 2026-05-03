@@ -165,10 +165,10 @@
     "source": "public-checkout",
     "orderId": "ORD-1777801813489-5e71",
     "paymentMethod": "cash",
-    "paymentStatus": "cash_due_on_site",
+    "paymentStatus": "paid",
     "total": 80,
     "cashVerificationCode": "9BC68F",
     "createdAt": "2026-05-03T09:50:55.129Z",
-    "updatedAt": "2026-05-03T09:50:55.129Z"
+    "updatedAt": "2026-05-03T09:53:39.668Z"
   }
 ]
