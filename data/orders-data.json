@@ -2,7 +2,7 @@
   {
     "id": "ORD-1777801813489-5e71",
     "publicToken": "XX6regVAJDAmsahhkz7AMFJAYmPZS_oa",
-    "status": "cash_due_on_site",
+    "status": "booked",
     "paymentStatus": "cash_due_on_site",
     "paymentMethod": "cash",
     "customer": {
@@ -39,8 +39,12 @@
     "cashVerificationCode": "9BC68F",
     "termsAcceptedAt": "2026-05-03T09:50:13.489Z",
     "createdAt": "2026-05-03T09:50:13.489Z",
-    "updatedAt": "2026-05-03T09:50:13.489Z",
-    "managerFeeTotal": 0
+    "updatedAt": "2026-05-03T09:50:55.751Z",
+    "managerFeeTotal": 0,
+    "bookingId": "BK-1777801855129-mmn3",
+    "bookingDate": "2026-05-05",
+    "bookingTime": "16:00",
+    "scheduledAt": "2026-05-03T09:50:55.751Z"
   },
   {
     "id": "ORD-1777801275399-f2d1",
