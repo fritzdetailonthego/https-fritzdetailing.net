@@ -64,6 +64,7 @@
 <meta property="og:type" content="website">
 <link rel="canonical" href="https://fritzdetailing.net">
 <title>Fritz's Detail on the Go | Mobile Detailing Southwest Virginia | fritzdetailing.net</title>
+<link rel="icon" href="/favicon.ico" sizes="any">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Rajdhani:wght@400;500;600;700&family=Open+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
@@ -541,6 +542,7 @@ nav a:hover{color:var(--purple-light)}
   <div class="container">
     <h2 class="section-title">Book & <span>Pay</span></h2>
     <p class="section-sub">Start checkout, select services, confirm payment terms, then schedule from the verified booking page.</p>
+    <p style="text-align:center;color:var(--gray);font-size:14px;margin:-12px auto 24px;max-width:720px">Fees such as distance, heavy pet hair, or excessive soil are reviewed and added by Fritz after the booking if needed.</p>
     <div class="payment-grid">
       <a href="/checkout.html?method=cash" class="payment-card pay-cash" id="pm-cash">
         <div class="payment-icon">$</div>
@@ -668,7 +670,7 @@ nav a:hover{color:var(--purple-light)}
         <input type="number" id="card-amount" min="1" step="1" placeholder="Select a service" readonly style="width:100%;padding:12px 14px 12px 30px;background:var(--dark);border:1px solid var(--border);border-radius:2px;color:#fff;font-size:18px;font-weight:700;outline:none;font-family:'Rajdhani',sans-serif;cursor:not-allowed;opacity:0.8">
       </div>
 
-      <div id="card-fees" style="display:none;margin-bottom:16px;background:var(--dark);border:1px solid var(--border);border-radius:2px;padding:10px 12px"></div>
+      <p style="margin:-4px 0 16px;color:var(--gray);font-size:13px;line-height:1.5">Fees such as distance, heavy pet hair, or excessive soil are reviewed and added by Fritz after the booking if needed.</p>
 
       <label style="display:block;font-size:13px;color:var(--gray);margin-bottom:6px;text-transform:uppercase;letter-spacing:1px;font-family:'Rajdhani',sans-serif;font-weight:600">Card Details</label>
       <div id="card-element" style="padding:14px;background:var(--dark);border:1px solid var(--border);border-radius:2px;margin-bottom:8px"></div>
@@ -1001,74 +1003,12 @@ async function initStripe() {
 }
 initStripe();
 
-function getCheckedCardFees() {
-  return Array.from(document.querySelectorAll('#card-fees input[type=checkbox]:checked')).map(input => ({
-    name: input.value,
-    amount: parseFloat(input.dataset.price) || 0
-  }));
-}
-
-function renderCardFees() {
-  const container = document.getElementById('card-fees');
-  if (!container) return;
-
-  const fees = Array.isArray(window.customFees) ? window.customFees : [];
-  if (fees.length === 0) {
-    container.style.display = 'none';
-    container.innerHTML = '';
-    return;
-  }
-
-  container.style.display = 'block';
-  container.innerHTML = '';
-
-  const label = document.createElement('div');
-  label.style.cssText = 'font-size:11px;color:var(--gray);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;font-family:Rajdhani,sans-serif;font-weight:600';
-  label.textContent = 'Optional Add-Ons & Fees';
-  container.appendChild(label);
-
-  fees.forEach((fee) => {
-    const amount = Number(fee.amount);
-    if (!Number.isFinite(amount) || amount <= 0 || !fee.name) return;
-
-    const row = document.createElement('label');
-    row.style.cssText = 'display:flex;align-items:flex-start;gap:10px;padding:7px 0;cursor:pointer;font-size:13px;color:var(--gray-light)';
-
-    const input = document.createElement('input');
-    input.type = 'checkbox';
-    input.value = fee.name;
-    input.dataset.price = String(amount);
-    input.style.cssText = 'accent-color:var(--purple);width:16px;height:16px;cursor:pointer;margin-top:2px;flex-shrink:0';
-    input.addEventListener('change', updateAmount);
-
-    const copy = document.createElement('span');
-    copy.style.flex = '1';
-    copy.textContent = fee.name;
-    if (fee.description) {
-      const desc = document.createElement('span');
-      desc.style.cssText = 'display:block;font-size:11px;color:var(--gray);margin-top:2px';
-      desc.textContent = fee.description;
-      copy.appendChild(desc);
-    }
-
-    const price = document.createElement('span');
-    price.style.cssText = 'color:var(--purple-light);font-family:Rajdhani,sans-serif;font-weight:700';
-    price.textContent = '$' + amount.toLocaleString();
-
-    row.appendChild(input);
-    row.appendChild(copy);
-    row.appendChild(price);
-    container.appendChild(row);
-  });
-}
-
 function updateAmount() {
   const sel = document.getElementById('card-service');
   const amtInput = document.getElementById('card-amount');
   const baseAmount = parseInt(sel.value) || 0;
-  const feeAmount = getCheckedCardFees().reduce((sum, fee) => sum + fee.amount, 0);
   if (sel.value) {
-    amtInput.value = String(baseAmount + feeAmount);
+    amtInput.value = String(baseAmount);
   } else {
     amtInput.value = '';
   }
@@ -1079,11 +1019,7 @@ async function handlePayment() {
   const email = document.getElementById('card-email').value.trim();
   const amount = parseInt(document.getElementById('card-amount').value);
   const service = document.getElementById('card-service');
-  const selectedFees = getCheckedCardFees();
-  const baseServiceText = service.options[service.selectedIndex]?.text || 'Detailing Service';
-  const serviceText = selectedFees.length > 0
-    ? baseServiceText + ' + ' + selectedFees.map(f => f.name).join(' + ')
-    : baseServiceText;
+  const serviceText = service.options[service.selectedIndex]?.text || 'Detailing Service';
   const errEl = document.getElementById('card-errors');
 
   if (!name) { errEl.textContent = 'Please enter your name.'; return; }
@@ -1290,24 +1226,6 @@ function invUpdateServices() {
     });
   }
 
-  // Custom fees (loaded from /api/fees)
-  if (window.customFees && window.customFees.length > 0) {
-    const label = document.createElement('div');
-    label.style.cssText = 'font-size:11px;color:var(--gray);text-transform:uppercase;letter-spacing:1px;padding:10px 0 4px;font-family:Rajdhani,sans-serif;font-weight:600;border-bottom:1px solid rgba(255,255,255,0.05);border-top:1px solid rgba(255,255,255,0.05);margin-top:6px';
-    label.textContent = 'Add-Ons & Fees';
-    container.appendChild(label);
-
-    window.customFees.forEach(f => {
-      const amount = Number(f.amount);
-      if (!Number.isFinite(amount) || amount <= 0 || !f.name) return;
-      const row = document.createElement('label');
-      row.style.cssText = 'display:flex;align-items:center;gap:10px;padding:8px 4px;cursor:pointer;font-size:14px;color:var(--gray-light)';
-      const desc = f.description ? '<br><span style="font-size:11px;color:var(--gray)">' + escapeHtml(f.description) + '</span>' : '';
-      row.innerHTML = '<input type="checkbox" value="' + escapeAttribute(f.name) + '" data-price="' + amount + '" data-fee="1" onchange="invCalcTotal()" style="accent-color:var(--purple);width:16px;height:16px;cursor:pointer;flex-shrink:0"><span style="flex:1">' + escapeHtml(f.name) + desc + '</span><span style="color:var(--purple-light);font-family:Rajdhani,sans-serif;font-weight:700">$' + amount.toLocaleString() + '</span>';
-      container.appendChild(row);
-    });
-  }
-
   invCalcTotal();
 }
 
@@ -1364,15 +1282,7 @@ function generateInvoice() {
   w.document.close();
 }
 
-// Init invoice services on load
-window.customFees = [];
-fetch('/api/fees', {
-  method: 'GET'
-}).then(r => r.json()).then(d => {
-  window.customFees = d.fees || [];
-  if (typeof renderCardFees === 'function') renderCardFees();
-  if (typeof invUpdateServices === 'function') invUpdateServices();
-}).catch(() => {});
+// Init invoice services on load. Extra fees are reviewed by Fritz after booking.
 invUpdateServices();
 
 // ===== DYNAMIC PRICING LOADER =====

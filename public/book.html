@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Schedule Appointment | Fritz's Detail on the Go</title>
+<link rel="icon" href="/favicon.ico" sizes="any">
 <meta name="description" content="Schedule a verified Fritz's Detail on the Go order.">
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Rajdhani:wght@400;500;600;700&family=Open+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
@@ -457,8 +458,12 @@ async function loadOrder() {
   }
 }
 
-loadConfig().then(() => renderCalendar());
-loadOrder();
+if (!orderId || !token) {
+  loadOrder();
+} else {
+  loadConfig().then(() => renderCalendar());
+  loadOrder();
+}
 </script>
 <script src="/site-shared.js"></script>
 </body>
