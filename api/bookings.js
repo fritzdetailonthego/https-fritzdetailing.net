@@ -1634,7 +1634,7 @@ module.exports = async (req, res) => {
   try {
     if (action === 'get-slots') {
       const { date, bookingType, durationMinutes, excludeBookingId } = req.body;
-      if (!date) return res.status(400).json({ error: 'Date required' });
+      if (!date) return res.json({ slots: [], date: null, error: 'Date required' });
 
       const [{ data: availability }, { data: bookings }] = await Promise.all([readAvailability(), readBookings()]);
       const result = getAvailableSlots(date, availability, bookings, {
