@@ -5,6 +5,7 @@ const {
   readGitHubJson,
   writeGitHubJson
 } = require('../lib/github-json-store');
+const { verifyAdminPassword } = require('../lib/admin-auth');
 
 const PRICING_REVISIONS_PATH = 'pricing-revisions-data.json';
 
@@ -27,9 +28,7 @@ module.exports = async (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
 
   const { password, action, pricing } = req.body || {};
-  if (!password || password !== process.env.ADMIN_PASSWORD) {
-    return res.status(401).json({ error: 'Unauthorized' });
-  }
+  if (!verifyAdminPassword(req, res, password, 'pricing-revisions')) return;
 
   const token = process.env.BLOB_READ_WRITE_TOKEN;
 

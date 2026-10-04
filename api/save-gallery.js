@@ -1,4 +1,6 @@
 // Saves gallery.json to GitHub repo
+const { verifyAdminPassword } = require('../lib/admin-auth');
+
 module.exports = async (req, res) => {
   if (req.method === 'OPTIONS') {
     res.setHeader('Access-Control-Allow-Origin', '*');
@@ -11,9 +13,7 @@ module.exports = async (req, res) => {
 
   const { password, gallery } = req.body;
 
-  if (!password || password !== process.env.ADMIN_PASSWORD) {
-    return res.status(401).json({ error: 'Wrong password' });
-  }
+  if (!verifyAdminPassword(req, res, password, 'save-gallery', 'Wrong password')) return;
 
   if (!gallery || typeof gallery !== 'object') {
     return res.status(400).json({ error: 'Invalid gallery data' });

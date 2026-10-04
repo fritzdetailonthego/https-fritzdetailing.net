@@ -3,6 +3,12 @@
 const fs = require('fs');
 const path = require('path');
 const { getStripeModeStatus } = require('../lib/stripe-mode');
+const {
+  clearAuthFailures,
+  isSecretEqual,
+  recordAuthFailure,
+  rejectIfRateLimited
+} = require('../lib/admin-auth');
 
 let salesLibCache = null;
 let ordersLibCache = null;
@@ -258,7 +264,13 @@ module.exports = async (req, res) => {
   }
 
   const { action, password, sale, saleId } = req.body;
-  const isAdmin = password && password === process.env.ADMIN_PASSWORD;
+  const passwordProvided = typeof password === 'string' && password.length > 0;
+  if (passwordProvided && rejectIfRateLimited(req, res, 'log-sale-admin')) return;
+  const isAdmin = passwordProvided && isSecretEqual(password, process.env.ADMIN_PASSWORD);
+  if (passwordProvided) {
+    if (isAdmin) clearAuthFailures(req, 'log-sale-admin');
+    else recordAuthFailure(req, 'log-sale-admin');
+  }
   const cfg = readConfig();
   const serverIsLive = cfg.stripeTestMode !== true;
 

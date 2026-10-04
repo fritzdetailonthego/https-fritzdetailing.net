@@ -10,6 +10,12 @@ const {
   writeGitHubJson
 } = require('../lib/github-json-store');
 const {
+  clearAuthFailures,
+  isSecretEqual,
+  recordAuthFailure,
+  rejectIfRateLimited
+} = require('../lib/admin-auth');
+const {
   appendSale,
   markSaleRefunded,
   saleInputFromPaymentIntent
@@ -1374,8 +1380,15 @@ module.exports = async (req, res) => {
 
   const token = process.env.BLOB_READ_WRITE_TOKEN;
   const { action, password } = req.body || {};
+  const passwordProvided = typeof password === 'string' && password.length > 0;
+  if (passwordProvided && rejectIfRateLimited(req, res, 'bookings-admin')) return;
+  const passwordAuthed = passwordProvided && isSecretEqual(password, process.env.ADMIN_PASSWORD);
+  if (passwordProvided) {
+    if (passwordAuthed) clearAuthFailures(req, 'bookings-admin');
+    else recordAuthFailure(req, 'bookings-admin');
+  }
   const managerSession = (
-    (password && password === process.env.ADMIN_PASSWORD && { role: 'manager', auth: 'password' }) ||
+    (passwordAuthed && { role: 'manager', auth: 'password' }) ||
     verifyManagerToken(getManagerTokenFromRequest(req, req.body || {}))
   );
   const authed = !!managerSession;

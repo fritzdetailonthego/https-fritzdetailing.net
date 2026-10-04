@@ -5,6 +5,7 @@ const {
   readGitHubJson,
   writeGitHubJson
 } = require('../lib/github-json-store');
+const { verifyAdminPassword } = require('../lib/admin-auth');
 
 const FEES_PATH = 'fees-data.json';
 
@@ -83,9 +84,7 @@ module.exports = async (req, res) => {
     }
 
     const { password, action } = req.body || {};
-    if (!password || password !== process.env.ADMIN_PASSWORD) {
-      return res.status(401).json({ error: 'Unauthorized' });
-    }
+    if (!verifyAdminPassword(req, res, password, 'fees')) return;
 
     if (action === 'list') {
       return res.json({ fees: await readFees() });
