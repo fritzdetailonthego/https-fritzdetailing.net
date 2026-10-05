@@ -9,7 +9,18 @@ const { verifyAdminPassword } = require('../lib/admin-auth');
 
 const FEES_PATH = 'fees-data.json';
 
+function isBlobNotFoundError(error) {
+  return !!error && (
+    error.name === 'BlobNotFoundError' ||
+    error.code === 'BlobNotFoundError' ||
+    error.status === 404 ||
+    error.statusCode === 404 ||
+    (typeof error.message === 'string' && error.message.includes('does not exist'))
+  );
+}
+
 module.exports = async (req, res) => {
+  res.setHeader('Cache-Control', 'no-store');
   if (req.method === 'OPTIONS') {
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
@@ -29,31 +40,29 @@ module.exports = async (req, res) => {
     ];
 
     if (hasGitHubJsonStore()) {
-      try {
-        const state = await readGitHubJson(FEES_PATH, defaultFees);
-        return {
-          ...state,
-          data: Array.isArray(state.data) ? state.data : defaultFees
-        };
-      } catch (_githubError) {
-        // Fall through to Blob only if the GitHub runtime store is unreachable.
-      }
+      const state = await readGitHubJson(FEES_PATH, defaultFees);
+      return {
+        ...state,
+        data: Array.isArray(state.data) ? state.data : defaultFees
+      };
     }
 
     let blobError = null;
-    try {
-      const result = await get(FEES_PATH, {
-        access: 'public',
-        token,
-        useCache: false
-      });
-      if (result) {
-        const text = await new Response(result.stream).text();
-        const data = JSON.parse(text);
-        return { data: Array.isArray(data) ? data : defaultFees, storage: 'blob' };
+    const accessModes = process.env.ALLOW_LEGACY_PUBLIC_BLOB_READS === 'true'
+      ? ['private', 'public']
+      : ['private'];
+    for (const access of accessModes) {
+      try {
+        const result = await get(FEES_PATH, { access, token, useCache: false });
+        if (result) {
+          const text = await new Response(result.stream).text();
+          const data = JSON.parse(text);
+          return { data: Array.isArray(data) ? data : defaultFees, storage: 'blob' };
+        }
+      } catch (error) {
+        if (isBlobNotFoundError(error)) continue;
+        blobError = error;
       }
-    } catch (error) {
-      blobError = error;
     }
 
     if (blobError) throw blobError;
@@ -73,7 +82,7 @@ module.exports = async (req, res) => {
     }
 
     await put('fees-data.json', JSON.stringify(fees), {
-      access: 'public',
+      access: 'private',
       contentType: 'application/json', addRandomSuffix: false, allowOverwrite: true, token
     });
   }
@@ -93,10 +102,11 @@ module.exports = async (req, res) => {
     if (action === 'save') {
       const { fees } = req.body;
       if (!Array.isArray(fees)) return res.status(400).json({ error: 'fees must be an array' });
+      if (fees.length > 100) return res.status(400).json({ error: 'Too many fees.' });
       const cleanFees = fees.map((fee) => {
         const amount = Number(fee && fee.amount);
         const name = typeof (fee && fee.name) === 'string' ? fee.name.trim() : '';
-        if (!name || !Number.isFinite(amount) || amount <= 0) return null;
+        if (!name || !Number.isFinite(amount) || amount <= 0 || amount > 100000) return null;
         return {
           id: typeof fee.id === 'string' && fee.id.trim()
             ? fee.id.trim().slice(0, 80)
@@ -107,6 +117,9 @@ module.exports = async (req, res) => {
           description: typeof fee.description === 'string' ? fee.description.trim().slice(0, 240) : ''
         };
       }).filter(Boolean);
+      if (cleanFees.length !== fees.length) {
+        return res.status(400).json({ error: 'Every fee needs a valid name and amount.' });
+      }
       await writeFees(cleanFees);
       return res.json({ success: true });
     }

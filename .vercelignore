@@ -1,0 +1,10 @@
+.git
+node_modules
+tests
+docs
+.github
+qa-output
+backups
+*.zip
+*.tar.gz
+.env*

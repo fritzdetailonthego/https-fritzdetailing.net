@@ -9,6 +9,16 @@ const { verifyAdminPassword } = require('../lib/admin-auth');
 
 const PRICING_REVISIONS_PATH = 'pricing-revisions-data.json';
 
+function isBlobNotFoundError(error) {
+  return !!error && (
+    error.name === 'BlobNotFoundError' ||
+    error.code === 'BlobNotFoundError' ||
+    error.status === 404 ||
+    error.statusCode === 404 ||
+    (typeof error.message === 'string' && error.message.includes('does not exist'))
+  );
+}
+
 function createRevisionId() {
   return `rev-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
@@ -19,6 +29,7 @@ function parseRevisionIndex(value) {
 }
 
 module.exports = async (req, res) => {
+  res.setHeader('Cache-Control', 'no-store');
   if (req.method === 'OPTIONS') {
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
@@ -34,31 +45,29 @@ module.exports = async (req, res) => {
 
   async function readRevisionsState() {
     if (hasGitHubJsonStore()) {
-      try {
-        const state = await readGitHubJson(PRICING_REVISIONS_PATH, []);
-        return {
-          ...state,
-          data: Array.isArray(state.data) ? state.data : []
-        };
-      } catch (_githubError) {
-        // Fall through to Blob only if the GitHub runtime store is unreachable.
-      }
+      const state = await readGitHubJson(PRICING_REVISIONS_PATH, []);
+      return {
+        ...state,
+        data: Array.isArray(state.data) ? state.data : []
+      };
     }
 
     let blobError = null;
-    try {
-      const result = await get(PRICING_REVISIONS_PATH, {
-        access: 'public',
-        token,
-        useCache: false
-      });
-      if (result) {
-        const text = await new Response(result.stream).text();
-        const data = JSON.parse(text);
-        return { data: Array.isArray(data) ? data : [], storage: 'blob' };
+    const accessModes = process.env.ALLOW_LEGACY_PUBLIC_BLOB_READS === 'true'
+      ? ['private', 'public']
+      : ['private'];
+    for (const access of accessModes) {
+      try {
+        const result = await get(PRICING_REVISIONS_PATH, { access, token, useCache: false });
+        if (result) {
+          const text = await new Response(result.stream).text();
+          const data = JSON.parse(text);
+          return { data: Array.isArray(data) ? data : [], storage: 'blob' };
+        }
+      } catch (error) {
+        if (isBlobNotFoundError(error)) continue;
+        blobError = error;
       }
-    } catch (error) {
-      blobError = error;
     }
 
     if (blobError) throw blobError;
@@ -83,7 +92,7 @@ module.exports = async (req, res) => {
     }
 
     await put('pricing-revisions-data.json', JSON.stringify(revisions), {
-      access: 'public',
+      access: 'private',
       contentType: 'application/json',
       addRandomSuffix: false,
       allowOverwrite: true,
@@ -93,6 +102,12 @@ module.exports = async (req, res) => {
 
   try {
     if (action === 'save') {
+      if (!pricing || typeof pricing !== 'object' || Array.isArray(pricing)) {
+        return res.status(400).json({ error: 'Valid pricing data is required.' });
+      }
+      if (Buffer.byteLength(JSON.stringify(pricing), 'utf8') > 500000) {
+        return res.status(413).json({ error: 'Pricing data is too large.' });
+      }
       const state = await readRevisionsState();
       const revisions = state.data;
       revisions.push({ id: createRevisionId(), timestamp: new Date().toISOString(), pricing });
@@ -116,6 +131,9 @@ module.exports = async (req, res) => {
       const { revisionId } = req.body;
       const revisions = await readRevisions();
       const revisionIndex = parseRevisionIndex(req.body.revisionIndex);
+      const hasRevisionSelector =
+        (typeof revisionId === 'string' && revisionId.length > 0) ||
+        Object.prototype.hasOwnProperty.call(req.body || {}, 'revisionIndex');
 
       const revision =
         (typeof revisionId === 'string' && revisionId
@@ -128,8 +146,8 @@ module.exports = async (req, res) => {
       if (revision) {
         return res.json({ success: true, pricing: revision.pricing });
       }
-      // Fallback: try last revision
-      if (revisions.length > 0) {
+      // No selector means restore the latest revision. An invalid explicit selector must fail.
+      if (!hasRevisionSelector && revisions.length > 0) {
         return res.json({ success: true, pricing: revisions[revisions.length - 1].pricing });
       }
       return res.status(404).json({ error: 'No revisions found' });

@@ -1,0 +1,22 @@
+name: Quality
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: node --test tests/backend*.cjs
+      - run: node scripts/check-site.cjs
+      - run: node scripts/dev-server.cjs --port 4173 > /tmp/fritz-server.log 2>&1 &
+      - run: npx --yes lighthouse@12.8.2 http://127.0.0.1:4173/ --only-categories=performance,accessibility,seo --output=json --output-path=/tmp/lighthouse.json --chrome-flags="--headless --no-sandbox"
+      - run: node -e "const x=require('/tmp/lighthouse.json').categories; for (const [n,t] of [['performance',.85],['accessibility',.9],['seo',.9]]) if (!x[n] || x[n].score < t) throw new Error(n+' Lighthouse score below '+t)"

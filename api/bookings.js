@@ -32,6 +32,10 @@ const {
   writeOrders
 } = require('../lib/orders');
 const { validateOrderServices } = require('../lib/pricing');
+const {
+  createRefundIdempotencyKey,
+  validatePaymentIntentForOrder
+} = require('../lib/payment-integrity');
 
 const BOOKINGS_PATH = 'bookings-data.json';
 const AVAILABILITY_PATH = 'availability-config.json';
@@ -545,7 +549,7 @@ function getStripeSecretCandidates(preferTestMode) {
 }
 
 async function retrieveStripePaymentIntent(paymentIntentId, preferTestMode) {
-  if (typeof paymentIntentId !== 'string' || !paymentIntentId.startsWith('pi_')) {
+  if (typeof paymentIntentId !== 'string' || !/^pi_[A-Za-z0-9]{8,128}$/.test(paymentIntentId)) {
     throw createHttpError(400, 'A valid Stripe payment id is required.');
   }
 
@@ -565,23 +569,52 @@ async function retrieveStripePaymentIntent(paymentIntentId, preferTestMode) {
     }
   }
 
-  throw createHttpError(400, lastError?.message || 'Could not verify Stripe payment.');
+  throw createHttpError(400, 'Could not verify Stripe payment.');
 }
 
-async function refundStripePayment(paymentIntentId, preferTestMode) {
+async function refundStripePayment(paymentIntentId, preferTestMode, order) {
   const { paymentIntent, isTest, stripe } = await retrieveStripePaymentIntent(paymentIntentId, preferTestMode);
-  if (paymentIntent.status !== 'succeeded') {
-    throw createHttpError(409, 'Only completed card payments can be refunded.');
+  if (typeof order?.stripeTestMode === 'boolean' && isTest !== order.stripeTestMode) {
+    throw createHttpError(400, 'Payment mode does not match this order.');
   }
-
-  const refund = await stripe.refunds.create({
-    payment_intent: paymentIntent.id
+  const originalPaymentAmount = Number.isInteger(order && order.stripeAmountCents)
+    ? order.stripeAmountCents
+    : Math.round(Number(order && order.subtotal) * 100);
+  validatePaymentIntentForOrder(paymentIntent, order, {
+    isTest,
+    expectedAmountCents: originalPaymentAmount
   });
+
+  const refund =
+    order.paymentStatus === 'refund_pending' && typeof order.refundId === 'string' && order.refundId
+      ? await stripe.refunds.retrieve(order.refundId)
+      : await stripe.refunds.create(
+          { payment_intent: paymentIntent.id },
+          { idempotencyKey: createRefundIdempotencyKey(order, paymentIntent.id) }
+        );
+
+  const refundPaymentIntentId = typeof refund?.payment_intent === 'string'
+    ? refund.payment_intent
+    : refund?.payment_intent?.id;
+  if (
+    !refund ||
+    typeof refund.id !== 'string' ||
+    refundPaymentIntentId !== paymentIntent.id ||
+    Number(refund.amount) !== originalPaymentAmount ||
+    refund.status === 'failed' ||
+    refund.status === 'canceled'
+  ) {
+    throw createHttpError(502, 'Stripe did not accept the refund. Please try again or contact Stripe.');
+  }
+  if (!['pending', 'succeeded'].includes(refund.status)) {
+    throw createHttpError(502, 'Stripe returned an unsupported refund status. Contact Stripe before retrying.');
+  }
 
   return {
     refund,
     isTest,
-    amount: (refund.amount || paymentIntent.amount_received || paymentIntent.amount) / 100
+    status: refund.status,
+    amount: (refund.amount || paymentIntent.amount_received) / 100
   };
 }
 
@@ -1279,11 +1312,7 @@ async function readJsonBlob(path, fallbackValue, token) {
 
 async function readJsonSingleton(path, fallbackValue, token) {
   if (hasGitHubJsonStore()) {
-    try {
-      return await readGitHubJson(path, fallbackValue);
-    } catch (_githubError) {
-      // Fall through to Blob only if the GitHub runtime store is unreachable.
-    }
+    return readGitHubJson(path, fallbackValue);
   }
 
   let blobError = null;
@@ -1305,7 +1334,10 @@ async function readJsonSingleton(path, fallbackValue, token) {
 
 async function getBlobByAccess(path, token) {
   let lastError = null;
-  for (const access of ['public', 'private']) {
+  const accessModes = process.env.ALLOW_LEGACY_PUBLIC_BLOB_READS === 'true'
+    ? ['private', 'public']
+    : ['private'];
+  for (const access of accessModes) {
     try {
       const result = await get(path, {
         access,
@@ -1325,7 +1357,7 @@ async function getBlobByAccess(path, token) {
 
 async function writeJsonBlob(path, data, etag, token) {
   const options = {
-    access: 'public',
+    access: 'private',
     contentType: JSON_CONTENT_TYPE,
     addRandomSuffix: false,
     allowOverwrite: true,
@@ -1369,6 +1401,7 @@ async function updateSingletonJsonBlob({ read, write, mutate, errorMessage }) {
 }
 
 module.exports = async (req, res) => {
+  res.setHeader('Cache-Control', 'no-store');
   if (req.method === 'OPTIONS') {
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
@@ -1739,7 +1772,7 @@ module.exports = async (req, res) => {
       if (!authed) return res.status(401).json({ error: 'Unauthorized' });
 
       const { deviceId, platform, deviceName, appVersion } = req.body || {};
-      const normalizedDeviceId = typeof deviceId === 'string' ? deviceId.trim() : '';
+      const normalizedDeviceId = cleanString(deviceId, 200);
       if (!normalizedDeviceId) {
         return res.status(400).json({ error: 'A device id is required.' });
       }
@@ -1754,9 +1787,9 @@ module.exports = async (req, res) => {
         mutate: async (existingDevices) => {
           upsertManagerDevice(existingDevices, {
             deviceId: normalizedDeviceId,
-            platform: typeof platform === 'string' ? platform : 'unknown',
-            deviceName: typeof deviceName === 'string' ? deviceName : '',
-            appVersion: typeof appVersion === 'string' ? appVersion : '',
+            platform: cleanString(platform, 40) || 'unknown',
+            deviceName: cleanString(deviceName, 160),
+            appVersion: cleanString(appVersion, 60),
             updatedAt: nowIso,
             lastSeenAt: nowIso
           });
@@ -1777,7 +1810,7 @@ module.exports = async (req, res) => {
         return res.status(400).json({ error: 'A valid Expo push token is required.' });
       }
 
-      const normalizedDeviceId = typeof deviceId === 'string' ? deviceId.trim() : '';
+      const normalizedDeviceId = cleanString(deviceId, 200);
       const nowIso = new Date().toISOString();
 
       for (let attempt = 0; attempt < 3; attempt++) {
@@ -1786,9 +1819,9 @@ module.exports = async (req, res) => {
         const nextDevice = upsertManagerDevice(devices, {
           pushToken,
           deviceId: normalizedDeviceId,
-          platform: typeof platform === 'string' ? platform : 'unknown',
-          deviceName: typeof deviceName === 'string' ? deviceName : '',
-          appVersion: typeof appVersion === 'string' ? appVersion : '',
+          platform: cleanString(platform, 40) || 'unknown',
+          deviceName: cleanString(deviceName, 160),
+          appVersion: cleanString(appVersion, 60),
           createdAt: nowIso,
           updatedAt: nowIso,
           lastSeenAt: nowIso
@@ -2120,28 +2153,66 @@ module.exports = async (req, res) => {
 
     if (action === 'confirm-card-order') {
       const { orderId, token: publicToken, paymentIntentId } = req.body || {};
+      const { data: existingOrders } = await readOrders();
+      const existingOrder = findOrderByCredentials(existingOrders, orderId, publicToken);
+      if (!existingOrder) {
+        return res.status(404).json({ error: 'Order not found. Start checkout again.' });
+      }
+      if (existingOrder.paymentMethod !== 'card') {
+        return res.status(400).json({ error: 'This order is not configured for card payment.' });
+      }
+      if (
+        existingOrder.paymentStatus === 'paid' &&
+        existingOrder.stripePaymentIntentId &&
+        existingOrder.stripePaymentIntentId !== paymentIntentId
+      ) {
+        return res.status(409).json({ error: 'This order is already linked to a different card payment.' });
+      }
+      if (!['requires_payment', 'paid'].includes(existingOrder.paymentStatus)) {
+        return res.status(409).json({ error: 'This order is not waiting for card payment.' });
+      }
+
       const cfg = readConfig();
       const preferTestMode = cfg.stripeTestMode === true;
       const { paymentIntent, isTest } = await retrieveStripePaymentIntent(paymentIntentId, preferTestMode);
-
-      if (paymentIntent.status !== 'succeeded') {
-        return res.status(409).json({ error: 'Card payment has not been confirmed.' });
+      if (typeof existingOrder.stripeTestMode === 'boolean' && isTest !== existingOrder.stripeTestMode) {
+        return res.status(400).json({ error: 'Payment mode does not match this order.' });
       }
+      const existingAmountCents = existingOrder.paymentStatus === 'paid'
+        ? (Number.isInteger(existingOrder.stripeAmountCents)
+            ? existingOrder.stripeAmountCents
+            : Math.round(Number(existingOrder.subtotal) * 100))
+        : undefined;
+      validatePaymentIntentForOrder(paymentIntent, existingOrder, {
+        isTest,
+        expectedAmountCents: existingAmountCents
+      });
 
       let savedOrder = null;
+      let alreadyConfirmed = false;
       await updateOrders((orders) => {
         const order = findOrderByCredentials(orders, orderId, publicToken);
         if (!order) throw createHttpError(404, 'Order not found. Start checkout again.');
         if (order.paymentMethod !== 'card') throw createHttpError(400, 'This order is not configured for card payment.');
-
-        const expectedAmount = Math.round(Number(order.total) * 100);
-        const paidAmount = paymentIntent.amount_received || paymentIntent.amount;
-        if (!Number.isInteger(expectedAmount) || expectedAmount !== paidAmount) {
-          throw createHttpError(400, 'Payment amount does not match the order total.');
+        const latestAmountCents = order.paymentStatus === 'paid'
+          ? (Number.isInteger(order.stripeAmountCents)
+              ? order.stripeAmountCents
+              : Math.round(Number(order.subtotal) * 100))
+          : undefined;
+        validatePaymentIntentForOrder(paymentIntent, order, {
+          isTest,
+          expectedAmountCents: latestAmountCents
+        });
+        if (order.paymentStatus === 'paid') {
+          if (order.stripePaymentIntentId !== paymentIntent.id) {
+            throw createHttpError(409, 'This order is already linked to a different card payment.');
+          }
+          alreadyConfirmed = true;
+          savedOrder = normalizeOrder(order);
+          return orders;
         }
-
-        if (paymentIntent.metadata?.order_id && paymentIntent.metadata.order_id !== order.id) {
-          throw createHttpError(400, 'Payment does not match this order.');
+        if (order.paymentStatus !== 'requires_payment') {
+          throw createHttpError(409, 'This order is not waiting for card payment.');
         }
 
         const nowIso = new Date().toISOString();
@@ -2150,6 +2221,8 @@ module.exports = async (req, res) => {
           status: order.bookingId ? 'booked' : 'paid',
           paymentStatus: 'paid',
           stripePaymentIntentId: paymentIntent.id,
+          stripeAmountCents: Math.round(Number(order.total) * 100),
+          stripeTestMode: isTest,
           paidAt: nowIso,
           updatedAt: nowIso
         });
@@ -2172,14 +2245,17 @@ module.exports = async (req, res) => {
       );
 
       let notificationResult = { attempted: 0, sent: 0, invalidTokens: [] };
-      try {
-        notificationResult = await notifyManagersAboutOrder(savedOrder, 'paid-order-created');
-      } catch (notificationError) {
-        console.error('Paid order push notification error:', notificationError.message);
+      if (!alreadyConfirmed) {
+        try {
+          notificationResult = await notifyManagersAboutOrder(savedOrder, 'paid-order-created');
+        } catch (notificationError) {
+          console.error('Paid order push notification error:', notificationError.message);
+        }
       }
 
       return res.json({
         success: true,
+        alreadyConfirmed,
         order: serializeOrderForPublic(savedOrder),
         bookingUrl: getOrderBookingUrl(savedOrder),
         notifications: notificationResult
@@ -2331,7 +2407,12 @@ module.exports = async (req, res) => {
         return res.status(404).json({ error: 'Booking not found.' });
       }
 
-      if (normalizeBookingStatus(existingBooking.status) === 'cancelled') {
+      const bookingAlreadyCancelled = normalizeBookingStatus(existingBooking.status) === 'cancelled';
+      const paidCardRefundRequired =
+        order.paymentMethod === 'card' &&
+        ['paid', 'refund_pending'].includes(order.paymentStatus) &&
+        order.stripePaymentIntentId;
+      if (bookingAlreadyCancelled && !paidCardRefundRequired) {
         return res.json({
           success: true,
           booking: normalizeBooking(existingBooking),
@@ -2340,7 +2421,7 @@ module.exports = async (req, res) => {
         });
       }
 
-      if (isInsideCancellationCallWindow(existingBooking)) {
+      if (!bookingAlreadyCancelled && isInsideCancellationCallWindow(existingBooking)) {
         return res.status(409).json({
           error: `Bookings within 24 hours must be cancelled by phone. Call Fritz at ${FRITZ_PHONE_DISPLAY}.`,
           callRequired: true,
@@ -2348,39 +2429,50 @@ module.exports = async (req, res) => {
         });
       }
 
-      let cancelledBooking = null;
-      await updateSingletonJsonBlob({
-        read: readBookings,
-        write: writeBookings,
-        errorMessage: 'Could not cancel the booking. Please try again.',
-        mutate: async (latestBookings) => {
-          const bookingIndex = latestBookings.findIndex((booking) => booking.id === order.bookingId);
-          if (bookingIndex < 0) throw createHttpError(404, 'Booking not found.');
+      let cancelledBooking = normalizeBooking(existingBooking);
+      if (!bookingAlreadyCancelled) {
+        await updateSingletonJsonBlob({
+          read: readBookings,
+          write: writeBookings,
+          errorMessage: 'Could not cancel the booking. Please try again.',
+          mutate: async (latestBookings) => {
+            const bookingIndex = latestBookings.findIndex((booking) => booking.id === order.bookingId);
+            if (bookingIndex < 0) throw createHttpError(404, 'Booking not found.');
 
-          const nowIso = new Date().toISOString();
-          cancelledBooking = normalizeBooking({
-            ...latestBookings[bookingIndex],
-            status: 'cancelled',
-            paymentStatus: order.paymentStatus,
-            cancellationPolicy: 'free-before-24-hours',
-            cancelledAt: nowIso,
-            updatedAt: nowIso
-          });
-          latestBookings[bookingIndex] = cancelledBooking;
-          return latestBookings;
-        }
-      });
+            const nowIso = new Date().toISOString();
+            cancelledBooking = normalizeBooking({
+              ...latestBookings[bookingIndex],
+              status: 'cancelled',
+              paymentStatus: order.paymentStatus,
+              cancellationPolicy: 'free-before-24-hours',
+              cancelledAt: nowIso,
+              updatedAt: nowIso
+            });
+            latestBookings[bookingIndex] = cancelledBooking;
+            return latestBookings;
+          }
+        });
+      }
 
       let refundResult = null;
-      if (order.paymentMethod === 'card' && order.paymentStatus === 'paid' && order.stripePaymentIntentId) {
+      if (
+        order.paymentMethod === 'card' &&
+        ['paid', 'refund_pending'].includes(order.paymentStatus) &&
+        order.stripePaymentIntentId
+      ) {
         const cfg = readConfig();
-        refundResult = await refundStripePayment(order.stripePaymentIntentId, cfg.stripeTestMode === true);
-        await markSaleRefunded({
-          stripePaymentId: order.stripePaymentIntentId,
-          orderId: order.id,
-          refundId: refundResult.refund.id,
-          refundAmount: refundResult.amount
-        });
+        const preferTestMode = typeof order.stripeTestMode === 'boolean'
+          ? order.stripeTestMode
+          : cfg.stripeTestMode === true;
+        refundResult = await refundStripePayment(order.stripePaymentIntentId, preferTestMode, order);
+        if (refundResult.status === 'succeeded') {
+          await markSaleRefunded({
+            stripePaymentId: order.stripePaymentIntentId,
+            orderId: order.id,
+            refundId: refundResult.refund.id,
+            refundAmount: refundResult.amount
+          });
+        }
       }
 
       let savedOrder = null;
@@ -2388,17 +2480,25 @@ module.exports = async (req, res) => {
         const latestOrder = findOrderByCredentials(latestOrders, orderId, publicToken);
         if (!latestOrder) throw createHttpError(404, 'Order not found.');
 
+        const refundCompleted = refundResult?.status === 'succeeded';
+        const refundPending = refundResult?.status === 'pending';
         const nowIso = new Date().toISOString();
         savedOrder = normalizeOrder({
           ...latestOrder,
-          status: refundResult ? 'refunded' : 'cancelled',
-          paymentStatus: refundResult ? 'refunded' : latestOrder.paymentStatus,
+          status: refundCompleted ? 'refunded' : 'cancelled',
+          paymentStatus: refundCompleted
+            ? 'refunded'
+            : refundPending
+              ? 'refund_pending'
+              : latestOrder.paymentStatus,
           cancellation: {
             policy: 'free-before-24-hours',
             cancelledAt: nowIso
           },
           refundId: refundResult?.refund?.id || latestOrder.refundId || '',
-          refundedAt: refundResult ? nowIso : latestOrder.refundedAt,
+          refundStatus: refundResult?.status || latestOrder.refundStatus || '',
+          refundRequestedAt: refundResult ? (latestOrder.refundRequestedAt || nowIso) : latestOrder.refundRequestedAt,
+          refundedAt: refundCompleted ? nowIso : latestOrder.refundedAt,
           updatedAt: nowIso
         });
 
@@ -2406,17 +2506,23 @@ module.exports = async (req, res) => {
       }, 'Could not update cancelled order. Please contact Fritz.');
 
       let notificationResult = { attempted: 0, sent: 0, invalidTokens: [] };
-      try {
-        notificationResult = await notifyManagersAboutOrder(savedOrder, 'order-cancelled');
-      } catch (notificationError) {
-        console.error('Cancellation push notification error:', notificationError.message);
+      if (!bookingAlreadyCancelled) {
+        try {
+          notificationResult = await notifyManagersAboutOrder(savedOrder, 'order-cancelled');
+        } catch (notificationError) {
+          console.error('Cancellation push notification error:', notificationError.message);
+        }
       }
 
       return res.json({
         success: true,
+        alreadyCancelled: bookingAlreadyCancelled,
+        refundPending: refundResult?.status === 'pending',
         booking: cancelledBooking,
         order: serializeOrderForPublic(savedOrder),
-        refund: refundResult ? { id: refundResult.refund.id, amount: refundResult.amount } : null,
+        refund: refundResult
+          ? { id: refundResult.refund.id, amount: refundResult.amount, status: refundResult.status }
+          : null,
         notifications: notificationResult
       });
     }
@@ -2443,12 +2549,17 @@ module.exports = async (req, res) => {
         notes
       } = req.body || {};
       const bookingType = normalizeBookingType(rawBookingType);
+      const normalizedName = cleanString(name, 120);
+      const normalizedPhone = cleanString(phone, 60);
+      const normalizedVehicle = cleanString(vehicle, 180);
+      const normalizedService = cleanString(service, 180);
+      const normalizedNotes = cleanString(notes, 1000);
 
       if (!date || !time) {
         return res.status(400).json({ error: 'Date and time are required.' });
       }
 
-      if (bookingType === 'customer' && (!name || !phone)) {
+      if (bookingType === 'customer' && (!normalizedName || !normalizedPhone)) {
         return res.status(400).json({ error: 'Customer bookings require a name and phone number.' });
       }
 
@@ -2473,11 +2584,11 @@ module.exports = async (req, res) => {
           id: 'BK-' + Date.now() + '-' + Math.random().toString(36).substr(2, 4),
           date,
           time: validation.time,
-          name: (typeof name === 'string' && name.trim()) || defaultName,
-          phone: typeof phone === 'string' ? phone : '',
-          vehicle: vehicle || '',
-          service: service || defaultService,
-          notes: notes || '',
+          name: normalizedName || defaultName,
+          phone: normalizedPhone,
+          vehicle: normalizedVehicle,
+          service: normalizedService || defaultService,
+          notes: normalizedNotes,
           status: 'confirmed',
           bookingType,
           durationMinutes: validation.durationMinutes,
@@ -2518,19 +2629,25 @@ module.exports = async (req, res) => {
         status
       } = req.body || {};
 
-      if (!bookingId || typeof bookingId !== 'string') {
+      if (!bookingId || typeof bookingId !== 'string' || !bookingId.trim()) {
         return res.status(400).json({ error: 'A booking id is required.' });
       }
 
       const bookingType = normalizeBookingType(rawBookingType);
       const nextStatus = normalizeBookingStatus(status);
+      const normalizedBookingId = cleanString(bookingId, 120);
+      const normalizedName = cleanString(name, 120);
+      const normalizedPhone = cleanString(phone, 60);
+      const normalizedVehicle = cleanString(vehicle, 180);
+      const normalizedService = cleanString(service, 180);
+      const normalizedNotes = cleanString(notes, 1000);
 
       if (nextStatus !== 'cancelled') {
         if (!date || !time) {
           return res.status(400).json({ error: 'Date and time are required.' });
         }
 
-        if (bookingType === 'customer' && (!name || !phone)) {
+        if (bookingType === 'customer' && (!normalizedName || !normalizedPhone)) {
           return res.status(400).json({ error: 'Customer bookings require a name and phone number.' });
         }
       }
@@ -2543,7 +2660,7 @@ module.exports = async (req, res) => {
         write: writeBookings,
         errorMessage: 'That time block changed before it could be saved. Please try again.',
         mutate: async (bookings) => {
-          const bookingIndex = bookings.findIndex((entry) => entry.id === bookingId);
+          const bookingIndex = bookings.findIndex((entry) => entry.id === normalizedBookingId);
 
           if (bookingIndex < 0) {
             const notFoundError = new Error('Booking not found.');
@@ -2566,7 +2683,7 @@ module.exports = async (req, res) => {
             const validation = validateBookingRequest(date, time, availability, bookings, {
               bookingType,
               durationMinutes,
-              excludeBookingId: bookingId,
+              excludeBookingId: normalizedBookingId,
               requireSlotAlignment: false
             });
 
@@ -2585,11 +2702,11 @@ module.exports = async (req, res) => {
               ...existingBooking,
               date,
               time: validation.time,
-              name: (typeof name === 'string' && name.trim()) || defaultName,
-              phone: typeof phone === 'string' ? phone : '',
-              vehicle: vehicle || '',
-              service: service || defaultService,
-              notes: notes || '',
+              name: normalizedName || defaultName,
+              phone: normalizedPhone,
+              vehicle: normalizedVehicle,
+              service: normalizedService || defaultService,
+              notes: normalizedNotes,
               status: nextStatus,
               bookingType,
               durationMinutes: validation.durationMinutes,
@@ -2675,8 +2792,6 @@ module.exports = async (req, res) => {
           }
           return bookings;
         }
-      }).catch((error) => {
-        console.error('Cash booking status update error:', error.message);
       });
 
       return res.json({
@@ -2693,7 +2808,7 @@ module.exports = async (req, res) => {
       const feeAmount = Number(feeInput.amount || feeInput.feeAmount);
 
       if (!orderId) return res.status(400).json({ error: 'An order id or booking id is required.' });
-      if (!feeName || !Number.isFinite(feeAmount) || feeAmount <= 0) {
+      if (!feeName || !Number.isFinite(feeAmount) || feeAmount <= 0 || feeAmount > 100000) {
         return res.status(400).json({ error: 'Fee name and amount are required.' });
       }
 
@@ -2703,8 +2818,12 @@ module.exports = async (req, res) => {
         if (!order) throw createHttpError(404, 'Order not found.');
 
         const nowIso = new Date().toISOString();
+        const existingManagerFees = Array.isArray(order.managerFees) ? order.managerFees : [];
+        if (existingManagerFees.length >= 100) {
+          throw createHttpError(400, 'Too many fees are attached to this order.');
+        }
         const managerFees = [
-          ...(Array.isArray(order.managerFees) ? order.managerFees : []),
+          ...existingManagerFees,
           {
             id: `FEE-${Date.now()}-${crypto.randomBytes(2).toString('hex')}`,
             name: feeName,
@@ -2730,6 +2849,7 @@ module.exports = async (req, res) => {
         return orders.map((entry) => entry.id === savedOrder.id ? savedOrder : entry);
       }, 'Could not add the fee. Please try again.');
 
+      let bookingSyncWarning = '';
       await updateSingletonJsonBlob({
         read: readBookings,
         write: writeBookings,
@@ -2747,17 +2867,22 @@ module.exports = async (req, res) => {
         }
       }).catch((error) => {
         console.error('Fee booking status update error:', error.message);
+        bookingSyncWarning = 'The fee was saved to the order, but the booking summary could not be refreshed.';
       });
 
       return res.json({
         success: true,
-        order: savedOrder
+        order: savedOrder,
+        partialSuccess: !!bookingSyncWarning,
+        warning: bookingSyncWarning || undefined
       });
     }
 
     if (action === 'cancel-booking') {
-      const { bookingId } = req.body;
+      const bookingId = cleanString(req.body && req.body.bookingId, 120);
+      if (!bookingId) return res.status(400).json({ error: 'A booking id is required.' });
       let linkedOrderId = null;
+      let bookingFound = false;
       await updateSingletonJsonBlob({
         read: readBookings,
         write: writeBookings,
@@ -2765,8 +2890,11 @@ module.exports = async (req, res) => {
         mutate: async (bookings) => {
           const booking = bookings.find((entry) => entry.id === bookingId);
 
-          if (booking && booking.status !== 'cancelled') {
+          if (booking) {
+            bookingFound = true;
             linkedOrderId = typeof booking.orderId === 'string' ? booking.orderId : null;
+          }
+          if (booking && booking.status !== 'cancelled') {
             booking.status = 'cancelled';
             booking.updatedAt = new Date().toISOString();
             booking.cancelledAt = booking.updatedAt;
@@ -2775,6 +2903,7 @@ module.exports = async (req, res) => {
           return bookings;
         }
       });
+      if (!bookingFound) return res.status(404).json({ error: 'Booking not found.' });
       if (linkedOrderId) {
         await updateOrders((orders) => {
           const nowIso = new Date().toISOString();
@@ -2789,8 +2918,6 @@ module.exports = async (req, res) => {
                 updatedAt: nowIso
               })
             : order);
-        }).catch((error) => {
-          console.error('Linked order cancel update error:', error.message);
         });
       }
       return res.json({ success: true });

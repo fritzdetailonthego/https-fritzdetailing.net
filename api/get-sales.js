@@ -2,6 +2,7 @@ const { getCommissionRate, readSales } = require('../lib/sales');
 const { verifyAdminPassword } = require('../lib/admin-auth');
 
 module.exports = async (req, res) => {
+  res.setHeader('Cache-Control', 'no-store');
   if (req.method === 'OPTIONS') {
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
