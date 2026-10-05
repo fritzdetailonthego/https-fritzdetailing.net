@@ -1,6 +1,8 @@
 const { getCommissionRate, readSales } = require('../lib/sales');
+const { verifyAdminPassword } = require('../lib/admin-auth');
 
 module.exports = async (req, res) => {
+  res.setHeader('Cache-Control', 'no-store');
   if (req.method === 'OPTIONS') {
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
@@ -14,9 +16,7 @@ module.exports = async (req, res) => {
   }
 
   const password = req.body?.password;
-  if (!password || password !== process.env.ADMIN_PASSWORD) {
-    return res.status(401).json({ error: 'Unauthorized' });
-  }
+  if (!verifyAdminPassword(req, res, password, 'get-sales')) return;
 
   try {
     let sales = await readSales();

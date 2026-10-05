@@ -1,4 +1,5 @@
 const crypto = require('crypto');
+const { verifyAdminPassword } = require('../lib/admin-auth');
 
 const MANAGER_TOKEN_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 
@@ -36,6 +37,7 @@ function createManagerToken() {
 }
 
 module.exports = async (req, res) => {
+  res.setHeader('Cache-Control', 'no-store');
   if (req.method === 'OPTIONS') {
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
@@ -51,9 +53,7 @@ module.exports = async (req, res) => {
     return res.status(500).json({ error: 'ADMIN_PASSWORD not set in Vercel environment variables.' });
   }
 
-  if (!password || password !== process.env.ADMIN_PASSWORD) {
-    return res.status(401).json({ error: 'Wrong password' });
-  }
+  if (!verifyAdminPassword(req, res, password, 'verify-admin', 'Wrong password')) return;
 
   if (issueManagerToken === false) {
     return res.json({

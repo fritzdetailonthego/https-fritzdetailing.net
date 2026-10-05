@@ -1,4 +1,6 @@
 // Saves site-config.json to GitHub repo
+const { verifyAdminPassword } = require('../lib/admin-auth');
+
 module.exports = async (req, res) => {
   if (req.method === 'OPTIONS') {
     res.setHeader('Access-Control-Allow-Origin', '*');
@@ -10,9 +12,7 @@ module.exports = async (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
 
   const { password, config } = req.body;
-  if (!password || password !== process.env.ADMIN_PASSWORD) {
-    return res.status(401).json({ error: 'Wrong password' });
-  }
+  if (!verifyAdminPassword(req, res, password, 'save-config', 'Wrong password')) return;
   if (!config || typeof config !== 'object') {
     return res.status(400).json({ error: 'Invalid config data' });
   }

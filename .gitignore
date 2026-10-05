@@ -1,2 +1,9 @@
 .vercel
 node_modules
+.env
+.env.*
+!.env.example
+backups/
+qa-output/
+*.zip
+*.tar.gz

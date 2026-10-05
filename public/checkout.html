@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<meta name="robots" content="noindex, nofollow">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Checkout | Fritz's Detail on the Go</title>
@@ -66,12 +67,13 @@ input:focus{border-color:var(--purple)}
 .muted{color:var(--gray);font-size:13px;margin-top:10px}
 @media(max-width:860px){.grid{grid-template-columns:1fr}.summary{position:static}.form-grid{grid-template-columns:1fr}.header{align-items:flex-start;flex-direction:column}}
 </style>
+<link rel="stylesheet" href="/brand.css">
 </head>
-<body>
+<body class="transaction">
 <main class="shell">
   <header class="header">
     <a class="brand" href="/">
-      <img src="/logo.jpg" alt="Fritz's Detail on the Go logo">
+      <img src="/logo.webp" alt="Fritz's Detail on the Go logo">
       <span class="brand-stack">
         <span class="brand-sub">Secure checkout</span>
         <span class="brand-title">Fritz's Detail</span>
@@ -90,8 +92,8 @@ input:focus{border-color:var(--purple)}
     <section class="panel">
       <h2 class="panel-title">Service Menu</h2>
       <p class="panel-copy">Select one or more services. The schedule duration is calculated from the selected services.</p>
-      <div id="vehicle-tabs" class="vehicle-tabs"></div>
-      <div id="service-grid" class="service-grid"></div>
+      <div id="vehicle-tabs" class="vehicle-tabs" role="tablist" aria-label="Vehicle type"></div>
+      <div id="service-grid" class="service-grid" role="tabpanel"></div>
     </section>
 
     <aside class="panel summary">
@@ -116,11 +118,11 @@ input:focus{border-color:var(--purple)}
       </div>
 
       <div class="method-row" id="payment-method-row">
-        <button type="button" class="method active" data-method="card" onclick="selectPaymentMethod('card')">
+        <button type="button" class="method active" data-method="card" aria-pressed="true" onclick="selectPaymentMethod('card')">
           <strong>Card</strong>
           <span>Charged before booking</span>
         </button>
-        <button type="button" class="method" data-method="cash" onclick="selectPaymentMethod('cash')">
+        <button type="button" class="method" data-method="cash" aria-pressed="false" onclick="selectPaymentMethod('cash')">
           <strong>Cash</strong>
           <span>Due on site before service</span>
         </button>
@@ -233,8 +235,23 @@ function formatDuration(minutes) {
 function renderVehicles() {
   const tabs = document.getElementById('vehicle-tabs');
   tabs.innerHTML = Object.entries(pricingData).map(([key, tier]) =>
-    `<button type="button" class="tab ${key === activeVehicle ? 'active' : ''}" onclick="activeVehicle='${key}';renderAll()">${escapeHtml(tier.label || key)}</button>`
+    `<button type="button" id="vehicle-tab-${key}" role="tab" aria-controls="service-grid" aria-selected="${key === activeVehicle}" tabindex="${key === activeVehicle ? '0' : '-1'}" class="tab ${key === activeVehicle ? 'active' : ''}" onclick="selectVehicle('${key}')">${escapeHtml(tier.label || key)}</button>`
   ).join('');
+  tabs.onkeydown = event => {
+    if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+    event.preventDefault();
+    const keys = Object.keys(pricingData);
+    const current = Math.max(0, keys.indexOf(activeVehicle));
+    const next = event.key === 'Home' ? 0 : event.key === 'End' ? keys.length - 1 : (current + (event.key === 'ArrowRight' ? 1 : -1) + keys.length) % keys.length;
+    selectVehicle(keys[next], true);
+  };
+}
+
+function selectVehicle(key, restoreFocus = false) {
+  if (!pricingData[key]) return;
+  activeVehicle = key;
+  renderAll();
+  if (restoreFocus) document.getElementById(`vehicle-tab-${key}`)?.focus();
 }
 
 function renderServices() {
@@ -242,7 +259,7 @@ function renderServices() {
   const services = buildCatalog().filter(service => service.vehicleType === activeVehicle);
   grid.innerHTML = services.map(service => {
     const active = selectedServiceIds.has(service.id);
-    return `<button type="button" class="service-card ${active ? 'active' : ''}" onclick="toggleService('${service.id}')">
+    return `<button type="button" data-service-id="${service.id}" aria-pressed="${active}" class="service-card ${active ? 'active' : ''}" onclick="toggleService('${service.id}')">
       <span class="service-top">
         <span class="service-name">${escapeHtml(service.name)}</span>
         <span class="service-price">$${service.price.toLocaleString()}</span>
@@ -250,6 +267,7 @@ function renderServices() {
       <span class="service-meta">${escapeHtml(service.category)} | ${formatDuration(service.durationMinutes)}</span>
     </button>`;
   }).join('');
+  grid.setAttribute('aria-labelledby', `vehicle-tab-${activeVehicle}`);
 }
 
 function renderCart() {
@@ -313,7 +331,9 @@ function renderAll() {
 function toggleService(id) {
   if (selectedServiceIds.has(id)) selectedServiceIds.delete(id);
   else selectedServiceIds.add(id);
-  renderAll();
+  renderServices();
+  renderCart();
+  document.querySelector(`[data-service-id="${id}"]`)?.focus();
 }
 
 function selectPaymentMethod(method) {
@@ -321,6 +341,7 @@ function selectPaymentMethod(method) {
   paymentMethod = method;
   document.querySelectorAll('.method').forEach(button => {
     button.classList.toggle('active', button.dataset.method === method);
+    button.setAttribute('aria-pressed', String(button.dataset.method === method));
   });
   document.getElementById('card-wrap').style.display = method === 'card' ? 'block' : 'none';
 }
@@ -372,7 +393,7 @@ async function initStripe() {
     cardElement = elements.create('card', {
       style: {
         base: {
-          color: '#fff',
+          color: '#17131a',
           fontFamily: 'Open Sans, sans-serif',
           fontSize: '15px',
           '::placeholder': { color: '#777' },

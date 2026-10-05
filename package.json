@@ -3,10 +3,17 @@
   "version": "1.1.13",
   "description": "Fritz's Detail on the Go — Website + Payments",
   "scripts": {
-    "start": "node api/create-payment-intent.js"
+    "start": "node scripts/dev-server.cjs",
+    "dev": "node scripts/dev-server.cjs",
+    "check": "node scripts/check-site.cjs",
+    "test": "node --test tests/backend*.cjs",
+    "backup": "node scripts/backup.cjs"
   },
   "dependencies": {
     "@vercel/blob": "^2.3.3",
     "stripe": "^17.0.0"
+  },
+  "engines": {
+    "node": "24.x"
   }
 }

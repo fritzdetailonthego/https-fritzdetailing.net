@@ -3,6 +3,13 @@
 const fs = require('fs');
 const path = require('path');
 const { getStripeModeStatus } = require('../lib/stripe-mode');
+const { validateStripeSalePayment } = require('../lib/payment-integrity');
+const {
+  clearAuthFailures,
+  isSecretEqual,
+  recordAuthFailure,
+  rejectIfRateLimited
+} = require('../lib/admin-auth');
 
 let salesLibCache = null;
 let ordersLibCache = null;
@@ -163,7 +170,7 @@ function constructStripeEvent(rawBody, signature) {
 }
 
 async function retrieveStripePaymentIntent(paymentIntentId, preferTestMode) {
-  if (typeof paymentIntentId !== 'string' || !paymentIntentId.startsWith('pi_')) {
+  if (typeof paymentIntentId !== 'string' || !/^pi_[A-Za-z0-9]{8,128}$/.test(paymentIntentId)) {
     throw createHttpError(400, 'A valid Stripe payment id is required.');
   }
 
@@ -183,22 +190,14 @@ async function retrieveStripePaymentIntent(paymentIntentId, preferTestMode) {
     }
   }
 
-  throw createHttpError(400, lastError?.message || 'Could not verify Stripe payment.');
+  throw createHttpError(400, 'Could not verify Stripe payment.');
 }
 
 async function verifyStripeSale(sale, preferTestMode) {
   const { saleInputFromPaymentIntent } = getSalesLib();
   const { paymentIntent, isTest } = await retrieveStripePaymentIntent(sale && sale.stripePaymentId, preferTestMode);
 
-  if (paymentIntent.status !== 'succeeded') {
-    throw createHttpError(409, 'Stripe payment has not succeeded.');
-  }
-
-  const expectedAmount = Math.round(Number(sale.amount) * 100);
-  const paidAmount = paymentIntent.amount_received || paymentIntent.amount;
-  if (!Number.isInteger(expectedAmount) || expectedAmount !== paidAmount) {
-    throw createHttpError(400, 'Sale amount does not match the Stripe payment.');
-  }
+  validateStripeSalePayment(paymentIntent, sale.amount);
 
   return {
     ...saleInputFromPaymentIntent(paymentIntent, isTest, {
@@ -223,6 +222,9 @@ async function handleStripeWebhook(req, res) {
   if (!paymentIntent || paymentIntent.object !== 'payment_intent') {
     return res.status(400).json({ error: 'Invalid payment intent event.' });
   }
+  if (paymentIntent.status !== 'succeeded' || String(paymentIntent.currency || '').toLowerCase() !== 'usd') {
+    return res.status(400).json({ error: 'Invalid completed USD payment intent.' });
+  }
 
   const { appendSale, saleInputFromPaymentIntent } = getSalesLib();
   const saleInput = saleInputFromPaymentIntent(paymentIntent, isTest);
@@ -231,6 +233,7 @@ async function handleStripeWebhook(req, res) {
 }
 
 module.exports = async (req, res) => {
+  res.setHeader('Cache-Control', 'no-store');
   if (req.method === 'OPTIONS') {
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'POST, GET, OPTIONS');
@@ -258,7 +261,13 @@ module.exports = async (req, res) => {
   }
 
   const { action, password, sale, saleId } = req.body;
-  const isAdmin = password && password === process.env.ADMIN_PASSWORD;
+  const passwordProvided = typeof password === 'string' && password.length > 0;
+  if (passwordProvided && rejectIfRateLimited(req, res, 'log-sale-admin')) return;
+  const isAdmin = passwordProvided && isSecretEqual(password, process.env.ADMIN_PASSWORD);
+  if (passwordProvided) {
+    if (isAdmin) clearAuthFailures(req, 'log-sale-admin');
+    else recordAuthFailure(req, 'log-sale-admin');
+  }
   const cfg = readConfig();
   const serverIsLive = cfg.stripeTestMode !== true;
 

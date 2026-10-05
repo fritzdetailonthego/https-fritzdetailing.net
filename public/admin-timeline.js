@@ -1335,7 +1335,7 @@
                   </div>
                 ` : ''}
                 ${displayEntries.map((entry) => `
-                  <button type="button" class="tk-entry ${TYPE_META[entry.kind].className}" data-entry-kind="${entry.kind}" data-entry-id="${entry.id}" style="top:${((entry.displayStartMinutes - metrics.startMinutes) / metrics.stepMinutes) * metrics.rowHeight}px;height:${Math.max(((entry.displayEndMinutes - entry.displayStartMinutes) / metrics.stepMinutes) * metrics.rowHeight - 4, 28)}px">
+                  <button type="button" class="tk-entry ${TYPE_META[entry.kind].className}" data-entry-kind="${escapeAttribute(entry.kind)}" data-entry-id="${escapeAttribute(entry.id)}" style="top:${((entry.displayStartMinutes - metrics.startMinutes) / metrics.stepMinutes) * metrics.rowHeight}px;height:${Math.max(((entry.displayEndMinutes - entry.displayStartMinutes) / metrics.stepMinutes) * metrics.rowHeight - 4, 28)}px">
                     <div class="tk-entry__title">${escapeHtml(entry.title)}</div>
                     <div class="tk-entry__sub">${escapeHtml(entry.subtitle)}</div>
                     ${entry.kind === 'recurring' ? `<div class="tk-entry__sub">${escapeHtml(formatRecurringPatternLabel(entry.meta.recurrence))}</div>` : ''}
@@ -1465,11 +1465,13 @@
     return String(value || '')
       .replace(/&/g, '&amp;')
       .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;');
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
   }
 
   function escapeAttribute(value) {
-    return escapeHtml(value).replace(/"/g, '&quot;');
+    return escapeHtml(value).replace(/`/g, '&#96;');
   }
 
   function render() {

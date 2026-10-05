@@ -1,6 +1,10 @@
 const path = require('path');
 const fs = require('fs');
 const { findOrderByCredentials, readOrders } = require('../lib/orders');
+const {
+  createPaymentIntentIdempotencyKey,
+  getExpectedAmountCents
+} = require('../lib/payment-integrity');
 const { getStripePaymentConfig, isStripeAuthenticationError } = require('../lib/stripe-mode');
 
 function readConfig() {
@@ -19,6 +23,7 @@ function isCardPaymentEnabled(config) {
 }
 
 module.exports = async (req, res) => {
+  res.setHeader('Cache-Control', 'no-store');
   if (req.method === 'OPTIONS') {
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
@@ -45,7 +50,7 @@ module.exports = async (req, res) => {
       return res.status(400).json({ error: 'This order is not configured for card payment.' });
     }
 
-    if (order.status !== 'requires_payment' && order.paymentStatus !== 'requires_payment') {
+    if (order.status !== 'requires_payment' || order.paymentStatus !== 'requires_payment') {
       return res.status(409).json({ error: 'This order is not waiting for card payment.' });
     }
 
@@ -53,10 +58,7 @@ module.exports = async (req, res) => {
       return res.status(400).json({ error: 'A valid email is required before payment.' });
     }
 
-    const amount = Math.round(Number(order.total) * 100);
-    if (!Number.isInteger(amount) || amount < 100) {
-      return res.status(400).json({ error: 'Invalid order total.' });
-    }
+    const amount = getExpectedAmountCents(order);
 
     const cfg = readConfig();
     if (!isCardPaymentEnabled(cfg)) {
@@ -74,18 +76,27 @@ module.exports = async (req, res) => {
     const stripe = require('stripe')(stripeConfig.secretKey);
     const serviceSummary = order.serviceSummary || (order.services || []).map((service) => service.name).join(' + ');
 
-    const paymentIntent = await stripe.paymentIntents.create({
-      amount,
-      currency: 'usd',
-      description: serviceSummary || "Fritz's Detail on the Go",
-      metadata: {
-        business: "Fritz's Detail on the Go",
-        order_id: order.id,
-        customer_name: order.customer?.name || '',
-        service: serviceSummary || ''
+    const paymentIntent = await stripe.paymentIntents.create(
+      {
+        amount,
+        currency: 'usd',
+        description: serviceSummary || "Fritz's Detail on the Go",
+        metadata: {
+          business: "Fritz's Detail on the Go",
+          order_id: order.id,
+          customer_name: order.customer?.name || '',
+          service: serviceSummary || ''
+        },
+        receipt_email: order.customer.email
       },
-      receipt_email: order.customer.email
-    });
+      {
+        idempotencyKey: createPaymentIntentIdempotencyKey(order, stripeConfig.testMode)
+      }
+    );
+
+    if (!paymentIntent || typeof paymentIntent.id !== 'string' || typeof paymentIntent.client_secret !== 'string') {
+      throw new Error('Stripe did not return a usable payment session.');
+    }
 
     res.json({
       clientSecret: paymentIntent.client_secret,
@@ -108,7 +119,7 @@ module.exports = async (req, res) => {
         ? 'Checkout storage is temporarily unavailable. Please try again.'
         : isStripeConfigError
           ? 'Card payment is not configured correctly. Choose another payment method or call Fritz.'
-        : error.message || 'Payment failed'
+          : 'Payment could not be started. Please try again.'
     });
   }
 };

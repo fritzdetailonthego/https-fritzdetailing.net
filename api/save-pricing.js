@@ -1,5 +1,6 @@
 // Saves pricing.json to GitHub repo, triggering auto-redeploy on Vercel
 // Requires env vars: ADMIN_PASSWORD, GITHUB_TOKEN, GITHUB_REPO
+const { verifyAdminPassword } = require('../lib/admin-auth');
 
 module.exports = async (req, res) => {
   if (req.method === 'OPTIONS') {
@@ -14,9 +15,7 @@ module.exports = async (req, res) => {
   const { password, pricing } = req.body;
 
   // Auth check
-  if (!password || password !== process.env.ADMIN_PASSWORD) {
-    return res.status(401).json({ error: 'Wrong password' });
-  }
+  if (!verifyAdminPassword(req, res, password, 'save-pricing', 'Wrong password')) return;
 
   if (!pricing || typeof pricing !== 'object') {
     return res.status(400).json({ error: 'Invalid pricing data' });
